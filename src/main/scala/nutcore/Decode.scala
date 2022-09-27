@@ -74,7 +74,6 @@ object Instructions extends HasInstrType with HasNutCoreParameter {
   val DecodeDefault = List(InstrN, FuType.csr, CSROpType.jmp)
   def DecodeTable = RVIInstr.table ++ NutCoreTrap.table ++
     (if (HasMExtension) RVMInstr.table else Nil) ++
-    (if (HasCExtension) RVCInstr.table else Nil) ++
     Priviledged.table ++
     RVAInstr.table ++
     RVZicsrInstr.table ++ RVZifenceiInstr.table
