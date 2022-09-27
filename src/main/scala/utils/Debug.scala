@@ -1,3 +1,4 @@
+
 /**************************************************************************************
 * Copyright (c) 2020 Institute of Computing Technology, CAS
 * Copyright (c) 2020 University of Chinese Academy of Sciences
@@ -52,7 +53,7 @@ object LogUtil {
            (prefix: Boolean, cond: Bool, pable: Printable)
            (implicit name: String): Any = {
     val commonInfo = p"[${GTimer()}] $name: "
-    when (cond && displayLog) {
+    when (false.B && cond && displayLog) {
       if(prefix) printf(commonInfo)
       printf(pable)
     }

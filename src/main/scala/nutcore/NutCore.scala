@@ -42,7 +42,7 @@ trait HasNutCoreParameter {
   val DataBits = XLEN
   val DataBytes = DataBits / 8
   val EnableVirtualMemory = if (Settings.get("HasDTLB") && Settings.get("HasITLB")) true else false
-  val EnablePerfCnt = true
+  val EnablePerfCnt = false
   // Parameter for Argo's OoO backend
   val EnableMultiIssue = Settings.get("EnableMultiIssue")
   val EnableOutOfOrderExec = Settings.get("EnableOutOfOrderExec")
