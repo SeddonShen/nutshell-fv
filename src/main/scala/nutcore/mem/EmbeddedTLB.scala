@@ -35,6 +35,7 @@ trait HasTLBIO extends HasNutCoreParameter with HasTlbConst with HasCSRConst {
     val csrMMU = new MMUIO
     val cacheEmpty = Input(Bool())
     val ipf = Output(Bool())
+    val iaf = Output(Bool())
   }
   val io = IO(new TLBIO)
 }
@@ -84,7 +85,10 @@ class EmbeddedTLB(implicit val tlbConfig: TLBConfig) extends TlbModule with HasT
   val tlbEmpty = Module(new EmbeddedTLBEmpty)
   val mdTLB = Module(new EmbeddedTLBMD)
   val mdUpdate = Wire(Bool())
-  
+
+  // VM enable && io
+  val vmEnable = satp.asTypeOf(satpBundle).mode === 8.U && (io.csrMMU.priviledgeMode < ModeM)
+
   tlbExec.io.flush := io.flush
   tlbExec.io.satp := satp
   tlbExec.io.mem <> io.mem
@@ -95,14 +99,13 @@ class EmbeddedTLB(implicit val tlbConfig: TLBConfig) extends TlbModule with HasT
   mdTLB.io.write <> tlbExec.io.mdWrite
   
   io.ipf := false.B
+  // when virtual memory is not enabled, io.in.valid will not be set for ITLB.
+  io.iaf := Mux(vmEnable, tlbExec.io.iaf, !isLegalInstrAddr(tlbExec.io.in.bits.addr))
   
   // meta reset
   val flushTLB = WireInit(false.B)
   BoringUtils.addSink(flushTLB, "MOUFlushTLB")
   mdTLB.reset := reset.asBool || flushTLB
-
-  // VM enable && io
-  val vmEnable = satp.asTypeOf(satpBundle).mode === 8.U && (io.csrMMU.priviledgeMode < ModeM)
 
   def PipelineConnectTLB[T <: Data](left: DecoupledIO[T], right: DecoupledIO[T], update: Bool, rightOutFire: Bool, isFlush: Bool, vmEnable: Bool) = {
     val valid = RegInit(false.B)
@@ -187,6 +190,7 @@ class EmbeddedTLBExec(implicit val tlbConfig: TLBConfig) extends TlbModule{
     val satp = Input(UInt(XLEN.W))
     val pf = new MMUIO
     val ipf = Output(Bool())
+    val iaf = Output(Bool())
     val isFinish = Output(Bool())
   })
 
@@ -399,6 +403,7 @@ class EmbeddedTLBExec(implicit val tlbConfig: TLBConfig) extends TlbModule{
   io.in.ready := io.out.ready && (state === s_idle) && !miss && !hitWB && io.mdReady && !hasException
 
   io.ipf := Mux(hit, hitinstrPF, missIPF)
+  io.iaf := instrAF
   io.isFinish := io.out.fire() || io.pf.hasException
 
   Debug("In(%d, %d) Out(%d, %d) InAddr:%x OutAddr:%x cmd:%d \n", io.in.valid, io.in.ready, io.out.valid, io.out.ready, req.addr, io.out.bits.addr, req.cmd)

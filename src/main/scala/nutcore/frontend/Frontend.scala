@@ -30,6 +30,7 @@ class FrontendIO(implicit val p: NutCoreConfig) extends Bundle with HasNutCoreCo
   val redirect = Flipped(new RedirectIO)
   val bpFlush = Output(Bool())
   val ipf = Input(Bool())
+  val iaf = Input(Bool())
 }
 
 
@@ -114,6 +115,7 @@ class Frontend_inorder(implicit val p: NutCoreConfig) extends NutCoreModule with
   io.flushVec <> ifu.io.flushVec
   io.bpFlush <> ifu.io.bpFlush
   io.ipf <> ifu.io.ipf
+  io.iaf <> ifu.io.iaf
   io.imem <> ifu.io.imem
 
   Debug("------------------------ FRONTEND:------------------------\n")

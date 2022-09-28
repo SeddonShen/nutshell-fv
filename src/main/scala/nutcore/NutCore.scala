@@ -168,6 +168,7 @@ class NutCore(implicit val p: NutCoreConfig) extends NutCoreModule {
 
     val itlb = EmbeddedTLB(in = frontend.io.imem, mem = dmemXbar.io.in(1), flush = frontend.io.flushVec(0) | frontend.io.bpFlush, csrMMU = backend.io.memMMU.imem, enable = HasITLB)(TLBConfig(name = "itlb", userBits = ICacheUserBundleWidth, totalEntry = 4))
     frontend.io.ipf := itlb.io.ipf
+    frontend.io.iaf := itlb.io.iaf
     io.imem <> Cache(in = itlb.io.out, mmio = mmioXbar.io.in.take(1), flush = Fill(2, frontend.io.flushVec(0) | frontend.io.bpFlush), empty = itlb.io.cacheEmpty, enable = HasIcache)(CacheConfig(ro = true, name = "icache", userBits = ICacheUserBundleWidth))
     
     // dtlb

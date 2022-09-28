@@ -316,6 +316,7 @@ class IFU_inorder extends NutCoreModule with HasResetVector {
     val flushVec = Output(UInt(4.W))
     val bpFlush = Output(Bool())
     val ipf = Input(Bool())
+    val iaf = Input(Bool())
   })
 
   // pc
@@ -388,6 +389,7 @@ class IFU_inorder extends NutCoreModule with HasResetVector {
     io.out.bits.brIdx := x(VAddrBits*2 + 3, VAddrBits*2)
   }
   io.out.bits.exceptionVec(instrPageFault) := io.ipf
+  io.out.bits.exceptionVec(instrAccessFault) := io.iaf
   io.out.valid := io.imem.resp.valid && !io.flushVec(0)
 
   BoringUtils.addSource(BoolStopWatch(io.imem.req.valid, io.imem.resp.fire()), "perfCntCondMimemStall")
