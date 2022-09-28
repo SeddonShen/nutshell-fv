@@ -1,3 +1,3 @@
 [submodule "difftest"]
 	path = difftest
-	url = https://github.com/AugustusWillisWang/difftest.git
+	url = git@github.com:poemonsense/DiffTest.git
