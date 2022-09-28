@@ -147,6 +147,7 @@ class EmbeddedTLB(implicit val tlbConfig: TLBConfig) extends TlbModule with HasT
     val tlbFinish = (tlbExec.io.out.valid && !alreadyOutFinish) || tlbExec.io.pf.isPF()
     BoringUtils.addSource(tlbFinish, "DTLBFINISH")
     BoringUtils.addSource(io.csrMMU.isPF(), "DTLBPF")
+    BoringUtils.addSource(io.csrMMU.isAF, "DTLBAF")
     BoringUtils.addSource(vmEnable, "DTLBENABLE")
   }
 
@@ -199,8 +200,6 @@ class EmbeddedTLBExec(implicit val tlbConfig: TLBConfig) extends TlbModule{
   val ifecth = if(tlbname == "itlb") true.B else false.B
 
   // pf init
-  pf.loadPF := false.B
-  pf.storePF := false.B
   pf.addr := req.addr
 
   // check hit or miss
@@ -209,10 +208,13 @@ class EmbeddedTLBExec(implicit val tlbConfig: TLBConfig) extends TlbModule{
   val miss = io.in.valid && !hitVec.orR
 
   val victimWaymask = if (Ways > 1) (1.U << LFSR64()(log2Up(Ways)-1,0)) else "b1".U
-  val waymask = Mux(hit, hitVec, victimWaymask)
+  val waymask = Mux(hit, hitVec, victimWaymask).asUInt
 
   val loadPF = WireInit(false.B)
   val storePF = WireInit(false.B)
+  val instrAF = WireInit(false.B)
+  val loadAF = WireInit(false.B)
+  val storeAF = WireInit(false.B)
 
   // hit
   val hitMeta = Mux1H(waymask, md).asTypeOf(tlbBundle2).meta.asTypeOf(metaBundle)
@@ -236,8 +238,11 @@ class EmbeddedTLBExec(implicit val tlbConfig: TLBConfig) extends TlbModule{
     BoringUtils.addSink(isAMO, "ISAMO")
   }
 
-  io.pf.loadPF := RegNext(loadPF, init =false.B)
-  io.pf.storePF := RegNext(storePF, init = false.B)
+  io.pf.loadPF := RegNext(loadPF, false.B)
+  io.pf.storePF := RegNext(storePF, false.B)
+//  io.pf.iaf := RegNext(instrAF, false.B)
+  io.pf.laf := RegNext(loadAF, false.B)
+  io.pf.saf := RegNext(storeAF, false.B)
 
   if (tlbname == "itlb") { hitinstrPF := !hitExec  && hit}
   if (tlbname == "dtlb") { 
@@ -380,12 +385,21 @@ class EmbeddedTLBExec(implicit val tlbConfig: TLBConfig) extends TlbModule{
   // io
   io.out.bits := req
   io.out.bits.addr := Mux(hit, maskPaddr(hitData.ppn, req.addr(PAddrBits-1, 0), hitMask), maskPaddr(memRespStore.asTypeOf(pteBundle).ppn, req.addr(PAddrBits-1, 0), missMaskStore))
-  io.out.valid := io.in.valid && Mux(hit && !hitWB, !(io.pf.isPF() || loadPF || storePF), state === s_wait_resp)// && !alreadyOutFire
-  
-  io.in.ready := io.out.ready && (state === s_idle) && !miss && !hitWB && io.mdReady && (!io.pf.isPF() && !loadPF && !storePF)//maybe be optimized
+  if (isITLB) {
+    instrAF := io.in.valid && !isLegalInstrAddr(io.out.bits.addr)
+  }
+  if (isDTLB) {
+    loadAF := io.in.valid && !isLegalLoadAddr(io.out.bits.addr)
+    storeAF := io.in.valid && !isLegalStoreAddr(io.out.bits.addr)
+  }
+  val hasException = io.pf.hasException || loadPF || storePF || loadAF || storeAF
+
+  io.out.valid := io.in.valid && Mux(hit && !hitWB, !hasException, state === s_wait_resp)// && !alreadyOutFire
+  //maybe be optimized
+  io.in.ready := io.out.ready && (state === s_idle) && !miss && !hitWB && io.mdReady && !hasException
 
   io.ipf := Mux(hit, hitinstrPF, missIPF)
-  io.isFinish := io.out.fire() || io.pf.isPF()
+  io.isFinish := io.out.fire() || io.pf.hasException
 
   Debug("In(%d, %d) Out(%d, %d) InAddr:%x OutAddr:%x cmd:%d \n", io.in.valid, io.in.ready, io.out.valid, io.out.ready, req.addr, io.out.bits.addr, req.cmd)
   Debug("isAMO:%d io.Flush:%d needFlush:%d alreadyOutFire:%d isFinish:%d\n",isAMO, io.flush, needFlush, alreadyOutFire, io.isFinish)

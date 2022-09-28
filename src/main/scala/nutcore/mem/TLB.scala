@@ -150,6 +150,9 @@ trait HasTlbConst extends Sv39Const{
   val XLEN: Int
 
   val tlbname = tlbConfig.name
+  def isITLB: Boolean = tlbname == "itlb"
+  def isDTLB: Boolean = tlbname == "dtlb"
+
   val userBits = tlbConfig.userBits
 
   val maskLen = vpn0Len + vpn1Len  // 18

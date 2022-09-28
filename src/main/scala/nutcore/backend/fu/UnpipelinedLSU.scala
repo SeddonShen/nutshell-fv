@@ -29,6 +29,7 @@ class UnpipeLSUIO extends FunctionUnitIO {
   val dmem = new SimpleBusUC(addrBits = VAddrBits)
   val isMMIO = Output(Bool())
   val dtlbPF = Output(Bool()) // TODO: refactor it for new backend
+  val dtlbAF = Output(Bool())
   val loadAddrMisaligned = Output(Bool()) // TODO: refactor it for new backend
   val storeAddrMisaligned = Output(Bool()) // TODO: refactor it for new backend
 }
@@ -47,6 +48,7 @@ class UnpipelinedLSU extends NutCoreModule with HasLSUConst {
     val lsExecUnit = Module(new LSExecUnit)
     lsExecUnit.io.instr := DontCare
     io.dtlbPF := lsExecUnit.io.dtlbPF
+    io.dtlbAF := lsExecUnit.io.dtlbAF
 
     val storeReq = valid & LSUOpType.isStore(func)
     val loadReq  = valid & LSUOpType.isLoad(func)
@@ -82,10 +84,8 @@ class UnpipelinedLSU extends NutCoreModule with HasLSUConst {
 
     // PF signal from TLB
     val dtlbFinish = WireInit(false.B)
-    val dtlbPF = WireInit(false.B)
     val dtlbEnable = WireInit(false.B)
     BoringUtils.addSink(dtlbFinish, "DTLBFINISH")
-    BoringUtils.addSink(dtlbPF, "DTLBPF")
     BoringUtils.addSink(dtlbEnable, "DTLBENABLE")
 
     // LSU control FSM state
@@ -254,7 +254,7 @@ class UnpipelinedLSU extends NutCoreModule with HasLSUConst {
         }
       }
     }
-    when(dtlbPF || io.loadAddrMisaligned || io.storeAddrMisaligned){
+    when(lsExecUnit.io.dtlbAF || lsExecUnit.io.dtlbPF || io.loadAddrMisaligned || io.storeAddrMisaligned){
       state := s_idle
       io.out.valid := true.B
       io.in.ready := true.B
@@ -298,12 +298,12 @@ class LSExecUnit extends NutCoreModule {
   }
 
   def genWmask(addr: UInt, sizeEncode: UInt): UInt = {
-    LookupTree(sizeEncode, List(
+    (LookupTree(sizeEncode, List(
       "b00".U -> 0x1.U, //0001 << addr(2:0)
       "b01".U -> 0x3.U, //0011
       "b10".U -> 0xf.U, //1111
       "b11".U -> 0xff.U //11111111
-    )) << addr(2, 0)
+    )) << addr(2, 0)).asUInt
   }
   def genWdata(data: UInt, sizeEncode: UInt): UInt = {
     LookupTree(sizeEncode, List(
@@ -315,11 +315,11 @@ class LSExecUnit extends NutCoreModule {
   }
 
   def genWmask32(addr: UInt, sizeEncode: UInt): UInt = {
-    LookupTree(sizeEncode, List(
+    (LookupTree(sizeEncode, List(
       "b00".U -> 0x1.U, //0001 << addr(1:0)
       "b01".U -> 0x3.U, //0011
       "b10".U -> 0xf.U  //1111
-    )) << addr(1, 0)
+    )) << addr(1, 0)).asUInt
   }
   def genWdata32(data: UInt, sizeEncode: UInt): UInt = {
     LookupTree(sizeEncode, List(
@@ -339,15 +339,19 @@ class LSExecUnit extends NutCoreModule {
 
   val dtlbFinish = WireInit(false.B)
   val dtlbPF = WireInit(false.B)
+  val dtlbAF = WireInit(false.B)
   val dtlbEnable = WireInit(false.B)
   if (Settings.get("HasDTLB")) {
     BoringUtils.addSink(dtlbFinish, "DTLBFINISH")
     BoringUtils.addSink(dtlbPF, "DTLBPF")
+    BoringUtils.addSink(dtlbAF, "DTLBAF")
     BoringUtils.addSink(dtlbEnable, "DTLBENABLE")
   }
 
   io.dtlbPF := dtlbPF
+  io.dtlbAF := dtlbAF
 
+  val dtlbHasException = dtlbPF || dtlbAF
   switch (state) {
     is (s_idle) { 
       when (dmem.req.fire() && dtlbEnable)  { state := s_wait_tlb  }
@@ -355,8 +359,8 @@ class LSExecUnit extends NutCoreModule {
       //when (dmem.req.fire()) { state := Mux(isStore, s_partialLoad, s_wait_resp) }
     }
     is (s_wait_tlb) {
-      when (dtlbFinish && dtlbPF ) { state := s_idle }
-      when (dtlbFinish && !dtlbPF) { state := s_wait_resp/*Mux(isStore, s_partialLoad, s_wait_resp) */} 
+      when (dtlbFinish && dtlbHasException) { state := s_idle }
+      when (dtlbFinish && !dtlbHasException) { state := s_wait_resp/*Mux(isStore, s_partialLoad, s_wait_resp) */}
     }
     is (s_wait_resp) { when (dmem.resp.fire()) { state := Mux(partialLoad, s_partialLoad, s_idle) } }
     is (s_partialLoad) { state := s_idle }
@@ -379,8 +383,8 @@ class LSExecUnit extends NutCoreModule {
   dmem.req.valid := valid && (state === s_idle) && !io.loadAddrMisaligned && !io.storeAddrMisaligned
   dmem.resp.ready := true.B
 
-  io.out.valid := Mux( dtlbPF && state =/= s_idle || io.loadAddrMisaligned || io.storeAddrMisaligned, true.B, Mux(partialLoad, state === s_partialLoad, dmem.resp.fire() && (state === s_wait_resp)))
-  io.in.ready := (state === s_idle) || dtlbPF
+  io.out.valid := Mux(dtlbHasException && state =/= s_idle || io.loadAddrMisaligned || io.storeAddrMisaligned, true.B, Mux(partialLoad, state === s_partialLoad, dmem.resp.fire() && (state === s_wait_resp)))
+  io.in.ready := (state === s_idle) || dtlbHasException
 
   Debug(io.out.fire(), "[LSU-EXECUNIT] state %x dresp %x dpf %x lm %x sm %x\n", state, dmem.resp.fire(), dtlbPF, io.loadAddrMisaligned, io.storeAddrMisaligned)
 
