@@ -78,6 +78,7 @@ class EXU(implicit val p: NutCoreConfig) extends NutCoreModule {
 
   csr.io.imemMMU <> io.memMMU.imem
   csr.io.dmemMMU <> io.memMMU.dmem
+  csr.io.exception := lsu.io.vaddr
 
   val mou = Module(new MOU)
   // mou does not write register

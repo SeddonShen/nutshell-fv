@@ -203,9 +203,6 @@ class EmbeddedTLBExec(implicit val tlbConfig: TLBConfig) extends TlbModule{
   val satp = io.satp.asTypeOf(satpBundle)
   val ifecth = if(tlbname == "itlb") true.B else false.B
 
-  // pf init
-  pf.addr := req.addr
-
   // check hit or miss
   val hitVec = VecInit(md.map(m => m.asTypeOf(tlbBundle).flag.asTypeOf(flagBundle).v && (m.asTypeOf(tlbBundle).asid === satp.asid) && MaskEQ(m.asTypeOf(tlbBundle).mask, m.asTypeOf(tlbBundle).vpn, vpn.asUInt))).asUInt
   val hit = io.in.valid && hitVec.orR
@@ -406,14 +403,30 @@ class EmbeddedTLBExec(implicit val tlbConfig: TLBConfig) extends TlbModule{
   io.iaf := instrAF
   io.isFinish := io.out.fire() || io.pf.hasException
 
-  Debug("In(%d, %d) Out(%d, %d) InAddr:%x OutAddr:%x cmd:%d \n", io.in.valid, io.in.ready, io.out.valid, io.out.ready, req.addr, io.out.bits.addr, req.cmd)
-  Debug("isAMO:%d io.Flush:%d needFlush:%d alreadyOutFire:%d isFinish:%d\n",isAMO, io.flush, needFlush, alreadyOutFire, io.isFinish)
-  Debug("hit:%d hitWB:%d hitVPN:%x hitFlag:%x hitPPN:%x hitRefillFlag:%x hitWBStore:%x hitCheck:%d hitExec:%d hitLoad:%d hitStore:%d\n", hit, hitWB, hitMeta.vpn, hitFlag.asUInt, hitData.ppn, hitRefillFlag, hitWBStore, hitCheck, hitExec, hitLoad, hitStore)
-  Debug("miss:%d state:%d level:%d raddr:%x memRdata:%x missMask:%x missRefillFlag:%x missMetaRefill:%d\n", miss, state, level, raddr, memRdata.asUInt, missMask, missRefillFlag, missMetaRefill)
-  Debug("meta/data: (0)%x|%b|%x (1)%x|%b|%x (2)%x|%b|%x (3)%x|%b|%x rread:%d\n", md(0).asTypeOf(tlbBundle).vpn, md(0).asTypeOf(tlbBundle).flag, md(0).asTypeOf(tlbBundle).ppn, md(1).asTypeOf(tlbBundle).vpn, md(1).asTypeOf(tlbBundle).flag, md(1).asTypeOf(tlbBundle).ppn, md(2).asTypeOf(tlbBundle).vpn, md(2).asTypeOf(tlbBundle).flag, md(2).asTypeOf(tlbBundle).ppn, md(3).asTypeOf(tlbBundle).vpn, md(3).asTypeOf(tlbBundle).flag, md(3).asTypeOf(tlbBundle).ppn, io.mdReady)
-  Debug("md: wen:%d windex:%x waymask:%x vpn:%x asid:%x mask:%x flag:%x asid:%x ppn:%x pteaddr:%x\n", io.mdWrite.wen, io.mdWrite.windex, io.mdWrite.waymask, io.mdWrite.wdata.asTypeOf(tlbBundle).vpn, io.mdWrite.wdata.asTypeOf(tlbBundle).asid, io.mdWrite.wdata.asTypeOf(tlbBundle).mask, io.mdWrite.wdata.asTypeOf(tlbBundle).flag, io.mdWrite.wdata.asTypeOf(tlbBundle).asid, io.mdWrite.wdata.asTypeOf(tlbBundle).ppn, io.mdWrite.wdata.asTypeOf(tlbBundle).pteaddr)
-  Debug("MemReq(%d, %d) MemResp(%d, %d) addr:%x cmd:%d rdata:%x cmd:%d\n", io.mem.req.valid, io.mem.req.ready, io.mem.resp.valid, io.mem.resp.ready, io.mem.req.bits.addr, io.mem.req.bits.cmd, io.mem.resp.bits.rdata, io.mem.resp.bits.cmd)
-  Debug("io.ipf:%d hitinstrPF:%d missIPF:%d pf.loadPF:%d pf.storePF:%d loadPF:%d storePF:%d\n", io.ipf, hitinstrPF, missIPF, io.pf.loadPF, io.pf.storePF, loadPF, storePF)
+  Debug("In(%d, %d) Out(%d, %d) InAddr:%x OutAddr:%x cmd:%d \n",
+    io.in.valid, io.in.ready, io.out.valid, io.out.ready, req.addr, io.out.bits.addr, req.cmd)
+  Debug("isAMO:%d io.Flush:%d needFlush:%d alreadyOutFire:%d isFinish:%d\n",
+    isAMO, io.flush, needFlush, alreadyOutFire, io.isFinish)
+  Debug("hit:%d hitWB:%d hitVPN:%x hitFlag:%x hitPPN:%x hitRefillFlag:%x hitWBStore:%x hitCheck:%d hitExec:%d hitLoad:%d hitStore:%d\n",
+    hit, hitWB, hitMeta.vpn, hitFlag.asUInt, hitData.ppn, hitRefillFlag, hitWBStore, hitCheck, hitExec, hitLoad, hitStore)
+  Debug("miss:%d state:%d level:%d raddr:%x memRdata:%x missMask:%x missRefillFlag:%x missMetaRefill:%d\n",
+    miss, state, level, raddr, memRdata.asUInt, missMask, missRefillFlag, missMetaRefill)
+  Debug("meta/data: (0)%x|%b|%x (1)%x|%b|%x (2)%x|%b|%x (3)%x|%b|%x rread:%d\n",
+    md(0).asTypeOf(tlbBundle).vpn, md(0).asTypeOf(tlbBundle).flag, md(0).asTypeOf(tlbBundle).ppn,
+    md(1).asTypeOf(tlbBundle).vpn, md(1).asTypeOf(tlbBundle).flag, md(1).asTypeOf(tlbBundle).ppn,
+    md(2).asTypeOf(tlbBundle).vpn, md(2).asTypeOf(tlbBundle).flag, md(2).asTypeOf(tlbBundle).ppn,
+    md(3).asTypeOf(tlbBundle).vpn, md(3).asTypeOf(tlbBundle).flag, md(3).asTypeOf(tlbBundle).ppn,
+    io.mdReady)
+  Debug("md: wen:%d windex:%x waymask:%x vpn:%x asid:%x mask:%x flag:%x asid:%x ppn:%x pteaddr:%x\n",
+    io.mdWrite.wen, io.mdWrite.windex, io.mdWrite.waymask, io.mdWrite.wdata.asTypeOf(tlbBundle).vpn,
+    io.mdWrite.wdata.asTypeOf(tlbBundle).asid, io.mdWrite.wdata.asTypeOf(tlbBundle).mask,
+    io.mdWrite.wdata.asTypeOf(tlbBundle).flag, io.mdWrite.wdata.asTypeOf(tlbBundle).asid,
+    io.mdWrite.wdata.asTypeOf(tlbBundle).ppn, io.mdWrite.wdata.asTypeOf(tlbBundle).pteaddr)
+  Debug("MemReq(%d, %d) MemResp(%d, %d) addr:%x cmd:%d rdata:%x cmd:%d\n",
+    io.mem.req.valid, io.mem.req.ready, io.mem.resp.valid, io.mem.resp.ready,
+    io.mem.req.bits.addr, io.mem.req.bits.cmd, io.mem.resp.bits.rdata, io.mem.resp.bits.cmd)
+  Debug("io.ipf:%d hitinstrPF:%d missIPF:%d pf.loadPF:%d pf.storePF:%d loadPF:%d storePF:%d\n",
+    io.ipf, hitinstrPF, missIPF, io.pf.loadPF, io.pf.storePF, loadPF, storePF)
 }
 
 class EmbeddedTLBEmpty(implicit val tlbConfig: TLBConfig) extends TlbModule {
@@ -430,7 +443,6 @@ class EmbeddedTLB_fake(implicit val tlbConfig: TLBConfig) extends TlbModule with
   io.out <> io.in
   io.csrMMU.loadPF := false.B
   io.csrMMU.storePF := false.B
-  io.csrMMU.addr := io.in.req.bits.addr
   io.ipf := false.B
 }
 
