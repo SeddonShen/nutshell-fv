@@ -33,6 +33,8 @@ class UnpipeLSUIO extends FunctionUnitIO {
   val vaddr = Output(UInt(64.W))
   val loadAddrMisaligned = Output(Bool()) // TODO: refactor it for new backend
   val storeAddrMisaligned = Output(Bool()) // TODO: refactor it for new backend
+  val loadAccessFault = Output(Bool())
+  val storeAccessFault = Output(Bool())
 }
 
 class UnpipelinedLSU extends NutCoreModule with HasLSUConst {
@@ -257,36 +259,41 @@ class UnpipelinedLSU extends NutCoreModule with HasLSUConst {
       }
     }
   }
-  when(lsExecUnit.io.dtlbAF || lsExecUnit.io.dtlbPF || io.loadAddrMisaligned || io.storeAddrMisaligned){
+  val hasException = lsExecUnit.io.dtlbAF || lsExecUnit.io.dtlbPF ||
+    io.loadAddrMisaligned || io.storeAddrMisaligned ||
+    io.loadAccessFault || io.storeAccessFault
+  when (hasException) {
     state := s_idle
     io.out.valid := true.B
     io.in.ready := true.B
   }
 
-  Debug(io.out.fire(), "[LSU-AGU] state %x inv %x inr %x\n", state, io.in.valid, io.in.ready)
-    // controled by FSM 
-    // io.in.ready := lsExecUnit.io.in.ready
-    // lsExecUnit.io.wdata := io.wdata
-    // io.out.valid := lsExecUnit.io.out.valid 
+  Debug(io.out.fire, "[LSU-AGU] state %x inv %x inr %x\n", state, io.in.valid, io.in.ready)
+  // controled by FSM
+  // io.in.ready := lsExecUnit.io.in.ready
+  // lsExecUnit.io.wdata := io.wdata
+  // io.out.valid := lsExecUnit.io.out.valid
 
-    //Set LR/SC bits
-    setLr := io.out.fire() && (lrReq || scReq)
-    setLrVal := lrReq
-    setLrAddr := src1
+  //Set LR/SC bits
+  setLr := io.out.fire && (lrReq || scReq)
+  setLrVal := lrReq
+  setLrAddr := src1
 
-    io.dmem <> lsExecUnit.io.dmem
-    io.out.bits := Mux(scReq, scInvalid, Mux(state === s_amo_s, atomRegReg, lsExecUnit.io.out.bits))
+  io.dmem <> lsExecUnit.io.dmem
+  io.out.bits := Mux(scReq, scInvalid, Mux(state === s_amo_s, atomRegReg, lsExecUnit.io.out.bits))
 
-    val lsuMMIO = WireInit(false.B)
-    BoringUtils.addSink(lsuMMIO, "lsuMMIO")
+  val lsuMMIO = WireInit(false.B)
+  BoringUtils.addSink(lsuMMIO, "lsuMMIO")
 
-    val mmioReg = RegInit(false.B)
-    when (!mmioReg) { mmioReg := lsuMMIO }
-    when (io.out.valid) { mmioReg := false.B }
-    io.isMMIO := mmioReg && io.out.valid
+  val mmioReg = RegInit(false.B)
+  when (!mmioReg) { mmioReg := lsuMMIO }
+  when (io.out.valid) { mmioReg := false.B }
+  io.isMMIO := mmioReg && io.out.valid
 
-    io.loadAddrMisaligned := lsExecUnit.io.loadAddrMisaligned
-    io.storeAddrMisaligned := lsExecUnit.io.storeAddrMisaligned
+  io.loadAddrMisaligned := lsExecUnit.io.loadAddrMisaligned
+  io.storeAddrMisaligned := lsExecUnit.io.storeAddrMisaligned
+  io.loadAccessFault := lsExecUnit.io.loadAccessFault
+  io.storeAccessFault := lsExecUnit.io.storeAccessFault
 }
 
 class LSExecUnit extends NutCoreModule {
@@ -385,13 +392,23 @@ class LSExecUnit extends NutCoreModule {
     wdata = reqWdata,
     wmask = reqWmask,
     cmd = Mux(isStore, SimpleBusCmd.write, SimpleBusCmd.read))
-  dmem.req.valid := valid && (state === s_idle) && !io.loadAddrMisaligned && !io.storeAddrMisaligned
+
+  val hasException = io.loadAddrMisaligned || io.storeAddrMisaligned ||
+    io.loadAccessFault || io.storeAccessFault
+  dmem.req.valid := valid && (state === s_idle) && !hasException
   dmem.resp.ready := true.B
 
-  io.out.valid := Mux(dtlbHasException && state =/= s_idle || io.loadAddrMisaligned || io.storeAddrMisaligned, true.B, Mux(partialLoad, state === s_partialLoad, dmem.resp.fire() && (state === s_wait_resp)))
+  io.out.valid := Mux(dtlbHasException && state =/= s_idle || hasException,
+    true.B,
+    Mux(partialLoad,
+      state === s_partialLoad,
+      dmem.resp.fire && (state === s_wait_resp)
+    )
+  )
   io.in.ready := (state === s_idle) || dtlbHasException
 
-  Debug(io.out.fire(), "[LSU-EXECUNIT] state %x dresp %x dpf %x lm %x sm %x\n", state, dmem.resp.fire(), dtlbPF, io.loadAddrMisaligned, io.storeAddrMisaligned)
+  Debug(io.out.fire, "[LSU-EXECUNIT] state %x dresp %x dpf %x lm %x sm %x\n",
+    state, dmem.resp.fire, dtlbPF, io.loadAddrMisaligned, io.storeAddrMisaligned)
 
   val rdata = dmem.resp.bits.rdata
   val rdataLatch = RegNext(rdata)
@@ -436,6 +453,8 @@ class LSExecUnit extends NutCoreModule {
 
   io.loadAddrMisaligned :=  valid && !isStore && !isAMO && !addrAligned
   io.storeAddrMisaligned := valid && (isStore || isAMO) && !addrAligned
+  io.loadAccessFault := valid && !(isStore || isAMO)&& !isLegalLoadAddr(addr)
+  io.storeAccessFault := valid && (isStore || isAMO) && !isLegalStoreAddr(addr)
 
   Debug(io.loadAddrMisaligned || io.storeAddrMisaligned, "misaligned addr detected\n")
 

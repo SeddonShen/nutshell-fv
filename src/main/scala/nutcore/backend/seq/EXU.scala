@@ -70,6 +70,8 @@ class EXU(implicit val p: NutCoreConfig) extends NutCoreModule {
   csr.io.cfIn := io.in.bits.cf
   csr.io.cfIn.exceptionVec(loadAddrMisaligned) := lsu.io.loadAddrMisaligned
   csr.io.cfIn.exceptionVec(storeAddrMisaligned) := lsu.io.storeAddrMisaligned
+  csr.io.cfIn.exceptionVec(loadAccessFault) := lsu.io.loadAccessFault
+  csr.io.cfIn.exceptionVec(storeAccessFault) := lsu.io.storeAccessFault
   csr.io.instrValid := io.in.valid && !io.flush
   csr.io.isBackendException := false.B
   io.out.bits.intrNO := csr.io.intrNO
@@ -88,8 +90,10 @@ class EXU(implicit val p: NutCoreConfig) extends NutCoreModule {
   
   io.out.bits.decode := DontCare
   (io.out.bits.decode.ctrl, io.in.bits.ctrl) match { case (o, i) =>
-    val hasException = lsuTlbPF || lsu.io.dtlbAF
-    o.rfWen := i.rfWen && (!hasException && !lsu.io.loadAddrMisaligned && !lsu.io.storeAddrMisaligned || !fuValids(FuType.lsu)) && !(csr.io.wenFix && fuValids(FuType.csr))
+    val hasException = lsuTlbPF || lsu.io.dtlbAF ||
+      lsu.io.loadAddrMisaligned || lsu.io.storeAddrMisaligned ||
+      lsu.io.loadAccessFault || lsu.io.storeAccessFault
+    o.rfWen := i.rfWen && (!hasException || !fuValids(FuType.lsu)) && !(csr.io.wenFix && fuValids(FuType.csr))
     o.rfDest := i.rfDest
     o.fuType := i.fuType
   }

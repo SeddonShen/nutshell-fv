@@ -557,8 +557,8 @@ class CSR(implicit val p: NutCoreConfig) extends NutCoreModule with HasCSRConst{
     hasInstrAccessFault := io.cfIn.exceptionVec(instrAccessFault) && valid
     hasLoadPageFault := io.dmemMMU.loadPF
     hasStorePageFault := io.dmemMMU.storePF
-    hasLoadAccessFault := io.dmemMMU.laf
-    hasStoreAccessFault := io.dmemMMU.saf
+    hasLoadAccessFault := io.dmemMMU.laf || io.cfIn.exceptionVec(loadAccessFault)
+    hasStoreAccessFault := io.dmemMMU.saf || io.cfIn.exceptionVec(storeAccessFault)
     hasStoreAddrMisaligned := io.cfIn.exceptionVec(storeAddrMisaligned)
     hasLoadAddrMisaligned := io.cfIn.exceptionVec(loadAddrMisaligned)
     dmemExceptionAddr := io.exception
@@ -582,8 +582,7 @@ class CSR(implicit val p: NutCoreConfig) extends NutCoreModule with HasCSRConst{
       GTimer(), hasInstrPageFault, tval, dmemExceptionAddr, io.cfIn.pc, priviledgeMode)
   }
 
-  when(hasLoadAddrMisaligned || hasStoreAddrMisaligned)
-  {
+  when(hasLoadAddrMisaligned || hasStoreAddrMisaligned) {
     mtval := dmemExceptionAddr
     Debug("[ML] %d: addr %x pc %x priviledgeMode %x\n",
       GTimer(), dmemExceptionAddr, io.cfIn.pc, priviledgeMode)
@@ -667,7 +666,7 @@ class CSR(implicit val p: NutCoreConfig) extends NutCoreModule with HasCSRConst{
   val delegS = deleg(causeNO(3,0)) && (priviledgeMode < ModeM)
   val isPageFault = hasInstrPageFault || hasLoadPageFault || hasStorePageFault
   val isAddrMisAligned = hasLoadAddrMisaligned || hasStoreAddrMisaligned
-  val isAccessFault = hasInstrAccessFault || hasLoadPageFault || hasStoreAccessFault
+  val isAccessFault = hasInstrAccessFault || hasLoadAccessFault || hasStoreAccessFault
   val tvalWen = !(isPageFault || isAddrMisAligned || isAccessFault) || raiseIntr // in nutcore-riscv64, no exception will come together with PF
 
   ret := isMret || isSret || isUret
