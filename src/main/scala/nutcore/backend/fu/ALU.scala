@@ -1,17 +1,17 @@
 /**************************************************************************************
 * Copyright (c) 2020 Institute of Computing Technology, CAS
 * Copyright (c) 2020 University of Chinese Academy of Sciences
-* 
-* NutShell is licensed under Mulan PSL v2.
-* You can use this software according to the terms and conditions of the Mulan PSL v2. 
-* You may obtain a copy of Mulan PSL v2 at:
-*             http://license.coscl.org.cn/MulanPSL2 
-* 
-* THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER 
-* EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY OR 
-* FIT FOR A PARTICULAR PURPOSE.  
 *
-* See the Mulan PSL v2 for more details.  
+* NutShell is licensed under Mulan PSL v2.
+* You can use this software according to the terms and conditions of the Mulan PSL v2.
+* You may obtain a copy of Mulan PSL v2 at:
+*             http://license.coscl.org.cn/MulanPSL2
+*
+* THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER
+* EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY OR
+* FIT FOR A PARTICULAR PURPOSE.
+*
+* See the Mulan PSL v2 for more details.
 ***************************************************************************************/
 
 package nutcore
@@ -117,7 +117,7 @@ class ALU(hasBru: Boolean = false) extends NutCoreModule {
   val isBranch = ALUOpType.isBranch(func)
   val isBru = ALUOpType.isBru(func)
   val taken = LookupTree(ALUOpType.getBranchType(func), branchOpTable) ^ ALUOpType.isBranchInvert(func)
-  val target = Mux(isBranch, SignExt(io.cfIn.pc, XLEN) + io.offset, adderRes(XLEN - 1, 0))
+  val target = Mux(isBranch, SignExt(io.cfIn.pc, XLEN) + io.offset, Cat(adderRes(XLEN - 1, 1), 0.U(1.W)))
   val predictWrong = Mux(!taken && isBranch, io.cfIn.brIdx(0), !io.cfIn.brIdx(0) || (io.redirect.target =/= io.cfIn.pnpc))
   val isRVC = (io.cfIn.instr(1,0) =/= "b11".U)
   assert(io.cfIn.instr(1,0) === "b11".U || isRVC || !valid)
@@ -170,7 +170,7 @@ class ALU(hasBru: Boolean = false) extends NutCoreModule {
 
   if(hasBru){
     BoringUtils.addSource(RegNext(bpuUpdateReq), "bpuUpdateReq")
-  
+
     val right = valid && isBru && !predictWrong
     val wrong = valid && isBru && predictWrong
     BoringUtils.addSource(right && isBranch, "MbpBRight")
