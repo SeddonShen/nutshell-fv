@@ -80,14 +80,25 @@ class EXU(implicit val p: NutCoreConfig) extends NutCoreModule {
 
   csr.io.imemMMU <> io.memMMU.imem
   csr.io.dmemMMU <> io.memMMU.dmem
-  csr.io.exception := lsu.io.vaddr
+  csr.io.dmemExceptionAddr := lsu.io.vaddr
+
+  // When the jump is illegal, we need to access CSR instead of other function units.
+  csr.io.illegalJump.valid   := alu.io.jumpIsIllegal.valid
+  csr.io.illegalJump.bits    := alu.io.jumpIsIllegal.bits
+  alu.io.jumpIsIllegal.ready := io.in.valid && !io.flush
+  when (alu.io.jumpIsIllegal.fire) {
+    fuValids.zipWithIndex.foreach{ case (v, index) =>
+      v := (index == FuType.csr.litValue).B
+    }
+    csr.io.cfIn.exceptionVec(instrAccessFault) := true.B
+  }
 
   val mou = Module(new MOU)
   // mou does not write register
   mou.access(valid = fuValids(FuType.mou), src1 = src1, src2 = src2, func = fuOpType)
   mou.io.cfIn := io.in.bits.cf
   mou.io.out.ready := true.B
-  
+
   io.out.bits.decode := DontCare
   (io.out.bits.decode.ctrl, io.in.bits.ctrl) match { case (o, i) =>
     val hasException = lsuTlbPF || lsu.io.dtlbAF ||
