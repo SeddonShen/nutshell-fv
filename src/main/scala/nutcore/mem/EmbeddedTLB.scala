@@ -175,7 +175,7 @@ class EmbeddedTLB(implicit val tlbConfig: TLBConfig) extends TlbModule with HasT
     }
 
     val hasValid = RegInit(false.B)
-    when (io.in.req.fire) {
+    when (io.in.req.fire && !io.flush) {
       hasValid := true.B
     }.elsewhen (io.in.resp.fire) {
       hasValid := false.B
