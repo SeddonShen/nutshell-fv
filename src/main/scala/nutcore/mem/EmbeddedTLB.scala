@@ -98,10 +98,6 @@ class EmbeddedTLB(implicit val tlbConfig: TLBConfig) extends TlbModule with HasT
   mdTLB.io.rindex := getIndex(io.in.req.bits.addr)
   mdTLB.io.write <> tlbExec.io.mdWrite
 
-  io.ipf := vmEnable && tlbExec.io.ipf
-  // when virtual memory is not enabled, io.in.valid will not be set for ITLB.
-  io.iaf := Mux(vmEnable, tlbExec.io.iaf, !isLegalInstrAddr(tlbExec.io.in.bits.addr))
-
   // meta reset
   val flushTLB = WireInit(false.B)
   BoringUtils.addSink(flushTLB, "MOUFlushTLB")
@@ -120,6 +116,25 @@ class EmbeddedTLB(implicit val tlbConfig: TLBConfig) extends TlbModule with HasT
     update := left.valid && right.ready
   }
 
+  val reqIsLegalInstr = isLegalInstrAddr(io.in.req.bits.addr)
+  val hasInflight = RegInit(false.B)
+  val lastReqAddr = RegEnable(io.in.req.bits.addr, io.in.req.fire && !io.flush)
+  if( tlbname == "itlb") {
+    when (io.flush) {
+      hasInflight := false.B
+    }.elsewhen (io.in.req.fire) {
+      hasInflight := true.B
+    }.elsewhen (io.in.resp.fire && io.in.resp.bits.user.get(VAddrBits - 1, 0) === lastReqAddr) {
+      hasInflight := false.B
+    }
+  }
+  val hasIllegalInflight = RegInit(false.B)
+  when (io.in.resp.fire || io.flush) {
+    hasIllegalInflight := false.B
+  }.elsewhen (io.in.req.fire && !io.flush) {
+    hasIllegalInflight := !reqIsLegalInstr
+  }
+
   tlbEmpty.io.in <> DontCare
   tlbEmpty.io.out.ready := DontCare
   PipelineConnectTLB(io.in.req, tlbExec.io.in, mdUpdate, tlbExec.io.isFinish, io.flush, vmEnable)
@@ -134,8 +149,11 @@ class EmbeddedTLB(implicit val tlbConfig: TLBConfig) extends TlbModule with HasT
       io.in.req.ready := io.out.req.ready
     }
     else {
-      io.out.req.valid := io.in.req.valid && isLegalInstrAddr(io.in.req.bits.addr)
-      io.in.req.ready := io.out.req.ready || !isLegalInstrAddr(io.in.req.bits.addr)
+      io.out.req.valid := io.in.req.valid && reqIsLegalInstr
+      io.in.req.ready := io.out.req.ready
+      when (io.in.req.valid && !reqIsLegalInstr) {
+        io.in.req.ready := !hasInflight
+      }
     }
     io.out.req.bits.addr := io.in.req.bits.addr(PAddrBits-1, 0)
     io.out.req.bits.size := io.in.req.bits.size
@@ -174,19 +192,17 @@ class EmbeddedTLB(implicit val tlbConfig: TLBConfig) extends TlbModule with HasT
       io.in.resp.bits.user.map(_ := tlbExec.io.in.bits.user.getOrElse(0.U))
     }
 
-    val hasValid = RegInit(false.B)
-    when (io.in.req.fire && !io.flush) {
-      hasValid := true.B
-    }.elsewhen (io.in.resp.fire) {
-      hasValid := false.B
-    }
-    when (hasValid && io.iaf) {
+    when (hasIllegalInflight && io.iaf) {
       io.in.resp.valid := true.B
       io.in.resp.bits.rdata := 0.U
       io.in.resp.bits.cmd := SimpleBusCmd.readLast
       io.in.resp.bits.user.map(_ := tlbExec.io.in.bits.user.getOrElse(0.U))
     }
   }
+
+  io.ipf := vmEnable && tlbExec.io.ipf
+  // when virtual memory is not enabled, io.in.valid will not be set for ITLB.
+  io.iaf := Mux(vmEnable, tlbExec.io.iaf, hasIllegalInflight)
 
   Debug("InReq(%d, %d) InResp(%d, %d) OutReq(%d, %d) OutResp(%d, %d) vmEnable:%d mode:%d\n", io.in.req.valid, io.in.req.ready, io.in.resp.valid, io.in.resp.ready, io.out.req.valid, io.out.req.ready, io.out.resp.valid, io.out.resp.ready, vmEnable, io.csrMMU.priviledgeMode)
   Debug("InReq: addr:%x cmd:%d wdata:%x OutReq: addr:%x cmd:%x wdata:%x\n", io.in.req.bits.addr, io.in.req.bits.cmd, io.in.req.bits.wdata, io.out.req.bits.addr, io.out.req.bits.cmd, io.out.req.bits.wdata)
