@@ -83,10 +83,11 @@ class EXU(implicit val p: NutCoreConfig) extends NutCoreModule {
   csr.io.dmemExceptionAddr := lsu.io.vaddr
 
   // When the jump is illegal, we need to access CSR instead of other function units.
-  csr.io.illegalJump.valid   := alu.io.jumpIsIllegal.valid
-  csr.io.illegalJump.bits    := alu.io.jumpIsIllegal.bits
+  csr.io.illegalJump.valid   := alu.io.jumpIsIllegal.valid || csr.io.xretIsIllegal.valid
+  csr.io.illegalJump.bits    := Mux(alu.io.jumpIsIllegal.valid, alu.io.jumpIsIllegal.bits, csr.io.xretIsIllegal.bits)
   alu.io.jumpIsIllegal.ready := io.in.valid && !io.flush
-  when (alu.io.jumpIsIllegal.fire) {
+  csr.io.xretIsIllegal.ready := io.in.valid && !io.flush
+  when (alu.io.jumpIsIllegal.fire || csr.io.xretIsIllegal.fire) {
     fuValids.zipWithIndex.foreach{ case (v, index) =>
       v := (index == FuType.csr.litValue).B
     }

@@ -184,6 +184,7 @@ class CSRIO extends FunctionUnitIO {
   val isBackendException = Input(Bool())
   val illegalJump = Flipped(ValidIO(UInt(64.W)))
   val dmemExceptionAddr = Input(UInt(64.W))
+  val xretIsIllegal = DecoupledIO(UInt(XLEN.W))
   // for differential testing
   val intrNO = Output(UInt(XLEN.W))
   val imemMMU = Flipped(new MMUIO)
@@ -650,11 +651,31 @@ class CSR(implicit val p: NutCoreConfig) extends NutCoreModule with HasCSRConst{
   io.intrNO := Mux(raiseIntr, causeNO, 0.U)
 
   val raiseExceptionIntr = (raiseException || raiseIntr) && io.instrValid
-  val retTarget = Wire(UInt(VAddrBits.W))
-  val trapTarget = Wire(UInt(VAddrBits.W))
+  val retTarget = Wire(UInt(XLEN.W))
+  val trapTarget = Wire(UInt(XLEN.W))
+  val redirectTarget = Mux(resetSatp,
+    SignExt(io.cfIn.pc, XLEN) + 4.U,
+    Mux(raiseExceptionIntr,
+      trapTarget,
+      retTarget
+    )
+  )
   io.redirect.valid := (valid && func === CSROpType.jmp) || raiseExceptionIntr || resetSatp
   io.redirect.rtype := 0.U
-  io.redirect.target := Mux(resetSatp, io.cfIn.pc + 4.U, Mux(raiseExceptionIntr, trapTarget, retTarget))
+  io.redirect.target := redirectTarget
+
+  // XRET instruction may have generated illegal address that is out of the range of virtual address space.
+  // In this case, we use registers to store the exceptional address here since PC in frontend has only VAddrBits.
+  val hasIllegalXRET = RegInit(false.B)
+  val isIllegalXRET = io.redirect.valid && redirectTarget(XLEN - 1, VAddrBits).orR
+  when (isIllegalXRET) {
+    hasIllegalXRET := true.B
+  }.elsewhen (io.xretIsIllegal.fire) {
+    hasIllegalXRET := false.B
+  }
+  io.xretIsIllegal.valid := hasIllegalXRET
+  io.xretIsIllegal.bits := RegEnable(redirectTarget, isIllegalXRET)
+
 
   Debug(raiseExceptionIntr, "excin %b excgen %b", csrExceptionVec.asUInt(), iduExceptionVec.asUInt())
   Debug(raiseExceptionIntr, "int/exc: pc %x int (%d):%x exc: (%d):%x\n",io.cfIn.pc, intrNO, io.cfIn.intrVec.asUInt, exceptionNO, raiseExceptionVec.asUInt)
@@ -673,7 +694,7 @@ class CSR(implicit val p: NutCoreConfig) extends NutCoreModule with HasCSRConst{
   val tvalWen = !(isPageFault || isAddrMisAligned || isAccessFault) || raiseIntr // in nutcore-riscv64, no exception will come together with PF
 
   ret := isMret || isSret || isUret
-  trapTarget := Mux(delegS, stvec, mtvec)(VAddrBits-1, 0)
+  trapTarget := Mux(delegS, stvec, mtvec)
   retTarget := DontCare
   // TODO redirect target
   // val illegalEret = TODO
@@ -688,7 +709,7 @@ class CSR(implicit val p: NutCoreConfig) extends NutCoreModule with HasCSRConst{
     mstatusNew.mpp := ModeU
     mstatus := mstatusNew.asUInt
     lr := false.B
-    retTarget := mepc(VAddrBits-1, 0)
+    retTarget := mepc
   }
 
   when (valid && isSret) {
@@ -701,7 +722,7 @@ class CSR(implicit val p: NutCoreConfig) extends NutCoreModule with HasCSRConst{
     mstatusNew.spp := ModeU
     mstatus := mstatusNew.asUInt
     lr := false.B
-    retTarget := sepc(VAddrBits-1, 0)
+    retTarget := sepc
   }
 
   when (valid && isUret) {
@@ -712,7 +733,7 @@ class CSR(implicit val p: NutCoreConfig) extends NutCoreModule with HasCSRConst{
     priviledgeMode := ModeU
     mstatusNew.pie.u := true.B
     mstatus := mstatusNew.asUInt
-    retTarget := uepc(VAddrBits-1, 0)
+    retTarget := uepc
   }
 
   when (raiseExceptionIntr) {
