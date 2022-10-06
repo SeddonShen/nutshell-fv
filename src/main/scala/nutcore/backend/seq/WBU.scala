@@ -38,7 +38,7 @@ class WBU(implicit val p: NutCoreConfig) extends NutCoreModule{
   io.redirect := io.in.bits.decode.cf.redirect
   io.redirect.valid := io.in.bits.decode.cf.redirect.valid && io.in.valid
   
-  val runahead_redirect = DifftestModule(new DiffRunaheadRedirectEventIO)
+  val runahead_redirect = DifftestModule(new DiffRunaheadRedirectEvent)
   runahead_redirect.clock := clock
   runahead_redirect.coreid := 0.U
   runahead_redirect.valid := io.redirect.valid
@@ -57,7 +57,7 @@ class WBU(implicit val p: NutCoreConfig) extends NutCoreModule{
   BoringUtils.addSource(falseWire, "perfCntCondMultiCommit")
   
   if (!p.FPGAPlatform) {
-    val difftest_commit = DifftestModule(new DiffInstrCommitIO)
+    val difftest_commit = DifftestModule(new DiffInstrCommit)
     difftest_commit.clock    := clock
     difftest_commit.coreid   := 0.U
     difftest_commit.index    := 0.U
@@ -69,20 +69,21 @@ class WBU(implicit val p: NutCoreConfig) extends NutCoreModule{
     difftest_commit.isRVC    := RegNext(io.in.bits.decode.cf.instr(1,0)=/="b11".U)
     difftest_commit.rfwen    := RegNext(io.wb.rfWen && io.wb.rfDest =/= 0.U) // && valid(ringBufferTail)(i) && commited(ringBufferTail)(i)
     difftest_commit.fpwen    := false.B
-    // difftest.wdata    := RegNext(wb.rfData)
+    difftest_commit.special  := 0.U
     difftest_commit.wdest    := RegNext(io.wb.rfDest)
     difftest_commit.wpdest   := RegNext(io.wb.rfDest)
 
-    val difftest_wb = DifftestModule(new DiffIntWritebackIO)
+    val difftest_wb = DifftestModule(new DiffIntWriteback)
     difftest_wb.clock := clock
     difftest_wb.coreid := 0.U
     difftest_wb.valid := RegNext(io.wb.rfWen && io.wb.rfDest =/= 0.U)
     difftest_wb.dest := RegNext(io.wb.rfDest)
     difftest_wb.data := RegNext(io.wb.rfData)
 
-    val runahead_commit = DifftestModule(new DiffRunaheadCommitEventIO)
+    val runahead_commit = DifftestModule(new DiffRunaheadCommitEvent)
     runahead_commit.clock := clock
     runahead_commit.coreid := 0.U
+    runahead_commit.index := 0.U
     runahead_commit.valid := RegNext(io.in.valid && io.in.bits.decode.cf.isBranch)
     runahead_commit.pc    := RegNext(SignExt(io.in.bits.decode.cf.pc, AddrBits))
   } else {

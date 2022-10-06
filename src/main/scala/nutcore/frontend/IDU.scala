@@ -157,21 +157,8 @@ class IDU(implicit val p: NutCoreConfig) extends NutCoreModule with HasInstrType
     decoder2.io.in.valid := false.B
   }
 
-  val checkpoint_id = RegInit(0.U(64.W))
-
-  // debug runahead
-  val runahead = DifftestModule(new DiffRunaheadEventIO)
-  runahead.clock         := clock
-  runahead.coreid        := 0.U
-  runahead.valid         := io.out(0).fire()
-  runahead.branch        := decoder1.io.isBranch
-  runahead.pc            := io.out(0).bits.cf.pc
-  runahead.checkpoint_id := checkpoint_id
-  when(runahead.valid && runahead.branch) {
-    checkpoint_id := checkpoint_id + 1.U // allocate a new checkpoint_id
-  }
   io.out(0).bits.cf.isBranch := decoder1.io.isBranch
-  io.out(0).bits.cf.runahead_checkpoint_id := checkpoint_id
+  io.out(0).bits.cf.runahead_checkpoint_id := 0.U
   // when(runahead.io.valid) {
   //   printf("fire pc %x branch %x inst %x\n", runahead.io.pc, runahead.io.branch, io.out(0).bits.cf.instr)
   // }

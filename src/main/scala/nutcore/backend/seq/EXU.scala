@@ -155,7 +155,7 @@ class EXU(implicit val p: NutCoreConfig) extends NutCoreModule {
     BoringUtils.addSink(instrCnt, "simInstrCnt")
     BoringUtils.addSource(nutcoretrap, "nutcoretrap")
 
-    val difftest = DifftestModule(new DiffTrapEventIO)
+    val difftest = DifftestModule(new DiffTrapEvent)
     difftest.clock    := clock
     difftest.coreid   := 0.U // TODO: nutshell does not support coreid auto config
     difftest.valid    := nutcoretrap
@@ -163,5 +163,6 @@ class EXU(implicit val p: NutCoreConfig) extends NutCoreModule {
     difftest.pc       := io.in.bits.cf.pc
     difftest.cycleCnt := cycleCnt
     difftest.instrCnt := instrCnt
+    difftest.hasWFI   := false.B
   }
 }
