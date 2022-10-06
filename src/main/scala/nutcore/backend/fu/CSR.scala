@@ -906,35 +906,35 @@ class CSR(implicit val p: NutCoreConfig) extends NutCoreModule with HasCSRConst{
     }
 
     // for differential testing
-    val difftest = Module(new DifftestCSRState)
-    difftest.io.clock := clock
-    difftest.io.coreid := 0.U // TODO
-    difftest.io.priviledgeMode := RegNext(priviledgeMode)
-    difftest.io.mstatus := RegNext(mstatus)
-    difftest.io.sstatus := RegNext(mstatus & sstatusRmask)
-    difftest.io.mepc := RegNext(mepc)
-    difftest.io.sepc := RegNext(sepc)
-    difftest.io.mtval:= RegNext(mtval)
-    difftest.io.stval:= RegNext(stval)
-    difftest.io.mtvec := RegNext(mtvec)
-    difftest.io.stvec := RegNext(stvec)
-    difftest.io.mcause := RegNext(mcause)
-    difftest.io.scause := RegNext(scause)
-    difftest.io.satp := RegNext(satp)
-    difftest.io.mip := RegNext(mipReg)
-    difftest.io.mie := RegNext(mie)
-    difftest.io.mscratch := RegNext(mscratch)
-    difftest.io.sscratch := RegNext(sscratch)
-    difftest.io.mideleg := RegNext(mideleg)
-    difftest.io.medeleg := RegNext(medeleg)
+    val difftest = DifftestModule(new DiffCSRStateIO)
+    difftest.clock := clock
+    difftest.coreid := 0.U // TODO
+    difftest.priviledgeMode := RegNext(priviledgeMode)
+    difftest.mstatus := RegNext(mstatus)
+    difftest.sstatus := RegNext(mstatus & sstatusRmask)
+    difftest.mepc := RegNext(mepc)
+    difftest.sepc := RegNext(sepc)
+    difftest.mtval:= RegNext(mtval)
+    difftest.stval:= RegNext(stval)
+    difftest.mtvec := RegNext(mtvec)
+    difftest.stvec := RegNext(stvec)
+    difftest.mcause := RegNext(mcause)
+    difftest.scause := RegNext(scause)
+    difftest.satp := RegNext(satp)
+    difftest.mip := RegNext(mipReg)
+    difftest.mie := RegNext(mie)
+    difftest.mscratch := RegNext(mscratch)
+    difftest.sscratch := RegNext(sscratch)
+    difftest.mideleg := RegNext(mideleg)
+    difftest.medeleg := RegNext(medeleg)
 
-    val difftestArchEvent = Module(new DifftestArchEvent)
-    difftestArchEvent.io.clock := clock
-    difftestArchEvent.io.coreid := 0.U // TODO
-    difftestArchEvent.io.intrNO := RegNext(RegNext(Mux(raiseIntr && io.instrValid && valid, intrNO, 0.U)))
-    difftestArchEvent.io.cause := RegNext(RegNext(Mux(raiseException && io.instrValid && valid, exceptionNO, 0.U)))
-    difftestArchEvent.io.exceptionPC := RegNext(RegNext(imemExceptionAddr))
-    difftestArchEvent.io.exceptionInst := RegNext(RegNext(io.cfIn.instr))
+    val difftestArchEvent = DifftestModule(new DiffArchEventIO)
+    difftestArchEvent.clock := clock
+    difftestArchEvent.coreid := 0.U // TODO
+    difftestArchEvent.intrNO := RegNext(RegNext(Mux(raiseIntr && io.instrValid && valid, intrNO, 0.U)))
+    difftestArchEvent.cause := RegNext(RegNext(Mux(raiseException && io.instrValid && valid, exceptionNO, 0.U)))
+    difftestArchEvent.exceptionPC := RegNext(RegNext(imemExceptionAddr))
+    difftestArchEvent.exceptionInst := RegNext(RegNext(io.cfIn.instr))
 
   } else {
     if (!p.FPGAPlatform) {
