@@ -200,7 +200,7 @@ class EmbeddedTLB(implicit val tlbConfig: TLBConfig) extends TlbModule with HasT
     }
   }
 
-  io.ipf := vmEnable && tlbExec.io.ipf
+  io.ipf := vmEnable && tlbExec.io.ipf && io.cacheEmpty
   // when virtual memory is not enabled, io.in.valid will not be set for ITLB.
   io.iaf := Mux(vmEnable, tlbExec.io.iaf, hasIllegalInflight)
 
