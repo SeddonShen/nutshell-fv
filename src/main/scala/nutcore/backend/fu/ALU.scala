@@ -1,17 +1,17 @@
 /**************************************************************************************
 * Copyright (c) 2020 Institute of Computing Technology, CAS
 * Copyright (c) 2020 University of Chinese Academy of Sciences
-* 
-* NutShell is licensed under Mulan PSL v2.
-* You can use this software according to the terms and conditions of the Mulan PSL v2. 
-* You may obtain a copy of Mulan PSL v2 at:
-*             http://license.coscl.org.cn/MulanPSL2 
-* 
-* THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER 
-* EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY OR 
-* FIT FOR A PARTICULAR PURPOSE.  
 *
-* See the Mulan PSL v2 for more details.  
+* NutShell is licensed under Mulan PSL v2.
+* You can use this software according to the terms and conditions of the Mulan PSL v2.
+* You may obtain a copy of Mulan PSL v2 at:
+*             http://license.coscl.org.cn/MulanPSL2
+*
+* THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER
+* EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY OR
+* FIT FOR A PARTICULAR PURPOSE.
+*
+* See the Mulan PSL v2 for more details.
 ***************************************************************************************/
 
 package nutcore
@@ -70,6 +70,7 @@ class ALUIO extends FunctionUnitIO {
   val cfIn = Flipped(new CtrlFlowIO)
   val redirect = new RedirectIO
   val offset = Input(UInt(XLEN.W))
+  val jumpIsIllegal = DecoupledIO(UInt(XLEN.W))
 }
 
 class ALU(hasBru: Boolean = false) extends NutCoreModule {
@@ -116,7 +117,7 @@ class ALU(hasBru: Boolean = false) extends NutCoreModule {
   val isBranch = ALUOpType.isBranch(func)
   val isBru = ALUOpType.isBru(func)
   val taken = LookupTree(ALUOpType.getBranchType(func), branchOpTable) ^ ALUOpType.isBranchInvert(func)
-  val target = Mux(isBranch, io.cfIn.pc + io.offset, adderRes)(VAddrBits-1,0)
+  val target = Mux(isBranch, SignExt(io.cfIn.pc, XLEN) + io.offset, Cat(adderRes(XLEN - 1, 1), 0.U(1.W)))
   val predictWrong = Mux(!taken && isBranch, io.cfIn.brIdx(0), !io.cfIn.brIdx(0) || (io.redirect.target =/= io.cfIn.pnpc))
   val isRVC = (io.cfIn.instr(1,0) =/= "b11".U)
   assert(io.cfIn.instr(1,0) === "b11".U || isRVC || !valid)
@@ -130,6 +131,18 @@ class ALU(hasBru: Boolean = false) extends NutCoreModule {
   // may be can be moved to ISU to calculate pc + 4
   // this is actually for jal and jalr to write pc + 4/2 to rd
   io.out.bits := Mux(isBru, Mux(!isRVC, SignExt(io.cfIn.pc, AddrBits) + 4.U, SignExt(io.cfIn.pc, AddrBits) + 2.U), aluRes)
+
+  // Jump instruction may have generated illegal address that is out of the range of virtual address space.
+  // In this case, we use registers to store the exceptional address here since PC in frontend has only VAddrBits.
+  val hasIllegalJumpAddr = RegInit(false.B)
+  val isIllegalJumpAddr = io.redirect.valid && !isBranch && target(XLEN - 1, VAddrBits).orR
+  when (isIllegalJumpAddr) {
+    hasIllegalJumpAddr := true.B
+  }.elsewhen (io.jumpIsIllegal.fire) {
+    hasIllegalJumpAddr := false.B
+  }
+  io.jumpIsIllegal.valid := hasIllegalJumpAddr
+  io.jumpIsIllegal.bits := RegEnable(target, isIllegalJumpAddr)
 
   Debug(valid && isBru, "tgt %x, valid:%d, npc: %x, pdwrong: %x\n", io.redirect.target, io.redirect.valid, io.cfIn.pnpc, predictWrong)
   Debug(valid && isBru, "taken:%d addrRes:%x src1:%x src2:%x func:%x\n", taken, adderRes, src1, src2, func)
@@ -157,7 +170,7 @@ class ALU(hasBru: Boolean = false) extends NutCoreModule {
 
   if(hasBru){
     BoringUtils.addSource(RegNext(bpuUpdateReq), "bpuUpdateReq")
-  
+
     val right = valid && isBru && !predictWrong
     val wrong = valid && isBru && predictWrong
     BoringUtils.addSource(right && isBranch, "MbpBRight")

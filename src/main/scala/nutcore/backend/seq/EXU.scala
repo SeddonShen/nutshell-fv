@@ -1,17 +1,17 @@
 /**************************************************************************************
 * Copyright (c) 2020 Institute of Computing Technology, CAS
 * Copyright (c) 2020 University of Chinese Academy of Sciences
-* 
-* NutShell is licensed under Mulan PSL v2.
-* You can use this software according to the terms and conditions of the Mulan PSL v2. 
-* You may obtain a copy of Mulan PSL v2 at:
-*             http://license.coscl.org.cn/MulanPSL2 
-* 
-* THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER 
-* EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY OR 
-* FIT FOR A PARTICULAR PURPOSE.  
 *
-* See the Mulan PSL v2 for more details.  
+* NutShell is licensed under Mulan PSL v2.
+* You can use this software according to the terms and conditions of the Mulan PSL v2.
+* You may obtain a copy of Mulan PSL v2 at:
+*             http://license.coscl.org.cn/MulanPSL2
+*
+* THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER
+* EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY OR
+* FIT FOR A PARTICULAR PURPOSE.
+*
+* See the Mulan PSL v2 for more details.
 ***************************************************************************************/
 
 package nutcore
@@ -70,6 +70,8 @@ class EXU(implicit val p: NutCoreConfig) extends NutCoreModule {
   csr.io.cfIn := io.in.bits.cf
   csr.io.cfIn.exceptionVec(loadAddrMisaligned) := lsu.io.loadAddrMisaligned
   csr.io.cfIn.exceptionVec(storeAddrMisaligned) := lsu.io.storeAddrMisaligned
+  csr.io.cfIn.exceptionVec(loadAccessFault) := lsu.io.loadAccessFault
+  csr.io.cfIn.exceptionVec(storeAccessFault) := lsu.io.storeAccessFault
   csr.io.instrValid := io.in.valid && !io.flush
   csr.io.isBackendException := false.B
   io.out.bits.intrNO := csr.io.intrNO
@@ -78,17 +80,31 @@ class EXU(implicit val p: NutCoreConfig) extends NutCoreModule {
 
   csr.io.imemMMU <> io.memMMU.imem
   csr.io.dmemMMU <> io.memMMU.dmem
+  csr.io.dmemExceptionAddr := lsu.io.vaddr
+
+  // When the jump is illegal, we need to access CSR instead of other function units.
+  csr.io.illegalJump.valid   := alu.io.jumpIsIllegal.valid
+  csr.io.illegalJump.bits    := alu.io.jumpIsIllegal.bits
+  alu.io.jumpIsIllegal.ready := io.in.valid && !io.flush
+  when (alu.io.jumpIsIllegal.fire) {
+    fuValids.zipWithIndex.foreach{ case (v, index) =>
+      v := (index == FuType.csr.litValue).B
+    }
+    csr.io.cfIn.exceptionVec(instrAccessFault) := true.B
+  }
 
   val mou = Module(new MOU)
   // mou does not write register
   mou.access(valid = fuValids(FuType.mou), src1 = src1, src2 = src2, func = fuOpType)
   mou.io.cfIn := io.in.bits.cf
   mou.io.out.ready := true.B
-  
+
   io.out.bits.decode := DontCare
   (io.out.bits.decode.ctrl, io.in.bits.ctrl) match { case (o, i) =>
-    val hasException = lsuTlbPF || lsu.io.dtlbAF
-    o.rfWen := i.rfWen && (!hasException && !lsu.io.loadAddrMisaligned && !lsu.io.storeAddrMisaligned || !fuValids(FuType.lsu)) && !(csr.io.wenFix && fuValids(FuType.csr))
+    val hasException = lsuTlbPF || lsu.io.dtlbAF ||
+      lsu.io.loadAddrMisaligned || lsu.io.storeAddrMisaligned ||
+      lsu.io.loadAccessFault || lsu.io.storeAccessFault
+    o.rfWen := i.rfWen && (!hasException || !fuValids(FuType.lsu)) && !(csr.io.wenFix && fuValids(FuType.csr))
     o.rfDest := i.rfDest
     o.fuType := i.fuType
   }
@@ -96,10 +112,10 @@ class EXU(implicit val p: NutCoreConfig) extends NutCoreModule {
   io.out.bits.decode.cf.instr := io.in.bits.cf.instr
   io.out.bits.decode.cf.runahead_checkpoint_id := io.in.bits.cf.runahead_checkpoint_id
   io.out.bits.decode.cf.isBranch := io.in.bits.cf.isBranch
-  io.out.bits.decode.cf.redirect <>
+  io.out.bits.decode.cf.redirect :=
     Mux(mou.io.redirect.valid, mou.io.redirect,
       Mux(csr.io.redirect.valid, csr.io.redirect, alu.io.redirect))
-  
+
   Debug(mou.io.redirect.valid || csr.io.redirect.valid || alu.io.redirect.valid, "[REDIRECT] mou %x csr %x alu %x \n", mou.io.redirect.valid, csr.io.redirect.valid, alu.io.redirect.valid)
   Debug(mou.io.redirect.valid || csr.io.redirect.valid || alu.io.redirect.valid, "[REDIRECT] flush: %d mou %x csr %x alu %x\n", io.flush, mou.io.redirect.target, csr.io.redirect.target, alu.io.redirect.target)
 
@@ -133,7 +149,7 @@ class EXU(implicit val p: NutCoreConfig) extends NutCoreModule {
   if (!p.FPGAPlatform) {
     val cycleCnt = WireInit(0.U(64.W))
     val instrCnt = WireInit(0.U(64.W))
-    val nutcoretrap = io.in.bits.ctrl.isNutCoreTrap && io.in.valid
+    val nutcoretrap = io.in.bits.ctrl.isNutCoreTrap && io.in.valid && !io.flush
 
     BoringUtils.addSink(cycleCnt, "simCycleCnt")
     BoringUtils.addSink(instrCnt, "simInstrCnt")

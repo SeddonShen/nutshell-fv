@@ -49,13 +49,19 @@ trait HasNutCoreParameter {
   val EnableMultiCyclePredictor = false // false unless a customized condition branch predictor is included
   val EnableOutOfOrderMemAccess = false // enable out of order mem access will improve OoO backend's performance
   val instrAddressSet = Seq(
-    (0x10000000L, 0x1fffffffL),
     (0x80000000L, 0xffffffffL)
   )
   val loadAddressSet = Seq(
-    (0x10000000L, 0x1fffffffL),
-    (0x30000000L, 0x3006ffffL),
-    (0x31000000L, 0xffffffffL)
+    (0x38000000L, 0x38000000L + 0x00010000L), // CLINT
+    (0x3c000000L, 0x3c000000L + 0x04000000L), // PLIC
+    (0x40600000L, 0x40600000L + 0x10L), // uart
+    (0x50000000L, 0x50000000L + 0x400000L), // vmem
+    (0x40001000L, 0x40001000L + 0x8L),  // vga ctrl
+    (0x40000000L, 0x40000000L + 0x1000L),  // flash
+    (0x40002000L, 0x40002000L + 0x1000L), // dummy sdcard
+    (0x40004000L, 0x40004000L + 0x1000L), // meipGen
+    (0x40003000L, 0x40003000L + 0x1000L),  // dma
+    (0x80000000L, 0xffffffffL)
   )
   val storeAddressSet = loadAddressSet
   def isLegalAddress(addr: UInt, set: Seq[(Long, Long)]): Bool = {
@@ -166,15 +172,39 @@ class NutCore(implicit val p: NutCoreConfig) extends NutCoreModule {
     val mmioXbar = Module(new SimpleBusCrossbarNto1(2))
     val dmemXbar = Module(new SimpleBusCrossbarNto1(4))
 
-    val itlb = EmbeddedTLB(in = frontend.io.imem, mem = dmemXbar.io.in(1), flush = frontend.io.flushVec(0) | frontend.io.bpFlush, csrMMU = backend.io.memMMU.imem, enable = HasITLB)(TLBConfig(name = "itlb", userBits = ICacheUserBundleWidth, totalEntry = 4))
+    val itlb = EmbeddedTLB(
+      in = frontend.io.imem,
+      mem = dmemXbar.io.in(1),
+      flush = frontend.io.flushVec(0) | frontend.io.bpFlush,
+      csrMMU = backend.io.memMMU.imem,
+      enable = HasITLB
+    )(TLBConfig(name = "itlb", userBits = ICacheUserBundleWidth, totalEntry = 4))
     frontend.io.ipf := itlb.io.ipf
     frontend.io.iaf := itlb.io.iaf
-    io.imem <> Cache(in = itlb.io.out, mmio = mmioXbar.io.in.take(1), flush = Fill(2, frontend.io.flushVec(0) | frontend.io.bpFlush), empty = itlb.io.cacheEmpty, enable = HasIcache)(CacheConfig(ro = true, name = "icache", userBits = ICacheUserBundleWidth))
+    io.imem <> Cache(
+      in = itlb.io.out,
+      mmio = mmioXbar.io.in.take(1),
+      flush = Fill(2, frontend.io.flushVec(0) | frontend.io.bpFlush),
+      empty = itlb.io.cacheEmpty,
+      enable = HasIcache
+    )(CacheConfig(ro = true, name = "icache", userBits = ICacheUserBundleWidth))
     
     // dtlb
-    val dtlb = EmbeddedTLB(in = backend.io.dmem, mem = dmemXbar.io.in(2), flush = false.B, csrMMU = backend.io.memMMU.dmem, enable = HasDTLB)(TLBConfig(name = "dtlb", totalEntry = 64))
+    val dtlb = EmbeddedTLB(
+      in = backend.io.dmem,
+      mem = dmemXbar.io.in(2),
+      flush = false.B,
+      csrMMU = backend.io.memMMU.dmem,
+      enable = HasDTLB
+    )(TLBConfig(name = "dtlb", totalEntry = 64))
     dmemXbar.io.in(0) <> dtlb.io.out
-    io.dmem <> Cache(in = dmemXbar.io.out, mmio = mmioXbar.io.in.drop(1), flush = "b00".U, empty = dtlb.io.cacheEmpty, enable = HasDcache)(CacheConfig(ro = false, name = "dcache"))
+    io.dmem <> Cache(
+      in = dmemXbar.io.out,
+      mmio = mmioXbar.io.in.drop(1),
+      flush = "b00".U,
+      empty = dtlb.io.cacheEmpty,
+      enable = HasDcache
+    )(CacheConfig(ro = false, name = "dcache"))
 
     // redirect
     frontend.io.redirect <> backend.io.redirect

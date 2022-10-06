@@ -182,6 +182,8 @@ class CSRIO extends FunctionUnitIO {
   // for exception check
   val instrValid = Input(Bool())
   val isBackendException = Input(Bool())
+  val illegalJump = Flipped(ValidIO(UInt(64.W)))
+  val dmemExceptionAddr = Input(UInt(64.W))
   // for differential testing
   val intrNO = Output(UInt(XLEN.W))
   val imemMMU = Flipped(new MMUIO)
@@ -541,8 +543,8 @@ class CSR(implicit val p: NutCoreConfig) extends NutCoreModule with HasCSRConst{
   val hasStoreAddrMisaligned = Wire(Bool())
   val hasLoadAddrMisaligned = Wire(Bool())
 
-  val dmemPagefaultAddr = Wire(UInt(VAddrBits.W))
-  val dmemAddrMisalignedAddr = Wire(UInt(VAddrBits.W))
+  val imemExceptionAddr = Wire(UInt(64.W))
+  val dmemExceptionAddr = Wire(UInt(64.W))
   val lsuAddr = WireInit(0.U(64.W))
   BoringUtils.addSink(lsuAddr, "LSUADDR")
   if(EnableOutOfOrderExec){
@@ -551,39 +553,42 @@ class CSR(implicit val p: NutCoreConfig) extends NutCoreModule with HasCSRConst{
     hasStorePageFault      := valid && io.cfIn.exceptionVec(storePageFault)
     hasStoreAddrMisaligned := valid && io.cfIn.exceptionVec(storeAddrMisaligned)
     hasLoadAddrMisaligned  := valid && io.cfIn.exceptionVec(loadAddrMisaligned)
-    dmemPagefaultAddr := src1 // LSU -> wbresult -> prf -> beUop.data.src1
-    dmemAddrMisalignedAddr := src1
+    dmemExceptionAddr := src1 // LSU -> wbresult -> prf -> beUop.data.src1
   }else{
     hasInstrPageFault := io.cfIn.exceptionVec(instrPageFault) && valid
     hasInstrAccessFault := io.cfIn.exceptionVec(instrAccessFault) && valid
     hasLoadPageFault := io.dmemMMU.loadPF
     hasStorePageFault := io.dmemMMU.storePF
-    hasLoadAccessFault := io.dmemMMU.laf
-    hasStoreAccessFault := io.dmemMMU.saf
+    hasLoadAccessFault := io.dmemMMU.laf || io.cfIn.exceptionVec(loadAccessFault)
+    hasStoreAccessFault := io.dmemMMU.saf || io.cfIn.exceptionVec(storeAccessFault)
     hasStoreAddrMisaligned := io.cfIn.exceptionVec(storeAddrMisaligned)
     hasLoadAddrMisaligned := io.cfIn.exceptionVec(loadAddrMisaligned)
-    dmemPagefaultAddr := io.dmemMMU.addr
-    dmemAddrMisalignedAddr := lsuAddr
+    dmemExceptionAddr := io.dmemExceptionAddr
+    imemExceptionAddr := Mux(io.illegalJump.valid, io.illegalJump.bits, SignExt(io.cfIn.pc, XLEN))
   }
 
   when (hasInstrAccessFault || hasLoadAccessFault || hasStoreAccessFault) {
-    mtval := Mux(hasInstrAccessFault, SignExt(io.cfIn.pc(VAddrBits-1,0), XLEN), SignExt(dmemPagefaultAddr, XLEN))
+    mtval := Mux(hasInstrAccessFault, imemExceptionAddr, dmemExceptionAddr)
   }
 
   when(hasInstrPageFault || hasLoadPageFault || hasStorePageFault){
-    val tval = Mux(hasInstrPageFault, Mux(io.cfIn.crossPageIPFFix, SignExt((io.cfIn.pc + 2.U)(VAddrBits-1,0), XLEN), SignExt(io.cfIn.pc(VAddrBits-1,0), XLEN)), SignExt(dmemPagefaultAddr, XLEN))
+    val tval = Mux(hasInstrPageFault,
+      Mux(io.cfIn.crossPageIPFFix, SignExt(io.cfIn.pc + 2.U, XLEN), imemExceptionAddr),
+      dmemExceptionAddr
+    )
     when(priviledgeMode === ModeM){
       mtval := tval
     }.otherwise{
       stval := tval
     }
-    Debug("[PF] %d: ipf %b tval %x := addr %x pc %x priviledgeMode %x\n", GTimer(), hasInstrPageFault, tval, SignExt(dmemPagefaultAddr, XLEN), io.cfIn.pc, priviledgeMode)
+    Debug("[PF] %d: ipf %b tval %x := addr %x pc %x priviledgeMode %x\n",
+      GTimer(), hasInstrPageFault, tval, dmemExceptionAddr, io.cfIn.pc, priviledgeMode)
   }
 
-  when(hasLoadAddrMisaligned || hasStoreAddrMisaligned)
-  {
-    mtval := SignExt(dmemAddrMisalignedAddr, XLEN)
-    Debug("[ML] %d: addr %x pc %x priviledgeMode %x\n", GTimer(), SignExt(dmemAddrMisalignedAddr, XLEN), io.cfIn.pc, priviledgeMode)
+  when(hasLoadAddrMisaligned || hasStoreAddrMisaligned) {
+    mtval := dmemExceptionAddr
+    Debug("[ML] %d: addr %x pc %x priviledgeMode %x\n",
+      GTimer(), dmemExceptionAddr, io.cfIn.pc, priviledgeMode)
   }
 
   // Exception and Intr
@@ -664,7 +669,7 @@ class CSR(implicit val p: NutCoreConfig) extends NutCoreModule with HasCSRConst{
   val delegS = deleg(causeNO(3,0)) && (priviledgeMode < ModeM)
   val isPageFault = hasInstrPageFault || hasLoadPageFault || hasStorePageFault
   val isAddrMisAligned = hasLoadAddrMisaligned || hasStoreAddrMisaligned
-  val isAccessFault = hasInstrAccessFault || hasLoadPageFault || hasStoreAccessFault
+  val isAccessFault = hasInstrAccessFault || hasLoadAccessFault || hasStoreAccessFault
   val tvalWen = !(isPageFault || isAddrMisAligned || isAccessFault) || raiseIntr // in nutcore-riscv64, no exception will come together with PF
 
   ret := isMret || isSret || isUret
@@ -716,7 +721,7 @@ class CSR(implicit val p: NutCoreConfig) extends NutCoreModule with HasCSRConst{
 
     when (delegS) {
       scause := causeNO
-      sepc := SignExt(io.cfIn.pc, XLEN)
+      sepc := imemExceptionAddr
       mstatusNew.spp := priviledgeMode
       mstatusNew.pie.s := mstatusOld.ie.s
       mstatusNew.ie.s := false.B
@@ -726,7 +731,7 @@ class CSR(implicit val p: NutCoreConfig) extends NutCoreModule with HasCSRConst{
       // trapTarget := stvec(VAddrBits-1. 0)
     }.otherwise {
       mcause := causeNO
-      mepc := SignExt(io.cfIn.pc, XLEN)
+      mepc := imemExceptionAddr
       mstatusNew.mpp := priviledgeMode
       mstatusNew.pie.m := mstatusOld.ie.m
       mstatusNew.ie.m := false.B
@@ -932,7 +937,7 @@ class CSR(implicit val p: NutCoreConfig) extends NutCoreModule with HasCSRConst{
     difftestArchEvent.io.coreid := 0.U // TODO
     difftestArchEvent.io.intrNO := RegNext(RegNext(Mux(raiseIntr && io.instrValid && valid, intrNO, 0.U)))
     difftestArchEvent.io.cause := RegNext(RegNext(Mux(raiseException && io.instrValid && valid, exceptionNO, 0.U)))
-    difftestArchEvent.io.exceptionPC := RegNext(RegNext(SignExt(io.cfIn.pc, XLEN)))
+    difftestArchEvent.io.exceptionPC := RegNext(RegNext(imemExceptionAddr))
     difftestArchEvent.io.exceptionInst := RegNext(RegNext(io.cfIn.instr))
 
   } else {

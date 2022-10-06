@@ -394,7 +394,6 @@ sealed class TLBExec(implicit val tlbConfig: TLBConfig) extends TlbModule{
   // pf init
   pf.loadPF := false.B
   pf.storePF := false.B
-  pf.addr := req.addr
 
   // check hit or miss
   val hitVec = VecInit(md.map(m => m.asTypeOf(tlbBundle).flag.asTypeOf(flagBundle).v && (m.asTypeOf(tlbBundle).asid === satp.asid) && MaskEQ(m.asTypeOf(tlbBundle).mask, m.asTypeOf(tlbBundle).vpn, vpn.asUInt))).asUInt
@@ -402,7 +401,7 @@ sealed class TLBExec(implicit val tlbConfig: TLBConfig) extends TlbModule{
   val miss = io.in.valid && !hitVec.orR
 
   val victimWaymask = if (Ways > 1) (1.U << LFSR64()(log2Up(Ways)-1,0)) else "b1".U
-  val waymask = Mux(hit, hitVec, victimWaymask)
+  val waymask = Mux(hit, hitVec, victimWaymask).asUInt
 
   val loadPF = WireInit(false.B)
   val storePF = WireInit(false.B)
