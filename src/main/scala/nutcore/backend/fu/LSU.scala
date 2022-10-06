@@ -1,17 +1,17 @@
 /**************************************************************************************
 * Copyright (c) 2020 Institute of Computing Technology, CAS
 * Copyright (c) 2020 University of Chinese Academy of Sciences
-* 
-* NutShell is licensed under Mulan PSL v2.
-* You can use this software according to the terms and conditions of the Mulan PSL v2. 
-* You may obtain a copy of Mulan PSL v2 at:
-*             http://license.coscl.org.cn/MulanPSL2 
-* 
-* THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER 
-* EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY OR 
-* FIT FOR A PARTICULAR PURPOSE.  
 *
-* See the Mulan PSL v2 for more details.  
+* NutShell is licensed under Mulan PSL v2.
+* You can use this software according to the terms and conditions of the Mulan PSL v2.
+* You may obtain a copy of Mulan PSL v2 at:
+*             http://license.coscl.org.cn/MulanPSL2
+*
+* THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER
+* EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY OR
+* FIT FOR A PARTICULAR PURPOSE.
+*
+* See the Mulan PSL v2 for more details.
 ***************************************************************************************/
 
 package nutcore
@@ -49,7 +49,7 @@ object LSUOpType { //TODO: refactor LSU fuop
   def amomax  = "b0110000".U
   def amominu = "b0110001".U
   def amomaxu = "b0110010".U
-  
+
   def isAdd(func: UInt) = func(6)
   def isAtom(func: UInt): Bool = func(5)
   def isStore(func: UInt): Bool = func(3)
@@ -181,7 +181,7 @@ class AtomALU extends NutCoreModule {
   val src1 = io.src1
   val src2 = io.src2
   val func = io.func
-  val isAdderSub = !LSUOpType.isAdd(func) 
+  val isAdderSub = !LSUOpType.isAdd(func)
   val adderRes = (src1 +& (src2 ^ Fill(XLEN, isAdderSub))) + isAdderSub
   val xorRes = src1 ^ src2
   val sltu = !adderRes(XLEN)
@@ -269,7 +269,7 @@ class LSU extends NutCoreModule with HasLSUConst {
   val dtlbEnable = WireInit(false.B)
   BoringUtils.addSink(dtlbFinish, "DTLBFINISH")
   BoringUtils.addSink(dtlbPF, "DTLBPF")
-  BoringUtils.addSink(dtlbEnable, "DTLBENABLE")
+  BoringUtils.addSink(dtlbEnable, "vmEnable")
 
   val addr = Mux(atomReq || lrReq || scReq, src1, src1 + src2)
   val data = io.uopIn.decode.data.src2
@@ -284,7 +284,7 @@ class LSU extends NutCoreModule with HasLSUConst {
     (storeReq || amoReq || scReq && !scInvalid), // needStore
     (loadReq || amoReq || lrReq) // needLoad
   )
-  // If a LSU inst triggers an exception, it has no difference compared with other normal insts 
+  // If a LSU inst triggers an exception, it has no difference compared with other normal insts
   // except it will be canceled by redirect bit
 
   // L/S Queue
@@ -354,7 +354,7 @@ class LSU extends NutCoreModule with HasLSUConst {
     }
     moq(i).brMask := updateBrMask(moq(i).brMask) // fixit, AS WELL AS STORE BRMASK !!!!!
   })
-  
+
   // write data to moq
   val vaddrIsMMIO = AddressSpace.isMMIO(addr)
   val paddrIsMMIO = AddressSpace.isMMIO(io.dtlb.resp.bits.rdata)
@@ -390,11 +390,11 @@ class LSU extends NutCoreModule with HasLSUConst {
     moq(moqDmemPtr).finished := true.B
     // store inst does not need to access mem until it is commited
   }
-  
+
   Debug("[LSU MOQ] pc           id vaddr        paddr        func    op      data             mmio   valid   finished    exc     mask\n")
   for(i <- 0 until moqSize){
     Debug(
-      "[LSU MOQ] 0x%x %x 0x%x 0x%x %b %b %x mmio:%b valid:%b finished:%b%b exc:%b%b%b%b %x %d", 
+      "[LSU MOQ] 0x%x %x 0x%x 0x%x %b %b %x mmio:%b valid:%b finished:%b%b exc:%b%b%b%b %x %d",
       moq(i).pc, moq(i).prfidx, moq(i).vaddr, moq(i).paddr, moq(i).func, moq(i).op, moq(i).data, moq(i).isMMIO, moq(i).valid, moq(i).tlbfin, moq(i).finished, moq(i).loadPageFault, moq(i).storePageFault, moq(i).loadAddrMisaligned, moq(i).storeAddrMisaligned, moq(i).brMask, i.U
     )
     Debug(false, moq(i).valid, " valid")
@@ -416,7 +416,7 @@ class LSU extends NutCoreModule with HasLSUConst {
   val storeQueue = Reg(Vec(storeQueueSize, new StoreQueueEntry))
   // Store Queue contains store insts that have finished TLB lookup stage
   // There are 2 types of store insts in this queue: ROB-commited (retired) / CDB-commited (commited)
-  // CDB-commited insts have already gotten their paddr from TLB, 
+  // CDB-commited insts have already gotten their paddr from TLB,
   // but whether these insts will be canceled is still pending for judgement.
   // ROB-commited insts are those insts already retired from ROB
   // val storeAlloc   = RegInit(0.U((log2Up(storeQueueSize)+1).W))
@@ -426,10 +426,10 @@ class LSU extends NutCoreModule with HasLSUConst {
   val haveUnconfirmedStore = storeHeadPtr =/= storeCmtPtr
   val haveUnrequiredStore = storeCmtPtr =/= 0.U && storeQueue(0).valid
   val haveUnfinishedStore = 0.U =/= storeHeadPtr
-  val storeQueueFull = storeHeadPtr === storeQueueSize.U 
+  val storeQueueFull = storeHeadPtr === storeQueueSize.U
   io.haveUnfinishedStore := haveUnfinishedStore
   Debug(storeCmtPtr > storeHeadPtr, "retired store should be less than valid store\n")
-    
+
   // assert(storeCmtPtr <= storeHeadPtr, "retired store should be less than valid store")
 
   // alloc a slot when a store tlb request is sent
@@ -448,7 +448,7 @@ class LSU extends NutCoreModule with HasLSUConst {
   val storeQueueSkipInst = !storeQueue(0).valid && storeHeadPtr =/= 0.U
   // when dmem try to commit to store queue, i.e. dmem report a write op is finished, dequeue
   // FIXIT: in current case, we can always assume a store is succeed after req.fire()
-  // therefore storeQueueDequeue is not necessary 
+  // therefore storeQueueDequeue is not necessary
   val storeQueueDequeue = storeQueueReqsend || storeQueueSkipInst // dmem.resp.fire() && MEMOpID.commitToSTQ(opResp) && !MEMOpID.needLoad(opResp) //&& MEMOpID.needStore(opResp)
   when(storeQueueDequeue){
     // storeQueue := Cat(storeQueue(0), storeQueue(storeQueueSize-1, 1))
@@ -463,7 +463,7 @@ class LSU extends NutCoreModule with HasLSUConst {
   when((storeQueueDequeue && !storeQueueSkipInst) && !storeQueueConfirm){nextStoreCmtPtr := storeCmtPtr - 1.U}
   when(!(storeQueueDequeue && !storeQueueSkipInst) && storeQueueConfirm){nextStoreCmtPtr := storeCmtPtr + 1.U}
   storeCmtPtr := nextStoreCmtPtr
-  
+
   // move storeHeadPtr ptr
   when(storeQueueDequeue && !(storeQueueEnqueue || storeQueueAMOEnqueue)){storeHeadPtr := storeHeadPtr - 1.U}
   when(!storeQueueDequeue && (storeQueueEnqueue || storeQueueAMOEnqueue)){storeHeadPtr := storeHeadPtr + 1.U}
@@ -529,7 +529,7 @@ class LSU extends NutCoreModule with HasLSUConst {
   Debug("[LSU STQ] pc           id vaddr        paddr        func    op      data             mmio v mask \n")
   for(i <- 0 to (storeQueueSize - 1)){
     Debug(
-      "[LSU STQ] 0x%x %x 0x%x 0x%x %b %b %x mmio:%b %b %x %d", 
+      "[LSU STQ] 0x%x %x 0x%x 0x%x %b %b %x mmio:%b %b %x %d",
       storeQueue(i).pc, storeQueue(i).prfidx, storeQueue(i).vaddr, storeQueue(i).paddr, storeQueue(i).func, storeQueue(i).op, storeQueue(i).data, storeQueue(i).isMMIO, storeQueue(i).valid, storeQueue(i).brMask, i.U
     )
     // Debug(storeAlloc === i.U, " alloc")
@@ -549,7 +549,7 @@ class LSU extends NutCoreModule with HasLSUConst {
   //-------------------------------------------------------
 
   // Exception check, fix mop
-  // Misalign exception generation 
+  // Misalign exception generation
   val addrAligned = LookupTree(size, List(
     "b00".U   -> true.B,              //b
     "b01".U   -> (addr(0) === 0.U),   //h
@@ -576,9 +576,9 @@ class LSU extends NutCoreModule with HasLSUConst {
   val pfType = Mux(havePendingDtlbReq, LSUOpType.needMemWrite(moq(moqDtlbPtr).func), LSUOpType.needMemWrite(func)) // 0: load pf 1: store pf
 
   io.dtlb.req.bits.apply(
-    addr = Mux(havePendingDtlbReq, moq(moqDtlbPtr).vaddr(VAddrBits-1, 0), addr(VAddrBits-1, 0)), 
-    size = 0.U, wdata = 0.U, wmask = 0.U, 
-    cmd = pfType, 
+    addr = Mux(havePendingDtlbReq, moq(moqDtlbPtr).vaddr(VAddrBits-1, 0), addr(VAddrBits-1, 0)),
+    size = 0.U, wdata = 0.U, wmask = 0.U,
+    cmd = pfType,
     user = dtlbUserBundle.asUInt
   )
   io.dtlb.req.valid := havePendingDtlbReq || io.in.fire() && dtlbEnable
@@ -613,7 +613,7 @@ class LSU extends NutCoreModule with HasLSUConst {
   // * commitToVPU
   // * reqLOAD
   // * reqSTORE
-  // * reqAtomALU  
+  // * reqAtomALU
 
   // Mem req srcs are distingushed by attribute:
   // doNothing   0000: bubble: just go throught the pipeline and do nothing
@@ -649,13 +649,13 @@ class LSU extends NutCoreModule with HasLSUConst {
 
   // loadDMemReq
   val loadDMemReqSrcPick = Mux(havePendingDmemReq, moqDmemPtr, io.dtlb.resp.bits.user.get.asTypeOf(new DCacheUserBundle).moqidx)
-  val loadDTlbRespReqValid = false.B //dtlbEnable && io.dtlb.resp.fire() && MEMOpID.needLoad(dtlbRespUser.op) && !dmemReqFrommoq && 
+  val loadDTlbRespReqValid = false.B //dtlbEnable && io.dtlb.resp.fire() && MEMOpID.needLoad(dtlbRespUser.op) && !dmemReqFrommoq &&
     //!loadPF && !storePF && !moq(tlbRespmoqidx).loadAddrMisaligned && !moq(tlbRespmoqidx).storeAddrMisaligned &&
     //!bruFlush && moq(tlbRespmoqidx).valid && tlbRespmoqidx === moqDmemPtr
   val loadSideUserBundle = Wire(new DCacheUserBundle)
 
   val atomData = Wire(UInt(XLEN.W))
-  
+
   loadSideUserBundle.moqidx := loadDMemReqSrcPick
   loadSideUserBundle.op := moq(loadDMemReqSrcPick).op
 
@@ -694,7 +694,7 @@ class LSU extends NutCoreModule with HasLSUConst {
   // }
 
   // Send request to dmem
-  
+
   def genWmask(addr: UInt, sizeEncode: UInt): UInt = {
     LookupTree(sizeEncode, List(
       "b00".U -> 0x1.U, //0001 << addr(2:0)
@@ -703,7 +703,7 @@ class LSU extends NutCoreModule with HasLSUConst {
       "b11".U -> 0xff.U //11111111
     )) << addr(2, 0)
   }
-  
+
   def genWdata(data: UInt, sizeEncode: UInt): UInt = {
     LookupTree(sizeEncode, List(
       "b00".U -> Fill(8, data(7, 0)),
@@ -745,8 +745,8 @@ class LSU extends NutCoreModule with HasLSUConst {
   }))
   val forwardWmask = List.tabulate(storeQueueSize)(i => storeQueue(i).wmask & Fill(XLEN/8, forwardVec(i))).foldRight(0.U)((sum, i) => sum | i)
   for(j <- (0 to (XLEN/8 - 1))){
-    dataBackVec(j) := MuxCase( 
-      // default = dmem.resp.bits.rdata(8*(j+1)-1, 8*j), 
+    dataBackVec(j) := MuxCase(
+      // default = dmem.resp.bits.rdata(8*(j+1)-1, 8*j),
       default = 0.U,
       mapping = List.tabulate(storeQueueSize)(i => {
         (forwardVec(i) && storeQueue(i).wmask(j), storeQueue(i).data(8*(j+1)-1, 8*j))
@@ -756,7 +756,7 @@ class LSU extends NutCoreModule with HasLSUConst {
 
   //                    Load Address Lookup Table
   //                      "Load Address Queue"
-  // 
+  //
   // Store addr backward match
   // TODO: opt timing
   val robLoadInstVec = WireInit(0.U(robSize.W))
@@ -775,7 +775,7 @@ class LSU extends NutCoreModule with HasLSUConst {
     ldDataMask(reqRobidx) := genWmask(io.dmem.req.bits.addr, moq(loadDMemReqSrcPick).size)
   }
   Debug(io.dmem.req.fire() && MEMOpID.needLoad(opReq), "[LSU] add load to MOQ pc:%x stmask:%x\n",io.dmem.req.bits.addr(PAddrBits-1, 3), moq(reqRobidx).stMask)
-  
+
   val storeNeedRollback = (0 until robSize).map(i =>{
     ldAddr(i) === Mux(havePendingStqEnq, moq(moqDmemPtr).paddr(PAddrBits-1, 3), io.dtlb.resp.bits.rdata(PAddrBits-1, 3)) &&
     (ldDataMask(i) & genWmask(moq(storeQueueEnqSrcPick).vaddr, moq(moqDmemPtr).size)).orR &&
@@ -786,10 +786,10 @@ class LSU extends NutCoreModule with HasLSUConst {
     moq(storeQueueEnqSrcPick).rollback := true.B
     // printf("%d: Rollback detected at pc %x vaddr %x\n", GTimer(), moq(storeQueueEnqSrcPick).pc, moq(storeQueueEnqSrcPick).vaddr)
   }
-  
+
   // Debug(storeQueueEnqueue, "store backward pc %x lvec %b rob %x addrtag %x\n",moq(storeQueueEnqSrcPick).pc, robLoadInstVec, moq(storeQueueEnqSrcPick).prfidx(prfAddrWidth-1,1), Mux(havePendingStqEnq, moq(moqDmemPtr).paddr(PAddrBits-1, 3), io.dtlb.resp.bits.rdata(PAddrBits-1, 3)))
   // (0 until robSize).map(i =>Debug(storeQueueEnqueue, "%x %x %x "+i+"\n",ldAddr(i),ldStmask(i),robLoadInstVec(i)))
-  
+
   // write back to load queue
   when(dmem.req.fire() && MEMOpID.needLoad(opReq)){
     moq(moqDmemPtr).fdata := dataBack

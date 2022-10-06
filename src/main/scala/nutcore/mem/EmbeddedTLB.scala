@@ -116,7 +116,7 @@ class EmbeddedTLB(implicit val tlbConfig: TLBConfig) extends TlbModule with HasT
     update := left.valid && right.ready
   }
 
-  val reqIsLegalInstr = isLegalInstrAddr(io.in.req.bits.addr)
+  val reqIsLegalInstr = vmEnable || isLegalInstrAddr(io.in.req.bits.addr)
   val hasInflight = RegInit(false.B)
   val lastReqAddr = RegEnable(io.in.req.bits.addr, io.in.req.fire && !io.flush)
   if( tlbname == "itlb") {
@@ -175,7 +175,7 @@ class EmbeddedTLB(implicit val tlbConfig: TLBConfig) extends TlbModule with HasT
     BoringUtils.addSource(tlbFinish, "DTLBFINISH")
     BoringUtils.addSource(io.csrMMU.isPF(), "DTLBPF")
     BoringUtils.addSource(io.csrMMU.isAF, "DTLBAF")
-    BoringUtils.addSource(vmEnable, "DTLBENABLE")
+    BoringUtils.addSource(vmEnable, "vmEnable")
   }
 
   // instruction page fault
@@ -421,11 +421,11 @@ class EmbeddedTLBExec(implicit val tlbConfig: TLBConfig) extends TlbModule{
   io.out.bits := req
   io.out.bits.addr := Mux(hit, maskPaddr(hitData.ppn, req.addr(PAddrBits-1, 0), hitMask), maskPaddr(memRespStore.asTypeOf(pteBundle).ppn, req.addr(PAddrBits-1, 0), missMaskStore))
   if (isITLB) {
-    instrAF := io.in.valid && !isLegalInstrAddr(io.out.bits.addr)
+    instrAF := io.in.valid && !isLegalInstrAddr(io.out.bits.addr) && ((hit && !hitWB) || state === s_wait_resp)
   }
   if (isDTLB) {
-    loadAF := io.in.valid && !isLegalLoadAddr(io.out.bits.addr)
-    storeAF := io.in.valid && !isLegalStoreAddr(io.out.bits.addr)
+    loadAF := io.in.valid && !isLegalLoadAddr(io.out.bits.addr) && ((hit && !hitWB) || state === s_wait_resp)
+    storeAF := io.in.valid && !isLegalStoreAddr(io.out.bits.addr) && ((hit && !hitWB) || state === s_wait_resp)
   }
   val hasException = io.pf.hasException || loadPF || storePF || loadAF || storeAF
 

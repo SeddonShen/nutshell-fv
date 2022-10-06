@@ -1,17 +1,17 @@
 /**************************************************************************************
 * Copyright (c) 2020 Institute of Computing Technology, CAS
 * Copyright (c) 2020 University of Chinese Academy of Sciences
-* 
-* NutShell is licensed under Mulan PSL v2.
-* You can use this software according to the terms and conditions of the Mulan PSL v2. 
-* You may obtain a copy of Mulan PSL v2 at:
-*             http://license.coscl.org.cn/MulanPSL2 
-* 
-* THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER 
-* EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY OR 
-* FIT FOR A PARTICULAR PURPOSE.  
 *
-* See the Mulan PSL v2 for more details.  
+* NutShell is licensed under Mulan PSL v2.
+* You can use this software according to the terms and conditions of the Mulan PSL v2.
+* You may obtain a copy of Mulan PSL v2 at:
+*             http://license.coscl.org.cn/MulanPSL2
+*
+* THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER
+* EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY OR
+* FIT FOR A PARTICULAR PURPOSE.
+*
+* See the Mulan PSL v2 for more details.
 ***************************************************************************************/
 
 package nutcore
@@ -36,7 +36,7 @@ sealed trait Sv39Const extends HasNutCoreParameter{
   val vpn1Len = 9
   val vpn0Len = 9
   val vpnLen = vpn2Len + vpn1Len + vpn0Len
-  
+
   //val paddrLen = PAddrBits
   //val vaddrLen = VAddrBits
   val satpLen = XLEN
@@ -47,7 +47,7 @@ sealed trait Sv39Const extends HasNutCoreParameter{
   val ptEntryLen = XLEN
   val satpResLen = XLEN - ppnLen - satpModeLen - asidLen
   //val vaResLen = 25 // unused
-  //val paResLen = 25 // unused 
+  //val paResLen = 25 // unused
   val pteResLen = XLEN - ppnLen - 2 - flagLen
 
   def vaBundle = new Bundle {
@@ -88,7 +88,7 @@ sealed trait Sv39Const extends HasNutCoreParameter{
   def paddrApply(ppn: UInt, vpnn: UInt):UInt = {
     Cat(Cat(ppn, vpnn), 0.U(3.W))
   }
-  
+
   def pteBundle = new Bundle {
     val reserved  = UInt(pteResLen.W)
     val ppn  = UInt(ppnLen.W)
@@ -156,8 +156,8 @@ trait HasTlbConst extends Sv39Const{
   val userBits = tlbConfig.userBits
 
   val maskLen = vpn0Len + vpn1Len  // 18
-  val metaLen = vpnLen + asidLen + maskLen + flagLen // 27 + 16 + 18 + 8 = 69, is asid necessary 
-  val dataLen = ppnLen + PAddrBits // 
+  val metaLen = vpnLen + asidLen + maskLen + flagLen // 27 + 16 + 18 + 8 = 69, is asid necessary
+  val dataLen = ppnLen + PAddrBits //
   val tlbLen = metaLen + dataLen
   val Ways = tlbConfig.ways
   val TotalEntry = tlbConfig.totalEntry
@@ -212,7 +212,7 @@ sealed class TLBMDWriteBundle (val IndexBits: Int, val Ways: Int, val tlbLen: In
   val windex = Output(UInt(IndexBits.W))
   val waymask = Output(UInt(Ways.W))
   val wdata = Output(UInt(tlbLen.W))
-  
+
   def apply(wen: UInt, windex: UInt, waymask: UInt, vpn: UInt, asid: UInt, mask: UInt, flag: UInt, ppn: UInt, pteaddr: UInt) {
     this.wen := wen
     this.windex := windex
@@ -277,7 +277,7 @@ class TLB(implicit val tlbConfig: TLBConfig) extends TlbModule{
   val tlbExec = Module(new TLBExec)
   val mdTLB = Module(new TLBMD)
   val mdUpdate = Wire(Bool())
-  
+
   tlbExec.io.flush := io.flush
   tlbExec.io.satp := satp
   tlbExec.io.mem <> io.mem
@@ -286,9 +286,9 @@ class TLB(implicit val tlbConfig: TLBConfig) extends TlbModule{
   tlbExec.io.mdReady := mdTLB.io.ready
   mdTLB.io.rindex := getIndex(io.in.req.bits.addr)
   mdTLB.io.write <> tlbExec.io.mdWrite
-  
+
   io.ipf := false.B
-  
+
   // meta reset
   val flushTLB = WireInit(false.B)
   BoringUtils.addSink(flushTLB, "MOUFlushTLB")
@@ -339,7 +339,7 @@ class TLB(implicit val tlbConfig: TLBConfig) extends TlbModule{
     val tlbFinish = (tlbExec.io.out.valid && !alreadyOutFinish) || tlbExec.io.pf.isPF()
     BoringUtils.addSource(tlbFinish, "DTLBFINISH")
     BoringUtils.addSource(io.csrMMU.isPF(), "DTLBPF")
-    BoringUtils.addSource(vmEnable, "DTLBENABLE")
+    BoringUtils.addSource(vmEnable, "vmEnable")
   }
 
   // instruction page fault
@@ -383,7 +383,7 @@ sealed class TLBExec(implicit val tlbConfig: TLBConfig) extends TlbModule{
   val io = IO(new TLBExecIO)
 
   val md = io.md//RegEnable(mdTLB.io.tlbmd, io.in.ready)
-  
+
   // lazy renaming
   val req = io.in.bits
   val vpn = req.addr.asTypeOf(vaBundle2).vpn.asTypeOf(vpnBundle)
@@ -427,7 +427,7 @@ sealed class TLBExec(implicit val tlbConfig: TLBConfig) extends TlbModule{
   io.pf.storePF := storePF //RegNext(storePF, init = false.B)
 
   if (tlbname == "itlb") { hitinstrPF := !hitExec  && hit}
-  if (tlbname == "dtlb") { 
+  if (tlbname == "dtlb") {
     loadPF := !hitLoad && req.isRead() && hit
     storePF := (!hitStore && req.isWrite() && hit)
     // AMO pagefault type will be fixed in LSU
@@ -437,7 +437,7 @@ sealed class TLBExec(implicit val tlbConfig: TLBConfig) extends TlbModule{
   val s_idle :: s_memReadReq :: s_memReadResp :: s_write_pte :: s_wait_resp :: s_miss_slpf :: Nil = Enum(6)
   val state = RegInit(s_idle)
   val level = RegInit(Level.U(log2Up(Level).W))
-  
+
   val memRespStore = Reg(UInt(XLEN.W))
   val missMask = WireInit("h3ffff".U(maskLen.W))
   val missMaskStore = Reg(UInt(maskLen.W))
@@ -477,14 +477,14 @@ sealed class TLBExec(implicit val tlbConfig: TLBConfig) extends TlbModule{
       }
     }
 
-    is (s_memReadReq) { 
+    is (s_memReadReq) {
       when (isFlush) {
         state := s_idle
         needFlush := false.B
       }.elsewhen (io.mem.req.fire()) { state := s_memReadResp}
     }
 
-    is (s_memReadResp) { 
+    is (s_memReadResp) {
       val missflag = memRdata.flag.asTypeOf(flagBundle)
       when (io.mem.resp.fire()) {
         when (isFlush) {
@@ -494,10 +494,10 @@ sealed class TLBExec(implicit val tlbConfig: TLBConfig) extends TlbModule{
           when(!missflag.v || (!missflag.r && missflag.w)) { //TODO: fix needflush
             if(tlbname == "itlb") { state := s_wait_resp } else { state := s_miss_slpf }
             if(tlbname == "itlb") { missIPF := true.B }
-            if(tlbname == "dtlb") { 
+            if(tlbname == "dtlb") {
               loadPF := req.isRead()
-              storePF := req.isWrite() 
-            }  
+              storePF := req.isWrite()
+            }
             Debug("tlbException!!! ")
             Debug(false, p" req:${req}  Memreq:${io.mem.req}  MemResp:${io.mem.resp}")
             Debug(false, " level:%d",level)
@@ -514,16 +514,16 @@ sealed class TLBExec(implicit val tlbConfig: TLBConfig) extends TlbModule{
           val updateAD = if (Settings.get("FPGAPlatform")) !missflag.a || (!missflag.d && req.isWrite()) else false.B
           val updateData = Cat( 0.U(56.W), req.isWrite(), 1.U(1.W), 0.U(6.W) )
           missRefillFlag := Cat(req.isWrite(), 1.U(1.W), 0.U(6.W)) | missflag.asUInt
-          memRespStore := io.mem.resp.bits.rdata | updateData 
+          memRespStore := io.mem.resp.bits.rdata | updateData
           if(tlbname == "itlb") {
             when (!permExec) { missIPF := true.B ; state := s_wait_resp}
-            .otherwise { 
+            .otherwise {
               state := Mux(updateAD, s_write_pte, s_wait_resp)
               missMetaRefill := true.B
             }
           }
           if(tlbname == "dtlb") {
-            when((!permLoad && req.isRead()) || (!permStore && req.isWrite())) { 
+            when((!permLoad && req.isRead()) || (!permStore && req.isWrite())) {
               state := s_miss_slpf
               loadPF := req.isRead()
               storePF := req.isWrite()
@@ -546,7 +546,7 @@ sealed class TLBExec(implicit val tlbConfig: TLBConfig) extends TlbModule{
       }.elsewhen (io.mem.req.fire()) { state := s_wait_resp }
     }
 
-    is (s_wait_resp) { 
+    is (s_wait_resp) {
       if(tlbname == "itlb"){
         when (io.out.fire() || ioFlush || alreadyOutFire){
           state := s_idle
@@ -573,17 +573,17 @@ sealed class TLBExec(implicit val tlbConfig: TLBConfig) extends TlbModule{
   io.mem.resp.ready := true.B
 
   // tlb refill
-  io.mdWrite.apply(wen = RegNext((missMetaRefill && !isFlush) || (hitWB && state === s_idle && !isFlush), init = false.B), 
-    windex = RegNext(getIndex(req.addr)), waymask = RegNext(waymask), vpn = RegNext(vpn.asUInt), 
-    asid = RegNext(Mux(hitWB, hitMeta.asid, satp.asid)), mask = RegNext(Mux(hitWB, hitMask, missMask)), 
-    flag = RegNext(Mux(hitWB, hitRefillFlag, missRefillFlag)), ppn = RegNext(Mux(hitWB, hitData.ppn, memRdata.ppn)), 
+  io.mdWrite.apply(wen = RegNext((missMetaRefill && !isFlush) || (hitWB && state === s_idle && !isFlush), init = false.B),
+    windex = RegNext(getIndex(req.addr)), waymask = RegNext(waymask), vpn = RegNext(vpn.asUInt),
+    asid = RegNext(Mux(hitWB, hitMeta.asid, satp.asid)), mask = RegNext(Mux(hitWB, hitMask, missMask)),
+    flag = RegNext(Mux(hitWB, hitRefillFlag, missRefillFlag)), ppn = RegNext(Mux(hitWB, hitData.ppn, memRdata.ppn)),
     pteaddr = RegNext((Mux(hitWB, hitData.pteaddr, raddr))))
 
   // io
   io.out.bits := req
   io.out.bits.addr := Mux(hit, maskPaddr(hitData.ppn, req.addr(PAddrBits-1, 0), hitMask), maskPaddr(memRespStore.asTypeOf(pteBundle).ppn, req.addr(PAddrBits-1, 0), missMaskStore))
   io.out.valid := io.in.valid && Mux(hit && !hitWB, !(io.pf.isPF() || loadPF || storePF), state === s_wait_resp)// && !alreadyOutFire
-  
+
   io.in.ready := io.out.ready && (state === s_idle) && !miss && !hitWB && io.mdReady && (!io.pf.isPF() && !loadPF && !storePF)//maybe be optimized
 
   io.ipf := Mux(hit, hitinstrPF, missIPF)

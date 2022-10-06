@@ -1,17 +1,17 @@
 /**************************************************************************************
 * Copyright (c) 2020 Institute of Computing Technology, CAS
 * Copyright (c) 2020 University of Chinese Academy of Sciences
-* 
-* NutShell is licensed under Mulan PSL v2.
-* You can use this software according to the terms and conditions of the Mulan PSL v2. 
-* You may obtain a copy of Mulan PSL v2 at:
-*             http://license.coscl.org.cn/MulanPSL2 
-* 
-* THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER 
-* EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY OR 
-* FIT FOR A PARTICULAR PURPOSE.  
 *
-* See the Mulan PSL v2 for more details.  
+* NutShell is licensed under Mulan PSL v2.
+* You can use this software according to the terms and conditions of the Mulan PSL v2.
+* You may obtain a copy of Mulan PSL v2 at:
+*             http://license.coscl.org.cn/MulanPSL2
+*
+* THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER
+* EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY OR
+* FIT FOR A PARTICULAR PURPOSE.
+*
+* See the Mulan PSL v2 for more details.
 ***************************************************************************************/
 
 package nutcore
@@ -91,7 +91,7 @@ class UnpipelinedLSU extends NutCoreModule with HasLSUConst {
   val dtlbFinish = WireInit(false.B)
   val dtlbEnable = WireInit(false.B)
   BoringUtils.addSink(dtlbFinish, "DTLBFINISH")
-  BoringUtils.addSink(dtlbEnable, "DTLBENABLE")
+  BoringUtils.addSink(dtlbEnable, "vmEnable")
 
   // LSU control FSM state
   val s_idle :: s_exec :: s_load :: s_lr :: s_sc :: s_amo_l :: s_amo_a :: s_amo_s :: Nil = Enum(8)
@@ -357,7 +357,7 @@ class LSExecUnit extends NutCoreModule {
     BoringUtils.addSink(dtlbFinish, "DTLBFINISH")
     BoringUtils.addSink(dtlbPF, "DTLBPF")
     BoringUtils.addSink(dtlbAF, "DTLBAF")
-    BoringUtils.addSink(dtlbEnable, "DTLBENABLE")
+    BoringUtils.addSink(dtlbEnable, "vmEnable")
   }
 
   io.dtlbPF := dtlbPF
@@ -365,9 +365,9 @@ class LSExecUnit extends NutCoreModule {
 
   val dtlbHasException = dtlbPF || dtlbAF
   switch (state) {
-    is (s_idle) { 
+    is (s_idle) {
       when (dmem.req.fire() && dtlbEnable)  { state := s_wait_tlb  }
-      when (dmem.req.fire() && !dtlbEnable) { state := s_wait_resp } 
+      when (dmem.req.fire() && !dtlbEnable) { state := s_wait_resp }
       //when (dmem.req.fire()) { state := Mux(isStore, s_partialLoad, s_wait_resp) }
     }
     is (s_wait_tlb) {
@@ -387,8 +387,8 @@ class LSExecUnit extends NutCoreModule {
   val reqWdata = if (XLEN == 32) genWdata32(io.wdata, size) else genWdata(io.wdata, size)
   val reqWmask = if (XLEN == 32) genWmask32(addr, size) else genWmask(addr, size)
   dmem.req.bits.apply(
-    addr = reqAddr, 
-    size = size, 
+    addr = reqAddr,
+    size = size,
     wdata = reqWdata,
     wmask = reqWmask,
     cmd = Mux(isStore, SimpleBusCmd.write, SimpleBusCmd.read))
@@ -453,8 +453,10 @@ class LSExecUnit extends NutCoreModule {
 
   io.loadAddrMisaligned :=  valid && !isStore && !isAMO && !addrAligned
   io.storeAddrMisaligned := valid && (isStore || isAMO) && !addrAligned
-  io.loadAccessFault := valid && !(isStore || isAMO)&& !isLegalLoadAddr(addr)
-  io.storeAccessFault := valid && (isStore || isAMO) && !isLegalStoreAddr(addr)
+  val vmEnable = WireInit(false.B)
+  BoringUtils.addSink(vmEnable, "vmEnable")
+  io.loadAccessFault  := valid && !vmEnable && !(isStore || isAMO) && !isLegalLoadAddr(addr)
+  io.storeAccessFault := valid && !vmEnable &&  (isStore || isAMO) && !isLegalStoreAddr(addr)
 
   Debug(io.loadAddrMisaligned || io.storeAddrMisaligned, "misaligned addr detected\n")
 

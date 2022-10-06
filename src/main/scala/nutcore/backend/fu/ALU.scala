@@ -135,7 +135,10 @@ class ALU(hasBru: Boolean = false) extends NutCoreModule {
   // Jump instruction may have generated illegal address that is out of the range of virtual address space.
   // In this case, we use registers to store the exceptional address here since PC in frontend has only VAddrBits.
   val hasIllegalJumpAddr = RegInit(false.B)
-  val isIllegalJumpAddr = io.redirect.valid && !isBranch && target(XLEN - 1, VAddrBits).orR
+  val vmEnable = WireInit(false.B)
+  BoringUtils.addSink(vmEnable, "vmEnable")
+  val addrNotLegal = Mux(vmEnable, target =/= SignExt(target(VAddrBits - 1, 0), XLEN), target(XLEN - 1, VAddrBits).orR)
+  val isIllegalJumpAddr = io.redirect.valid && !isBranch && addrNotLegal
   when (isIllegalJumpAddr) {
     hasIllegalJumpAddr := true.B
   }.elsewhen (io.jumpIsIllegal.fire) {
