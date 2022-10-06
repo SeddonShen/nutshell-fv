@@ -567,11 +567,11 @@ class CSR(implicit val p: NutCoreConfig) extends NutCoreModule with HasCSRConst{
     imemExceptionAddr := Mux(io.illegalJump.valid, io.illegalJump.bits, SignExt(io.cfIn.pc, XLEN))
   }
 
-  when (hasInstrAccessFault || hasLoadAccessFault || hasStoreAccessFault) {
-    mtval := Mux(hasInstrAccessFault, imemExceptionAddr, dmemExceptionAddr)
-  }
-
-  when(hasInstrPageFault || hasLoadPageFault || hasStorePageFault){
+  when(hasLoadAddrMisaligned || hasStoreAddrMisaligned) {
+    mtval := dmemExceptionAddr
+    Debug("[ML] %d: addr %x pc %x priviledgeMode %x\n",
+      GTimer(), dmemExceptionAddr, io.cfIn.pc, priviledgeMode)
+  }.elsewhen (hasInstrPageFault || hasLoadPageFault || hasStorePageFault) {
     val tval = Mux(hasInstrPageFault,
       Mux(io.cfIn.crossPageIPFFix, SignExt(io.cfIn.pc + 2.U, XLEN), imemExceptionAddr),
       dmemExceptionAddr
@@ -583,12 +583,8 @@ class CSR(implicit val p: NutCoreConfig) extends NutCoreModule with HasCSRConst{
     }
     Debug("[PF] %d: ipf %b tval %x := addr %x pc %x priviledgeMode %x\n",
       GTimer(), hasInstrPageFault, tval, dmemExceptionAddr, io.cfIn.pc, priviledgeMode)
-  }
-
-  when(hasLoadAddrMisaligned || hasStoreAddrMisaligned) {
-    mtval := dmemExceptionAddr
-    Debug("[ML] %d: addr %x pc %x priviledgeMode %x\n",
-      GTimer(), dmemExceptionAddr, io.cfIn.pc, priviledgeMode)
+  }.elsewhen (hasInstrAccessFault || hasLoadAccessFault || hasStoreAccessFault) {
+    mtval := Mux(hasInstrAccessFault, imemExceptionAddr, dmemExceptionAddr)
   }
 
   // Exception and Intr
