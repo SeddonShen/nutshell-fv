@@ -64,4 +64,7 @@ clean:
 bsp:
 	mill -i mill.bsp.BSP/install
 
+sds:
+	$(MAKE) emu EMU_TRACE=1 -j16 EMU_THREADS=4
+
 .PHONY: verilog emu clean help $(REF_SO)
