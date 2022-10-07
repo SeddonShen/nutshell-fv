@@ -16,18 +16,15 @@
 
 package sim
 
-import system._
-import nutcore.NutCoreConfig
-
-import chisel3._
-import chisel3.util._
-import chisel3.util.experimental.BoringUtils
-
 import bus.axi4._
+import chisel3._
+import chisel3.util.experimental.BoringUtils
 import device.AXI4RAM
-import nutcore._
-import utils.GTimer
 import difftest._
+import difftest.sds.SDS
+import nutcore.NutCoreConfig
+import system._
+import utils.GTimer
 
 class SimTop extends Module {
   val io = IO(new Bundle{
@@ -66,4 +63,6 @@ class SimTop extends Module {
   BoringUtils.addSink(dummyWire, "DISPLAY_ENABLE")
 
   io.uart <> mmio.io.uart
+
+  SDS.collect()
 }
