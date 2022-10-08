@@ -1,17 +1,17 @@
 /**************************************************************************************
 * Copyright (c) 2020 Institute of Computing Technology, CAS
 * Copyright (c) 2020 University of Chinese Academy of Sciences
-* 
-* NutShell is licensed under Mulan PSL v2.
-* You can use this software according to the terms and conditions of the Mulan PSL v2. 
-* You may obtain a copy of Mulan PSL v2 at:
-*             http://license.coscl.org.cn/MulanPSL2 
-* 
-* THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER 
-* EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY OR 
-* FIT FOR A PARTICULAR PURPOSE.  
 *
-* See the Mulan PSL v2 for more details.  
+* NutShell is licensed under Mulan PSL v2.
+* You can use this software according to the terms and conditions of the Mulan PSL v2.
+* You may obtain a copy of Mulan PSL v2 at:
+*             http://license.coscl.org.cn/MulanPSL2
+*
+* THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER
+* EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY OR
+* FIT FOR A PARTICULAR PURPOSE.
+*
+* See the Mulan PSL v2 for more details.
 ***************************************************************************************/
 
 package nutcore
@@ -37,14 +37,14 @@ class WBU(implicit val p: NutCoreConfig) extends NutCoreModule{
 
   io.redirect := io.in.bits.decode.cf.redirect
   io.redirect.valid := io.in.bits.decode.cf.redirect.valid && io.in.valid
-  
-  val runahead_redirect = DifftestModule(new DiffRunaheadRedirectEvent)
-  runahead_redirect.clock := clock
-  runahead_redirect.coreid := 0.U
-  runahead_redirect.valid := io.redirect.valid
-  runahead_redirect.pc := io.in.bits.decode.cf.pc // for debug only
-  runahead_redirect.target_pc := io.in.bits.decode.cf.redirect.target // for debug only
-  runahead_redirect.checkpoint_id := io.in.bits.decode.cf.runahead_checkpoint_id // make sure it is right
+
+  // val runahead_redirect = DifftestModule(new DiffRunaheadRedirectEvent)
+  // runahead_redirect.clock := clock
+  // runahead_redirect.coreid := 0.U
+  // runahead_redirect.valid := io.redirect.valid
+  // runahead_redirect.pc := io.in.bits.decode.cf.pc // for debug only
+  // runahead_redirect.target_pc := io.in.bits.decode.cf.redirect.target // for debug only
+  // runahead_redirect.checkpoint_id := io.in.bits.decode.cf.runahead_checkpoint_id // make sure it is right
 
   // when(runahead_redirect.io.valid) {
   //   printf("DUT pc %x redirect to %x cpid %x\n", runahead_redirect.io.pc, runahead_redirect.io.target_pc, runahead_redirect.io.checkpoint_id)
@@ -55,7 +55,7 @@ class WBU(implicit val p: NutCoreConfig) extends NutCoreModule{
   val falseWire = WireInit(false.B) // make BoringUtils.addSource happy
   BoringUtils.addSource(io.in.valid, "perfCntCondMinstret")
   BoringUtils.addSource(falseWire, "perfCntCondMultiCommit")
-  
+
   if (!p.FPGAPlatform) {
     val difftest_commit = DifftestModule(new DiffInstrCommit)
     difftest_commit.clock    := clock
@@ -80,12 +80,12 @@ class WBU(implicit val p: NutCoreConfig) extends NutCoreModule{
     difftest_wb.dest := RegNext(io.wb.rfDest)
     difftest_wb.data := RegNext(io.wb.rfData)
 
-    val runahead_commit = DifftestModule(new DiffRunaheadCommitEvent)
-    runahead_commit.clock := clock
-    runahead_commit.coreid := 0.U
-    runahead_commit.index := 0.U
-    runahead_commit.valid := RegNext(io.in.valid && io.in.bits.decode.cf.isBranch)
-    runahead_commit.pc    := RegNext(SignExt(io.in.bits.decode.cf.pc, AddrBits))
+    // val runahead_commit = DifftestModule(new DiffRunaheadCommitEvent)
+    // runahead_commit.clock := clock
+    // runahead_commit.coreid := 0.U
+    // runahead_commit.index := 0.U
+    // runahead_commit.valid := RegNext(io.in.valid && io.in.bits.decode.cf.isBranch)
+    // runahead_commit.pc    := RegNext(SignExt(io.in.bits.decode.cf.pc, AddrBits))
   } else {
     BoringUtils.addSource(io.in.valid, "ilaWBUvalid")
     BoringUtils.addSource(io.in.bits.decode.cf.pc, "ilaWBUpc")
