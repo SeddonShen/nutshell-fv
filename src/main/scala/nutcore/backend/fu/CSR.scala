@@ -931,9 +931,9 @@ class CSR(implicit val p: NutCoreConfig) extends NutCoreModule with HasCSRConst{
     val difftestArchEvent = DifftestModule(new DiffArchEvent)
     difftestArchEvent.clock := clock
     difftestArchEvent.coreid := 0.U // TODO
-    difftestArchEvent.intrNO := RegNext(RegNext(Mux(raiseIntr && io.instrValid && valid, intrNO, 0.U)))
-    difftestArchEvent.cause := RegNext(RegNext(Mux(raiseException && io.instrValid && valid, exceptionNO, 0.U)))
-    difftestArchEvent.exceptionPC := RegNext(RegNext(imemExceptionAddr))
+    difftestArchEvent.interrupt     := RegNext(RegNext(Mux(raiseIntr && io.instrValid && valid, intrNO, 0.U)))
+    difftestArchEvent.exception     := RegNext(RegNext(Mux(raiseException && io.instrValid && valid, exceptionNO, 0.U)))
+    difftestArchEvent.exceptionPC   := RegNext(RegNext(imemExceptionAddr))
     difftestArchEvent.exceptionInst := RegNext(RegNext(io.cfIn.instr))
 
   } else {
