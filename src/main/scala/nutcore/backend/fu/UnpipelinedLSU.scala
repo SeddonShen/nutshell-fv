@@ -1,17 +1,17 @@
 /**************************************************************************************
 * Copyright (c) 2020 Institute of Computing Technology, CAS
 * Copyright (c) 2020 University of Chinese Academy of Sciences
-* 
-* NutShell is licensed under Mulan PSL v2.
-* You can use this software according to the terms and conditions of the Mulan PSL v2. 
-* You may obtain a copy of Mulan PSL v2 at:
-*             http://license.coscl.org.cn/MulanPSL2 
-* 
-* THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER 
-* EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY OR 
-* FIT FOR A PARTICULAR PURPOSE.  
 *
-* See the Mulan PSL v2 for more details.  
+* NutShell is licensed under Mulan PSL v2.
+* You can use this software according to the terms and conditions of the Mulan PSL v2.
+* You may obtain a copy of Mulan PSL v2 at:
+*             http://license.coscl.org.cn/MulanPSL2
+*
+* THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER
+* EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY OR
+* FIT FOR A PARTICULAR PURPOSE.
+*
+* See the Mulan PSL v2 for more details.
 ***************************************************************************************/
 
 package nutcore
@@ -21,6 +21,7 @@ import chisel3.util.experimental.BoringUtils
 
 import utils._
 import bus.simplebus._
+import difftest._
 import top.Settings
 
 class UnpipeLSUIO extends FunctionUnitIO {
@@ -294,6 +295,19 @@ class UnpipelinedLSU extends NutCoreModule with HasLSUConst {
   io.storeAddrMisaligned := lsExecUnit.io.storeAddrMisaligned
   io.loadAccessFault := lsExecUnit.io.loadAccessFault
   io.storeAccessFault := lsExecUnit.io.storeAccessFault
+
+  val isMemStore = RegEnable(io.dmem.req.bits.cmd === SimpleBusCmd.write && io.dmem.req.bits.addr >= 0x80000000L.U, io.dmem.req.fire)
+  val storeAddr = RegEnable(io.dmem.req.bits.addr, io.dmem.req.fire)
+  val storeData = RegEnable((MaskExpand(io.dmem.req.bits.wmask) & io.dmem.req.bits.wdata).asUInt, io.dmem.req.fire)
+  val storeMask = RegEnable(io.dmem.req.bits.wmask, io.dmem.req.fire)
+  val difftest = Module(new DifftestStoreEvent)
+  difftest.io.clock     := clock
+  difftest.io.coreid    := 0.U
+  difftest.io.index     := 0.U
+  difftest.io.valid     := RegNext(RegNext(RegNext(io.out.fire && state === s_idle && isMemStore)))
+  difftest.io.storeAddr := RegNext(RegNext(RegNext(storeAddr)))
+  difftest.io.storeData := RegNext(RegNext(RegNext(storeData)))
+  difftest.io.storeMask := RegNext(RegNext(RegNext(storeMask)))
 }
 
 class LSExecUnit extends NutCoreModule {
@@ -365,9 +379,9 @@ class LSExecUnit extends NutCoreModule {
 
   val dtlbHasException = dtlbPF || dtlbAF
   switch (state) {
-    is (s_idle) { 
+    is (s_idle) {
       when (dmem.req.fire() && dtlbEnable)  { state := s_wait_tlb  }
-      when (dmem.req.fire() && !dtlbEnable) { state := s_wait_resp } 
+      when (dmem.req.fire() && !dtlbEnable) { state := s_wait_resp }
       //when (dmem.req.fire()) { state := Mux(isStore, s_partialLoad, s_wait_resp) }
     }
     is (s_wait_tlb) {
@@ -387,8 +401,8 @@ class LSExecUnit extends NutCoreModule {
   val reqWdata = if (XLEN == 32) genWdata32(io.wdata, size) else genWdata(io.wdata, size)
   val reqWmask = if (XLEN == 32) genWmask32(addr, size) else genWmask(addr, size)
   dmem.req.bits.apply(
-    addr = reqAddr, 
-    size = size, 
+    addr = reqAddr,
+    size = size,
     wdata = reqWdata,
     wmask = reqWmask,
     cmd = Mux(isStore, SimpleBusCmd.write, SimpleBusCmd.read))
