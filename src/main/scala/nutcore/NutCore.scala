@@ -1,17 +1,17 @@
 /**************************************************************************************
 * Copyright (c) 2020 Institute of Computing Technology, CAS
 * Copyright (c) 2020 University of Chinese Academy of Sciences
-* 
-* NutShell is licensed under Mulan PSL v2.
-* You can use this software according to the terms and conditions of the Mulan PSL v2. 
-* You may obtain a copy of Mulan PSL v2 at:
-*             http://license.coscl.org.cn/MulanPSL2 
-* 
-* THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER 
-* EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY OR 
-* FIT FOR A PARTICULAR PURPOSE.  
 *
-* See the Mulan PSL v2 for more details.  
+* NutShell is licensed under Mulan PSL v2.
+* You can use this software according to the terms and conditions of the Mulan PSL v2.
+* You may obtain a copy of Mulan PSL v2 at:
+*             http://license.coscl.org.cn/MulanPSL2
+*
+* THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER
+* EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY OR
+* FIT FOR A PARTICULAR PURPOSE.
+*
+* See the Mulan PSL v2 for more details.
 ***************************************************************************************/
 
 package nutcore
@@ -65,7 +65,7 @@ trait HasNutCoreParameter {
   )
   val storeAddressSet = loadAddressSet
   def isLegalAddress(addr: UInt, set: Seq[(Long, Long)]): Bool = {
-    VecInit(set.map(s => addr >= s._1.U && addr <= s._2.U)).asUInt.orR
+    VecInit(set.map(s => addr >= s._1.U && addr < s._2.U)).asUInt.orR
   }
   def isLegalInstrAddr(addr: UInt): Bool = isLegalAddress(addr, instrAddressSet)
   def isLegalLoadAddr(addr: UInt): Bool = isLegalAddress(addr, loadAddressSet)
@@ -89,9 +89,9 @@ abstract class NutCoreBundle extends Bundle with HasNutCoreParameter with HasNut
 case class NutCoreConfig (
   FPGAPlatform: Boolean = true,
   EnableDebug: Boolean = Settings.get("EnableDebug"),
-  EnhancedLog: Boolean = true 
+  EnhancedLog: Boolean = true
 )
-// Enable EnhancedLog will slow down simulation, 
+// Enable EnhancedLog will slow down simulation,
 // but make it possible to control debug log using emu parameter
 
 object AddressSpace extends HasNutCoreParameter {
@@ -124,7 +124,7 @@ class NutCore(implicit val p: NutCoreConfig) extends NutCoreModule {
     case (false, true)  => Module(new Frontend_ooo)
     case (false, false) => Module(new Frontend_inorder)
   }
-  
+
   // Backend
   if (EnableOutOfOrderExec) {
     val mmioXbar = Module(new SimpleBusCrossbarNto1(if (HasDcache) 2 else 3))
@@ -140,7 +140,7 @@ class NutCore(implicit val p: NutCoreConfig) extends NutCoreModule {
     io.imem <> Cache(in = itlb.io.out, mmio = mmioXbar.io.in.take(1), flush = Fill(2, frontend.io.flushVec(0) | frontend.io.bpFlush), empty = itlb.io.cacheEmpty)(
       CacheConfig(ro = true, name = "icache", userBits = ICacheUserBundleWidth)
     )
-    
+
     val dtlb = TLB(in = backend.io.dtlb, mem = dmemXbar.io.in(1), flush = frontend.io.flushVec(3), csrMMU = backend.io.memMMU.dmem)(TLBConfig(name = "dtlb", userBits = DCacheUserBundleWidth, totalEntry = 64))
     dtlb.io.out := DontCare //FIXIT
     dtlb.io.out.req.ready := true.B //FIXIT
@@ -188,7 +188,7 @@ class NutCore(implicit val p: NutCoreConfig) extends NutCoreModule {
       empty = itlb.io.cacheEmpty,
       enable = HasIcache
     )(CacheConfig(ro = true, name = "icache", userBits = ICacheUserBundleWidth))
-    
+
     // dtlb
     val dtlb = EmbeddedTLB(
       in = backend.io.dmem,
