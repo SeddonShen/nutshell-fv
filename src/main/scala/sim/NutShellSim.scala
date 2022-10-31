@@ -21,7 +21,6 @@ import chisel3._
 import chisel3.util.experimental.BoringUtils
 import device.AXI4RAM
 import difftest._
-import difftest.sds.SDS
 import nutcore.NutCoreConfig
 import system._
 import utils.GTimer
@@ -64,5 +63,5 @@ class SimTop extends Module {
 
   io.uart <> mmio.io.uart
 
-  SDS.collect()
+   DifftestModule.finish()
 }
