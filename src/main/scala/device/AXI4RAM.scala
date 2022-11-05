@@ -1,17 +1,17 @@
 /**************************************************************************************
 * Copyright (c) 2020 Institute of Computing Technology, CAS
 * Copyright (c) 2020 University of Chinese Academy of Sciences
-* 
-* NutShell is licensed under Mulan PSL v2.
-* You can use this software according to the terms and conditions of the Mulan PSL v2. 
-* You may obtain a copy of Mulan PSL v2 at:
-*             http://license.coscl.org.cn/MulanPSL2 
-* 
-* THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER 
-* EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY OR 
-* FIT FOR A PARTICULAR PURPOSE.  
 *
-* See the Mulan PSL v2 for more details.  
+* NutShell is licensed under Mulan PSL v2.
+* You can use this software according to the terms and conditions of the Mulan PSL v2.
+* You may obtain a copy of Mulan PSL v2 at:
+*             http://license.coscl.org.cn/MulanPSL2
+*
+* THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER
+* EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY OR
+* FIT FOR A PARTICULAR PURPOSE.
+*
+* See the Mulan PSL v2 for more details.
 ***************************************************************************************/
 
 package device
@@ -24,7 +24,7 @@ import nutcore.HasNutCoreParameter
 import bus.axi4._
 import utils._
 
-class RAMHelper(memByte: Int) extends BlackBox with HasNutCoreParameter {
+class RAMHelper(memByte: Long) extends BlackBox with HasNutCoreParameter {
   val io = IO(new Bundle {
     val clk = Input(Clock())
     val rIdx = Input(UInt(DataBits.W))
@@ -37,10 +37,10 @@ class RAMHelper(memByte: Int) extends BlackBox with HasNutCoreParameter {
   }).suggestName("io")
 }
 
-class AXI4RAM[T <: AXI4Lite](_type: T = new AXI4, memByte: Int,
+class AXI4RAM[T <: AXI4Lite](_type: T = new AXI4, memByte: Long,
   useBlackBox: Boolean = false) extends AXI4SlaveModule(_type) with HasNutCoreParameter {
 
-  val offsetBits = log2Up(memByte)
+  val offsetBits = log2Ceil(memByte)
   val offsetMask = (1 << offsetBits) - 1
   def index(addr: UInt) = (addr & offsetMask.U) >> log2Ceil(DataBytes)
   def inRange(idx: UInt) = idx < (memByte / 8).U
