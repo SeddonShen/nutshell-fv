@@ -59,8 +59,8 @@ trait HasNutCoreParameter {
     (0x40001000L, 0x40001000L + 0x8L),  // vga ctrl
     (0x40000000L, 0x40000000L + 0x1000L),  // flash
     (0x40002000L, 0x40002000L + 0x1000L), // dummy sdcard
-    (0x40004000L, 0x40004000L + 0x1000L), // meipGen
-    (0x40003000L, 0x40003000L + 0x1000L),  // dma
+    // (0x40004000L, 0x40004000L + 0x1000L), // meipGen
+    // (0x40003000L, 0x40003000L + 0x1000L),  // dma
     (0x80000000L, 0xffffffffL)
   )
   val storeAddressSet = loadAddressSet
