@@ -1,17 +1,17 @@
 /**************************************************************************************
 * Copyright (c) 2020 Institute of Computing Technology, CAS
 * Copyright (c) 2020 University of Chinese Academy of Sciences
-* 
-* NutShell is licensed under Mulan PSL v2.
-* You can use this software according to the terms and conditions of the Mulan PSL v2. 
-* You may obtain a copy of Mulan PSL v2 at:
-*             http://license.coscl.org.cn/MulanPSL2 
-* 
-* THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER 
-* EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY OR 
-* FIT FOR A PARTICULAR PURPOSE.  
 *
-* See the Mulan PSL v2 for more details.  
+* NutShell is licensed under Mulan PSL v2.
+* You can use this software according to the terms and conditions of the Mulan PSL v2.
+* You may obtain a copy of Mulan PSL v2 at:
+*             http://license.coscl.org.cn/MulanPSL2
+*
+* THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER
+* EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY OR
+* FIT FOR A PARTICULAR PURPOSE.
+*
+* See the Mulan PSL v2 for more details.
 ***************************************************************************************/
 
 package nutcore
@@ -23,10 +23,10 @@ import chisel3.util.experimental.BoringUtils
 import utils._
 import difftest._
 
-// Sequential Inst Issue Unit 
+// Sequential Inst Issue Unit
 class ISU(implicit val p: NutCoreConfig) extends NutCoreModule with HasRegFileParameter {
   val io = IO(new Bundle {
-    val in = Vec(2, Flipped(Decoupled(new DecodeIO))) // make in-order backend compatible with high performance frontend 
+    val in = Vec(2, Flipped(Decoupled(new DecodeIO))) // make in-order backend compatible with high performance frontend
     val out = Decoupled(new DecodeIO)
     val wb = Flipped(new WriteBackIO)
     val forward = Flipped(new ForwardIO)
@@ -102,6 +102,6 @@ class ISU(implicit val p: NutCoreConfig) extends NutCoreModule with HasRegFilePa
     val difftest = DifftestModule(new DiffArchIntRegState)
     difftest.clock  := clock
     difftest.coreid := 0.U // TODO
-    difftest.gpr    := VecInit((0 to NRReg-1).map(i => rf.read(i.U)))
+    difftest.value  := VecInit((0 to NRReg-1).map(i => rf.read(i.U)))
   }
 }

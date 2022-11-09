@@ -77,7 +77,7 @@ class WBU(implicit val p: NutCoreConfig) extends NutCoreModule{
     difftest_wb.clock := clock
     difftest_wb.coreid := 0.U
     difftest_wb.valid := RegNext(io.wb.rfWen && io.wb.rfDest =/= 0.U)
-    difftest_wb.dest := RegNext(io.wb.rfDest)
+    difftest_wb.address := RegNext(io.wb.rfDest)
     difftest_wb.data := RegNext(io.wb.rfData)
 
     // val runahead_commit = DifftestModule(new DiffRunaheadCommitEvent)

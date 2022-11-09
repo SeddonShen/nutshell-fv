@@ -517,7 +517,7 @@ class ROB(implicit val p: NutCoreConfig) extends NutCoreModule with HasInstrType
       difftest_wb.clock := clock
       difftest_wb.coreid := 0.U
       difftest_wb.valid := RegNext(io.wb(i).rfWen && io.wb(i).rfDest =/= 0.U)
-      difftest_wb.dest := RegNext(io.wb(i).rfDest)
+      difftest_wb.address := RegNext(io.wb(i).rfDest)
       difftest_wb.data := RegNext(io.wb(i).rfData)
     }
   } else {
