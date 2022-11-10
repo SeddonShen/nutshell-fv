@@ -658,7 +658,7 @@ class Backend_ooo(implicit val p: NutCoreConfig) extends NutCoreModule with HasR
     val difftest = DifftestModule(new DiffTrapEvent)
     difftest.clock    := clock
     difftest.coreid   := 0.U // TODO: nutshell does not support coreid auto config
-    difftest.valid    := nutcoretrap
+    difftest.hasTrap  := nutcoretrap
     difftest.code     := csrrs.io.out.bits.decode.data.src1
     difftest.pc       := csrrs.io.out.bits.decode.cf.pc
     difftest.cycleCnt := cycleCnt
