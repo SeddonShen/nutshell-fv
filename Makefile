@@ -1,6 +1,6 @@
 TOP = TopMain
 FPGATOP = NutShellFPGATop
-BUILD_DIR = ./build
+BUILD_DIR = $(abspath ./build)
 TOP_V = $(BUILD_DIR)/$(TOP).v
 SCALA_FILE = $(shell find ./src/main/scala -name '*.scala')
 TEST_FILE = $(shell find ./src/test/scala -name '*.scala')           \
