@@ -25,11 +25,18 @@ import nutcore.NutCoreConfig
 import system._
 import utils.GTimer
 
+class Coverage extends Bundle {
+  val total   = UInt(32.W)
+  val current = UInt(32.W)
+  val bitmap  = Vec(2, UInt(64.W))
+}
+
 class SimTop extends Module {
   val io = IO(new Bundle{
     val logCtrl = new LogCtrlIO
     val perfInfo = new PerfInfoIO
     val uart = new UARTIO
+    val coverage = Output(new Coverage)
   })
 
   lazy val config = NutCoreConfig(FPGAPlatform = false)
@@ -63,5 +70,10 @@ class SimTop extends Module {
 
   io.uart <> mmio.io.uart
 
-   DifftestModule.finish()
+  io.coverage := DontCare
+  BoringUtils.addSink(io.coverage.total, "instrCovTotal")
+  BoringUtils.addSink(io.coverage.current, "instrCovCurrent")
+  BoringUtils.addSink(io.coverage.bitmap, "instrCovBitmap")
+
+  DifftestModule.finish()
 }
