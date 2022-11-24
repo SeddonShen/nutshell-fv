@@ -146,24 +146,30 @@ class IDU(implicit val p: NutCoreConfig) extends NutCoreModule with HasInstrType
     val in = Vec(2, Flipped(Decoupled(new CtrlFlowIO)))
     val out = Vec(2, Decoupled(new DecodeIO))
   })
-  val decoder1  = Module(new Decoder)
-  val decoder2  = Module(new Decoder)
-  io.in(0) <> decoder1.io.in
-  io.in(1) <> decoder2.io.in
-  io.out(0) <> decoder1.io.out
-  io.out(1) <> decoder2.io.out
-  if(!EnableMultiIssue){
+  val decoder = Module(new Decoder)
+  io.in(0) <> decoder.io.in
+  io.out(0) <> decoder.io.out
+  val isWFI = WireInit(decoder.io.isWFI)
+
+  if (EnableMultiIssue) {
+    val decoder2 = Module(new Decoder)
+    io.in(1) <> decoder2.io.in
+    io.out(1) <> decoder2.io.out
+    isWFI := decoder.io.isWFI | decoder2.io.isWFI
+  }
+  else {
     io.in(1).ready := false.B
-    decoder2.io.in.valid := false.B
+    io.out(1).valid := false.B
+    io.out(1).bits := DontCare
   }
 
-  io.out(0).bits.cf.isBranch := decoder1.io.isBranch
+  io.out(0).bits.cf.isBranch := decoder.io.isBranch
   io.out(0).bits.cf.runahead_checkpoint_id := 0.U
   // when(runahead.io.valid) {
   //   printf("fire pc %x branch %x inst %x\n", runahead.io.pc, runahead.io.branch, io.out(0).bits.cf.instr)
   // }
 
   if (!p.FPGAPlatform) {
-    BoringUtils.addSource(decoder1.io.isWFI | decoder2.io.isWFI, "isWFI")
+    BoringUtils.addSource(isWFI, "isWFI")
   }
 }
