@@ -662,15 +662,22 @@ class CSR(implicit val p: NutCoreConfig) extends NutCoreModule with HasCSRConst{
 
   // XRET instruction may have generated illegal address that is out of the range of virtual address space.
   // In this case, we use registers to store the exceptional address here since PC in frontend has only VAddrBits.
+  val vmEnable = WireInit(false.B)
+  BoringUtils.addSink(vmEnable, "vmEnable")
+  val redirectTargetReg = RegEnable(redirectTarget, io.redirect.valid)
+  val addrNotLegal = Mux(vmEnable,
+    redirectTargetReg =/= SignExt(redirectTargetReg(VAddrBits - 1, 0), XLEN),
+    redirectTargetReg(XLEN - 1, VAddrBits).orR
+  )
   val hasIllegalXRET = RegInit(false.B)
-  val isIllegalXRET = io.redirect.valid && redirectTarget(XLEN - 1, VAddrBits).orR
+  val isIllegalXRET = RegNext(io.redirect.valid) && addrNotLegal
   when (isIllegalXRET) {
     hasIllegalXRET := true.B
   }.elsewhen (io.xretIsIllegal.fire) {
     hasIllegalXRET := false.B
   }
   io.xretIsIllegal.valid := hasIllegalXRET
-  io.xretIsIllegal.bits := RegEnable(redirectTarget, isIllegalXRET)
+  io.xretIsIllegal.bits := redirectTargetReg
 
 
   Debug(raiseExceptionIntr, "excin %b excgen %b", csrExceptionVec.asUInt(), iduExceptionVec.asUInt())
