@@ -21,6 +21,7 @@ import chisel3.util.experimental.BoringUtils
 
 import utils._
 import bus.simplebus._
+import difftest._
 import top.Settings
 
 class UnpipeLSUIO extends FunctionUnitIO {
@@ -294,6 +295,19 @@ class UnpipelinedLSU extends NutCoreModule with HasLSUConst {
   io.storeAddrMisaligned := lsExecUnit.io.storeAddrMisaligned
   io.loadAccessFault := lsExecUnit.io.loadAccessFault
   io.storeAccessFault := lsExecUnit.io.storeAccessFault
+
+  val isMemStore = RegEnable(io.dmem.req.bits.cmd === SimpleBusCmd.write && io.dmem.req.bits.addr >= 0x80000000L.U, io.dmem.req.fire)
+  val storeAddr = RegEnable(io.dmem.req.bits.addr, io.dmem.req.fire)
+  val storeData = RegEnable((MaskExpand(io.dmem.req.bits.wmask) & io.dmem.req.bits.wdata).asUInt, io.dmem.req.fire)
+  val storeMask = RegEnable(io.dmem.req.bits.wmask, io.dmem.req.fire)
+  val difftest = DifftestModule(new DiffStoreEvent)
+  difftest.clock  := clock
+  difftest.coreid := 0.U
+  difftest.index  := 0.U
+  difftest.valid  := RegNext(RegNext(RegNext(io.out.fire && state === s_idle && isMemStore)))
+  difftest.addr   := RegNext(RegNext(RegNext(storeAddr)))
+  difftest.data   := RegNext(RegNext(RegNext(storeData)))
+  difftest.mask   := RegNext(RegNext(RegNext(storeMask)))
 }
 
 class LSExecUnit extends NutCoreModule {
