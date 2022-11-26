@@ -314,7 +314,7 @@ class LSExecUnit extends NutCoreModule {
   val io = IO(new UnpipeLSUIO)
 
   val (valid, addr, func) = (io.in.valid, io.in.bits.src1, io.in.bits.func) // src1 is used as address
-  io.vaddr := RegEnable(addr, io.in.fire)
+  io.vaddr := HoldUnless(addr, io.in.fire)
 
   def access(valid: Bool, addr: UInt, func: UInt): UInt = {
     this.valid := valid
