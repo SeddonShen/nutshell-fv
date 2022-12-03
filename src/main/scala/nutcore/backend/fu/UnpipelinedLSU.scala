@@ -40,28 +40,49 @@ class UnpipeLSUIO extends FunctionUnitIO {
 
 class UnpipelinedLSU extends NutCoreModule with HasLSUConst {
   val io = IO(new UnpipeLSUIO)
-  val (valid, src1, src2, func) = (io.in.valid, io.in.bits.src1, io.in.bits.src2, io.in.bits.func)
+  val (in_valid, src1, src2, func) = (io.in.valid, io.in.bits.src1, io.in.bits.src2, io.in.bits.func)
 
   def access(valid: Bool, src1: UInt, src2: UInt, func: UInt, dtlbPF: Bool): UInt = {
-    this.valid := valid
-    this.src1 := src1
-    this.src2 := src2
-    this.func := func
+    io.in.valid := valid
+    io.in.bits.src1 := src1
+    io.in.bits.src2 := src2
+    io.in.bits.func := func
     dtlbPF := io.dtlbPF
     io.out.bits
   }
+
+  val isAtomic = LSUOpType.isAtom(func)
+  val isAmo = LSUOpType.isAMO(func)
+  val isLr = LSUOpType.isLR(func)
+  val isSc = LSUOpType.isSC(func)
+
+  // check address alignment before sending the requests out
+  val in_vaddr = src1 + src2
+  val addrAligned = LookupTree(func(1, 0), List(
+    "b00".U -> true.B, //b
+    "b01".U -> (in_vaddr(0) === 0.U), //h
+    "b10".U -> (in_vaddr(1, 0) === 0.U), //w
+    "b11".U -> (in_vaddr(2, 0) === 0.U) //d
+  ))
+  val hasAddrMisaligned = in_valid && !addrAligned
+  io.loadAddrMisaligned := hasAddrMisaligned && (LSUOpType.isLoad(func) || isLr)
+  io.storeAddrMisaligned := hasAddrMisaligned && (LSUOpType.isStore(func) || isAmo || isSc)
+
+  val valid = in_valid && addrAligned
+
   val lsExecUnit = Module(new LSExecUnit)
   lsExecUnit.io.instr := DontCare
-  io.vaddr := lsExecUnit.io.vaddr
+  io.vaddr := Mux(io.loadAddrMisaligned || io.storeAddrMisaligned,
+    HoldUnless(in_vaddr, hasAddrMisaligned),
+    lsExecUnit.io.vaddr
+  )
   io.dtlbPF := lsExecUnit.io.dtlbPF
   io.dtlbAF := lsExecUnit.io.dtlbAF
 
-  val storeReq = valid & LSUOpType.isStore(func)
-  val loadReq  = valid & LSUOpType.isLoad(func)
-  val atomReq  = valid & LSUOpType.isAtom(func)
-  val amoReq   = valid & LSUOpType.isAMO(func)
-  val lrReq   = valid & LSUOpType.isLR(func)
-  val scReq   = valid & LSUOpType.isSC(func)
+  val atomReq = valid & isAtomic
+  val amoReq = valid & isAmo
+  val lrReq = valid & isLr
+  val scReq = valid & isSc
   if (Settings.get("HasDTLB")) {
     BoringUtils.addSource(amoReq, "ISAMO")
   }
@@ -291,8 +312,6 @@ class UnpipelinedLSU extends NutCoreModule with HasLSUConst {
   when (io.out.valid) { mmioReg := false.B }
   io.isMMIO := mmioReg && io.out.valid
 
-  io.loadAddrMisaligned := lsExecUnit.io.loadAddrMisaligned
-  io.storeAddrMisaligned := lsExecUnit.io.storeAddrMisaligned
   io.loadAccessFault := lsExecUnit.io.loadAccessFault
   io.storeAccessFault := lsExecUnit.io.storeAccessFault
 
@@ -407,8 +426,7 @@ class LSExecUnit extends NutCoreModule {
     wmask = reqWmask,
     cmd = Mux(isStore, SimpleBusCmd.write, SimpleBusCmd.read))
 
-  val hasException = io.loadAddrMisaligned || io.storeAddrMisaligned ||
-    io.loadAccessFault || io.storeAccessFault
+  val hasException = io.loadAccessFault || io.storeAccessFault
   dmem.req.valid := valid && (state === s_idle) && !hasException
   dmem.resp.ready := true.B
 
@@ -421,8 +439,7 @@ class LSExecUnit extends NutCoreModule {
   )
   io.in.ready := (state === s_idle) || dtlbHasException
 
-  Debug(io.out.fire, "[LSU-EXECUNIT] state %x dresp %x dpf %x lm %x sm %x\n",
-    state, dmem.resp.fire, dtlbPF, io.loadAddrMisaligned, io.storeAddrMisaligned)
+  Debug(io.out.fire, "[LSU-EXECUNIT] state %x dresp %x dpf %x\n", state, dmem.resp.fire, dtlbPF)
 
   val rdata = dmem.resp.bits.rdata
   val rdataLatch = RegNext(rdata)
@@ -451,12 +468,7 @@ class LSExecUnit extends NutCoreModule {
       LSUOpType.lhu  -> ZeroExt(rdataSel(15, 0), XLEN),
       LSUOpType.lwu  -> ZeroExt(rdataSel(31, 0), XLEN)
   ))
-  val addrAligned = LookupTree(func(1,0), List(
-    "b00".U   -> true.B,            //b
-    "b01".U   -> (addr(0) === 0.U),   //h
-    "b10".U   -> (addr(1,0) === 0.U), //w
-    "b11".U   -> (addr(2,0) === 0.U)  //d
-  ))
+
 
   io.out.bits := Mux(partialLoad, rdataPartialLoad, rdata(XLEN-1,0))
 
@@ -465,14 +477,12 @@ class LSExecUnit extends NutCoreModule {
   val isAMO = WireInit(false.B)
   BoringUtils.addSink(isAMO, "ISAMO2")
 
-  io.loadAddrMisaligned :=  valid && !isStore && !isAMO && !addrAligned
-  io.storeAddrMisaligned := valid && (isStore || isAMO) && !addrAligned
+  io.loadAddrMisaligned := DontCare
+  io.storeAddrMisaligned := DontCare
   val vmEnable = WireInit(false.B)
   BoringUtils.addSink(vmEnable, "vmEnable")
   io.loadAccessFault  := valid && !vmEnable && !(isStore || isAMO) && !isLegalLoadAddr(addr)
   io.storeAccessFault := valid && !vmEnable &&  (isStore || isAMO) && !isLegalStoreAddr(addr)
-
-  Debug(io.loadAddrMisaligned || io.storeAddrMisaligned, "misaligned addr detected\n")
 
   BoringUtils.addSource(dmem.isRead() && dmem.req.fire(), "perfCntCondMloadInstr")
   BoringUtils.addSource(BoolStopWatch(dmem.isRead(), dmem.resp.fire()), "perfCntCondMloadStall")
