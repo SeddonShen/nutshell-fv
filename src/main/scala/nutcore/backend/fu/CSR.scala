@@ -311,9 +311,9 @@ class CSR(implicit val p: NutCoreConfig) extends NutCoreModule with HasCSRConst{
   val mscratch = RegInit(UInt(XLEN.W), 0.U)
 
   val pmpcfg0 = RegInit(UInt(XLEN.W), 0.U)
-  val pmpcfg1 = RegInit(UInt(XLEN.W), 0.U)
+  // val pmpcfg1 = RegInit(UInt(XLEN.W), 0.U)
   val pmpcfg2 = RegInit(UInt(XLEN.W), 0.U)
-  val pmpcfg3 = RegInit(UInt(XLEN.W), 0.U)
+  // val pmpcfg3 = RegInit(UInt(XLEN.W), 0.U)
   val pmpaddr0 = RegInit(UInt(XLEN.W), 0.U)
   val pmpaddr1 = RegInit(UInt(XLEN.W), 0.U)
   val pmpaddr2 = RegInit(UInt(XLEN.W), 0.U)
@@ -446,9 +446,9 @@ class CSR(implicit val p: NutCoreConfig) extends NutCoreModule with HasCSRConst{
 
     // Machine Memory Protection
     MaskedRegMap(Pmpcfg0, pmpcfg0),
-    MaskedRegMap(Pmpcfg1, pmpcfg1),
+    // MaskedRegMap(Pmpcfg1, pmpcfg1),
     MaskedRegMap(Pmpcfg2, pmpcfg2),
-    MaskedRegMap(Pmpcfg3, pmpcfg3),
+    // MaskedRegMap(Pmpcfg3, pmpcfg3),
     MaskedRegMap(PmpaddrBase + 0, pmpaddr0),
     MaskedRegMap(PmpaddrBase + 1, pmpaddr1),
     MaskedRegMap(PmpaddrBase + 2, pmpaddr2),
