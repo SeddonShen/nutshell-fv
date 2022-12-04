@@ -40,8 +40,8 @@ object RVAInstr extends HasInstrType {
   
   val table = Array(
     // LR          -> List(InstrI, FuType.lsu, LSUOpType.lr),
-    LR_D        -> List(InstrI, FuType.lsu, LSUOpType.lr),
-    LR_W        -> List(InstrI, FuType.lsu, LSUOpType.lr),
+    LR_D        -> List(InstrR, FuType.lsu, LSUOpType.lr),
+    LR_W        -> List(InstrR, FuType.lsu, LSUOpType.lr),
     // SC          -> List(InstrS, FuType.lsu, LSUOpType.sc),
     SC_D        -> List(InstrSA, FuType.lsu, LSUOpType.sc),
     SC_W        -> List(InstrSA, FuType.lsu, LSUOpType.sc),
