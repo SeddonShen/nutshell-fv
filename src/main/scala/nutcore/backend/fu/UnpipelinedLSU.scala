@@ -58,7 +58,9 @@ class UnpipelinedLSU extends NutCoreModule with HasLSUConst {
 
   // check address alignment before sending the requests out
   val in_vaddr = src1 + src2
-  val addrAligned = LookupTree(func(1, 0), List(
+  // NutShell determines the W/D of AMO instructions with func3.
+  val in_func = Mux(isAtomic, Mux(io.instr(12), "b11".U, "b10".U), func(1, 0))
+  val addrAligned = LookupTree(in_func, List(
     "b00".U -> true.B, //b
     "b01".U -> (in_vaddr(0) === 0.U), //h
     "b10".U -> (in_vaddr(1, 0) === 0.U), //w
