@@ -56,8 +56,9 @@ class UnpipelinedLSU extends NutCoreModule with HasLSUConst {
   val isLr = LSUOpType.isLR(func)
   val isSc = LSUOpType.isSC(func)
 
-  // check address alignment before sending the requests out
   val in_vaddr = Mux(isAtomic, src1, src1 + src2)
+
+  // check address alignment before sending the requests out
   // NutShell determines the W/D of AMO instructions with func3.
   val in_func = Mux(isAtomic, Mux(io.instr(12), "b11".U, "b10".U), func(1, 0))
   val addrAligned = LookupTree(in_func, List(
@@ -70,12 +71,21 @@ class UnpipelinedLSU extends NutCoreModule with HasLSUConst {
   io.loadAddrMisaligned := hasAddrMisaligned && (LSUOpType.isLoad(func) || isLr)
   io.storeAddrMisaligned := hasAddrMisaligned && (LSUOpType.isStore(func) || isAmo || isSc)
 
-  val valid = in_valid && addrAligned
+  // PF signal from TLB
+  val dtlbFinish = WireInit(false.B)
+  val dtlbEnable = WireInit(false.B)
+  BoringUtils.addSink(dtlbFinish, "DTLBFINISH")
+  BoringUtils.addSink(dtlbEnable, "vmEnable")
+
+  // also need to check access fault for the SC instruction
+  val hasScAccessFault = in_valid && isSc && !dtlbEnable && !isLegalStoreAddr(in_vaddr)
+
+  val valid = in_valid && addrAligned && !hasScAccessFault
 
   val lsExecUnit = Module(new LSExecUnit)
   lsExecUnit.io.instr := DontCare
-  io.vaddr := Mux(io.loadAddrMisaligned || io.storeAddrMisaligned,
-    HoldUnless(in_vaddr, hasAddrMisaligned),
+  io.vaddr := Mux(io.loadAddrMisaligned || io.storeAddrMisaligned || hasScAccessFault,
+    HoldUnless(in_vaddr, hasAddrMisaligned || hasScAccessFault),
     lsExecUnit.io.vaddr
   )
   io.dtlbPF := lsExecUnit.io.dtlbPF
@@ -110,12 +120,6 @@ class UnpipelinedLSU extends NutCoreModule with HasLSUConst {
   BoringUtils.addSink(lrAddr, "lr_addr")
 
   val scInvalid = !(src1 === lrAddr) && scReq
-
-  // PF signal from TLB
-  val dtlbFinish = WireInit(false.B)
-  val dtlbEnable = WireInit(false.B)
-  BoringUtils.addSink(dtlbFinish, "DTLBFINISH")
-  BoringUtils.addSink(dtlbEnable, "vmEnable")
 
   // LSU control FSM state
   val s_idle :: s_exec :: s_load :: s_lr :: s_sc :: s_amo_l :: s_amo_a :: s_amo_s :: Nil = Enum(8)
@@ -315,7 +319,7 @@ class UnpipelinedLSU extends NutCoreModule with HasLSUConst {
   io.isMMIO := mmioReg && io.out.valid
 
   io.loadAccessFault := lsExecUnit.io.loadAccessFault
-  io.storeAccessFault := lsExecUnit.io.storeAccessFault
+  io.storeAccessFault := lsExecUnit.io.storeAccessFault || hasScAccessFault
 
   val isMemStore = RegEnable(io.dmem.req.bits.cmd === SimpleBusCmd.write && io.dmem.req.bits.addr >= 0x80000000L.U, io.dmem.req.fire)
   val storeAddr = RegEnable(io.dmem.req.bits.addr, io.dmem.req.fire)
