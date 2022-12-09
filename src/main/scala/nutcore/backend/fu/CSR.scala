@@ -306,6 +306,23 @@ class CSR(implicit val p: NutCoreConfig) extends NutCoreModule with HasCSRConst{
     mstatusNew
   }
 
+  val mstatusWMask = (~ZeroExt((
+    GenMask(XLEN - 2, 36) | // WPRI
+    GenMask(35, 32)       | // SXL and UXL cannot be changed
+    GenMask(31, 23)       | // WPRI
+    GenMask(16, 15)       | // XS is read-only
+    GenMask(10, 9)        | // WPRI
+    GenMask(6)            | // WPRI
+    GenMask(2)              // WPRI
+  ), 64)).asUInt
+  val mstatusMask = (~ZeroExt((
+    GenMask(XLEN - 2, 36) | // WPRI
+    GenMask(31, 23)       | // WPRI
+    GenMask(10, 9)        | // WPRI
+    GenMask(6)            | // WPRI
+    GenMask(2)              // WPRI
+  ), 64)).asUInt
+
   val medeleg = RegInit(UInt(XLEN.W), 0.U)
   val mideleg = RegInit(UInt(XLEN.W), 0.U)
   val mscratch = RegInit(UInt(XLEN.W), 0.U)
@@ -429,7 +446,7 @@ class CSR(implicit val p: NutCoreConfig) extends NutCoreModule with HasCSRConst{
 
     // Machine Trap Setup
     // MaskedRegMap(Mstatus, mstatus, "hffffffffffffffee".U, (x=>{printf("mstatus write: %x time: %d\n", x, GTimer()); x})),
-    MaskedRegMap(Mstatus, mstatus, "hffffffffffffffff".U(64.W), mstatusUpdateSideEffect),
+    MaskedRegMap(Mstatus, mstatus, mstatusWMask, mstatusUpdateSideEffect, mstatusMask),
     MaskedRegMap(Misa, misa), // now MXL, EXT is not changeable
     MaskedRegMap(Medeleg, medeleg, "hb3ff".U(64.W)),
     MaskedRegMap(Mideleg, mideleg, "h222".U(64.W)),
