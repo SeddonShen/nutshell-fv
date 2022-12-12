@@ -323,7 +323,7 @@ class UnpipelinedLSU extends NutCoreModule with HasLSUConst {
 
   val isStore = io.out.fire && !hasException && (state === s_idle || state === s_sc || state === s_amo_s)
   val isMemStore = RegEnable(io.dmem.req.bits.cmd === SimpleBusCmd.write && io.dmem.req.bits.addr >= 0x80000000L.U, io.dmem.req.fire)
-  val storeAddr = RegEnable(io.dmem.req.bits.addr, io.dmem.req.fire)
+  val storeAddr = Cat(RegEnable(io.dmem.req.bits.addr >> 3, io.dmem.req.fire), 0.U(3.W))
   val storeData = RegEnable((MaskExpand(io.dmem.req.bits.wmask) & io.dmem.req.bits.wdata).asUInt, io.dmem.req.fire)
   val storeMask = RegEnable(io.dmem.req.bits.wmask, io.dmem.req.fire)
   val difftest = DifftestModule(new DiffStoreEvent)
