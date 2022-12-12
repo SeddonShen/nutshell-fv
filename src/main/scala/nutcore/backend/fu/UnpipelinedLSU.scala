@@ -171,7 +171,7 @@ class UnpipelinedLSU extends NutCoreModule with HasLSUConst {
       when(valid){state := s_exec}
 
       if(!IndependentAddrCalcState){
-        lsExecUnit.io.in.valid     := io.in.valid && !atomReq
+        lsExecUnit.io.in.valid     := valid && !atomReq
         lsExecUnit.io.out.ready    := io.out.ready
         lsExecUnit.io.in.bits.src1 := src1 + src2
         lsExecUnit.io.in.bits.src2 := DontCare
