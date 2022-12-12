@@ -25,7 +25,7 @@ import bus.axi4._
 import utils._
 import top.Settings
 
-sealed trait Sv39Const extends HasNutCoreParameter{
+trait Sv39Const extends HasNutCoreParameter{
   val Level = 3
   val offLen  = 12
   val ppn0Len = 9

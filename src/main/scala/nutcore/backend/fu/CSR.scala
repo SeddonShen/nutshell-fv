@@ -192,7 +192,7 @@ class CSRIO extends FunctionUnitIO {
   val wenFix = Output(Bool())
 }
 
-class CSR(implicit val p: NutCoreConfig) extends NutCoreModule with HasCSRConst{
+class CSR(implicit val p: NutCoreConfig) extends NutCoreModule with HasCSRConst with Sv39Const{
   val io = IO(new CSRIO)
 
   val (valid, src1, src2, func) = (io.in.valid, io.in.bits.src1, io.in.bits.src2, io.in.bits.func)
@@ -242,6 +242,10 @@ class CSR(implicit val p: NutCoreConfig) extends NutCoreModule with HasCSRConst{
     val mode = UInt(4.W)
     val asid = UInt(16.W)
     val ppn  = UInt(44.W)
+
+    def vmEnable(priviledgeMode: UInt): Bool = {
+      mode === 8.U && priviledgeMode < ModeM
+    }
   }
 
   class Interrupt extends Bundle {
@@ -249,6 +253,9 @@ class CSR(implicit val p: NutCoreConfig) extends NutCoreModule with HasCSRConst{
     val t = new Priv
     val s = new Priv
   }
+
+  // Hart Priviledge Mode
+  val priviledgeMode = RegInit(UInt(2.W), ModeM)
 
   // Machine-Level CSRs
 
@@ -352,8 +359,11 @@ class CSR(implicit val p: NutCoreConfig) extends NutCoreModule with HasCSRConst{
   // val sie = RegInit(0.U(XLEN.W))
   val sieMask = "h222".U(64.W) & mideleg
   val sipMask  = "h222".U(64.W) & mideleg
-  // val satp = RegInit(UInt(XLEN.W), "h8000000000087fbe".U)
+
   val satp = RegInit(UInt(XLEN.W), 0.U)
+  val satpStruct = satp.asTypeOf(new SatpStruct)
+  val vmEnable = satpStruct.vmEnable(priviledgeMode)
+
   val sepc = RegInit(UInt(XLEN.W), 0.U)
   val scause = RegInit(UInt(XLEN.W), 0.U)
   val stval = Reg(UInt(XLEN.W))
@@ -384,8 +394,6 @@ class CSR(implicit val p: NutCoreConfig) extends NutCoreModule with HasCSRConst{
     lrAddr := setLrAddr
   }
 
-  // Hart Priviledge Mode
-  val priviledgeMode = RegInit(UInt(2.W), ModeM)
 
   // perfcnt
   val hasPerfCnt = EnablePerfCnt && !p.FPGAPlatform
@@ -582,7 +590,13 @@ class CSR(implicit val p: NutCoreConfig) extends NutCoreModule with HasCSRConst{
     hasStoreAddrMisaligned := io.cfIn.exceptionVec(storeAddrMisaligned)
     hasLoadAddrMisaligned := io.cfIn.exceptionVec(loadAddrMisaligned)
     dmemExceptionAddr := io.dmemExceptionAddr
-    imemExceptionAddr := Mux(io.illegalJump.valid, io.illegalJump.bits, SignExt(io.cfIn.pc, XLEN))
+    imemExceptionAddr := Mux(io.illegalJump.valid,
+      io.illegalJump.bits,
+      Mux(vmEnable,
+        SignExt(io.cfIn.pc, XLEN),
+        ZeroExt(io.cfIn.pc, XLEN)
+      )
+    )
   }
 
   when(hasLoadAddrMisaligned || hasStoreAddrMisaligned) {
@@ -679,8 +693,6 @@ class CSR(implicit val p: NutCoreConfig) extends NutCoreModule with HasCSRConst{
 
   // XRET instruction may have generated illegal address that is out of the range of virtual address space.
   // In this case, we use registers to store the exceptional address here since PC in frontend has only VAddrBits.
-  val vmEnable = WireInit(false.B)
-  BoringUtils.addSink(vmEnable, "vmEnable")
   val redirectTargetReg = RegEnable(redirectTarget, io.redirect.valid)
   val addrNotLegal = Mux(vmEnable,
     redirectTargetReg =/= SignExt(redirectTargetReg(VAddrBits - 1, 0), XLEN),
