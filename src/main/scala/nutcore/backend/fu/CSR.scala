@@ -190,6 +190,7 @@ class CSRIO extends FunctionUnitIO {
   val imemMMU = Flipped(new MMUIO)
   val dmemMMU = Flipped(new MMUIO)
   val wenFix = Output(Bool())
+  val isPerfRead = Output(Bool())
 }
 
 class CSR(implicit val p: NutCoreConfig) extends NutCoreModule with HasCSRConst with Sv39Const{
@@ -507,6 +508,7 @@ class CSR(implicit val p: NutCoreConfig) extends NutCoreModule with HasCSRConst 
   val isIllegalAddr = MaskedRegMap.isIllegalAddr(mapping, addr)
   val resetSatp = addr === Satp.U && wen // write to satp will cause the pipeline be flushed
   io.out.bits := rdata
+  io.isPerfRead := io.out.valid && addr >= 0xb00.U && addr < (0xb00 + nrPerfCnts).U
 
   // Fix Mip/Sip write
   val fixMapping = Map(
@@ -907,7 +909,7 @@ class CSR(implicit val p: NutCoreConfig) extends NutCoreModule with HasCSRConst 
 
   val perfCntList = generalPerfCntList ++  (if (EnableOutOfOrderExec) outOfOrderPerfCntList else sequentialPerfCntList)
 
-	val perfCntCond = List.fill(0x80)(WireInit(false.B))
+  val perfCntCond = List.fill(0x80)(WireInit(false.B))
   (perfCnts zip perfCntCond).map { case (c, e) => { when (e) { c := c + 1.U } } }
   // Manually update perf counter
   val pendingLS = WireInit(0.U(5.W))
@@ -924,7 +926,7 @@ class CSR(implicit val p: NutCoreConfig) extends NutCoreModule with HasCSRConst 
   }
 
   BoringUtils.addSource(WireInit(true.B), "perfCntCondMcycle")
-  perfCntList.map { case (name, (addr, boringId)) => {
+  perfCntList.foreach { case (name, (addr, boringId)) => {
     BoringUtils.addSink(perfCntCond(addr & 0x7f), boringId)
     if (!hasPerfCnt) {
       // do not enable perfcnts except for Mcycle and Minstret

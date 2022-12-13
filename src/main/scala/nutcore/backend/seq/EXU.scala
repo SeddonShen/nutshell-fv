@@ -94,6 +94,11 @@ class EXU(implicit val p: NutCoreConfig) extends NutCoreModule {
     csr.io.cfIn.exceptionVec(instrAccessFault) := true.B
   }
 
+  // read requests to performance counters should be skipped.
+  when (io.out.bits.decode.ctrl.rfWen && csr.io.isPerfRead) {
+    io.out.bits.isMMIO := true.B
+  }
+
   val mou = Module(new MOU)
   // mou does not write register
   mou.access(valid = fuValids(FuType.mou), src1 = src1, src2 = src2, func = fuOpType)
