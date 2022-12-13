@@ -178,8 +178,8 @@ class AtomALU extends NutCoreModule {
 
   // src1: load result
   // src2: reg  result
-  val src1 = io.src1
-  val src2 = io.src2
+  val src1 = Mux(io.isWordOp, SignExt(io.src1(31, 0), 64), io.src1)
+  val src2 = Mux(io.isWordOp, SignExt(io.src2(31, 0), 64), io.src2)
   val func = io.func
   val isAdderSub = !LSUOpType.isAdd(func)
   val adderRes = (src1 +& (src2 ^ Fill(XLEN, isAdderSub))) + isAdderSub
@@ -199,7 +199,7 @@ class AtomALU extends NutCoreModule {
     LSUOpType.amomaxu -> Mux(sltu(0), src2, src1)
   ))
 
-  io.result :=  Mux(io.isWordOp, SignExt(res(31,0), 64), res(XLEN-1,0))
+  io.result := res
 }
 
 // Out Of Order Load/Store Unit
