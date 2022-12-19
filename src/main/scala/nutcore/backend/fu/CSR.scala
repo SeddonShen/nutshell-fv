@@ -364,6 +364,7 @@ class CSR(implicit val p: NutCoreConfig) extends NutCoreModule with HasCSRConst 
   val sipMask  = "h222".U(64.W) & mideleg
 
   val satp = RegInit(UInt(XLEN.W), 0.U)
+  val satpMask = Cat("h8ffff".U(20.W), ((1L << (PAddrBits - 12)) - 1).U(44.W))
   val satpStruct = satp.asTypeOf(new SatpStruct)
   val vmEnable = satpStruct.vmEnable(priviledgeMode)
 
@@ -447,7 +448,7 @@ class CSR(implicit val p: NutCoreConfig) extends NutCoreModule with HasCSRConst 
     MaskedRegMap(Sip, mip.asUInt, sipMask, MaskedRegMap.Unwritable, sipMask),
 
     // Supervisor Protection and Translation
-    MaskedRegMap(Satp, satp),
+    MaskedRegMap(Satp, satp, satpMask),
 
     // Machine Information Registers
     MaskedRegMap(Mvendorid, mvendorid, 0.U, MaskedRegMap.Unwritable),
