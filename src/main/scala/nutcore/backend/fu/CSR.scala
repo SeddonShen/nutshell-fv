@@ -261,6 +261,7 @@ class CSR(implicit val p: NutCoreConfig) extends NutCoreModule with HasCSRConst 
   // Machine-Level CSRs
 
   val mtvec = RegInit(UInt(XLEN.W), 0.U)
+  val mtvecMask = "hfffffffffffffffc".U(64.W)
   val mcounteren = RegInit(UInt(XLEN.W), 0.U)
   val mcause = RegInit(UInt(XLEN.W), 0.U)
   val mtval = RegInit(UInt(XLEN.W), 0.U)
@@ -357,6 +358,7 @@ class CSR(implicit val p: NutCoreConfig) extends NutCoreModule with HasCSRConst 
   val sstatusRmask = sstatusWmask | "h8000000300018000".U
   // Sstatus Read Mask = (SSTATUS_WMASK | (0xf << 13) | (1ull << 63) | (3ull << 32))
   val stvec = RegInit(UInt(XLEN.W), 0.U)
+  val stvecMask = "hfffffffffffffffc".U(64.W)
   // val sie = RegInit(0.U(XLEN.W))
   val sieMask = "h222".U(64.W) & mideleg
   val sipMask  = "h222".U(64.W) & mideleg
@@ -434,7 +436,7 @@ class CSR(implicit val p: NutCoreConfig) extends NutCoreModule with HasCSRConst 
     // MaskedRegMap(Sedeleg, Sedeleg),
     // MaskedRegMap(Sideleg, Sideleg),
     MaskedRegMap(Sie, mie, sieMask, MaskedRegMap.NoSideEffect, sieMask),
-    MaskedRegMap(Stvec, stvec),
+    MaskedRegMap(Stvec, stvec, stvecMask),
     MaskedRegMap(Scounteren, scounteren),
 
     // Supervisor Trap Handling
@@ -460,7 +462,7 @@ class CSR(implicit val p: NutCoreConfig) extends NutCoreModule with HasCSRConst 
     MaskedRegMap(Medeleg, medeleg, "hb3ff".U(64.W)),
     MaskedRegMap(Mideleg, mideleg, "h222".U(64.W)),
     MaskedRegMap(Mie, mie),
-    MaskedRegMap(Mtvec, mtvec),
+    MaskedRegMap(Mtvec, mtvec, mtvecMask),
     MaskedRegMap(Mcounteren, mcounteren),
 
     // Machine Trap Handling
