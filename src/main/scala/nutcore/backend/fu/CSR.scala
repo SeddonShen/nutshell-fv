@@ -604,35 +604,6 @@ class CSR(implicit val p: NutCoreConfig) extends NutCoreModule with HasCSRConst 
     )
   }
 
-  when(hasLoadAddrMisaligned || hasStoreAddrMisaligned) {
-    when(priviledgeMode === ModeM) {
-      mtval := dmemExceptionAddr
-    }.otherwise {
-      stval := dmemExceptionAddr
-    }
-    Debug("[ML] %d: addr %x pc %x priviledgeMode %x\n",
-      GTimer(), dmemExceptionAddr, io.cfIn.pc, priviledgeMode)
-  }.elsewhen (hasInstrPageFault || hasLoadPageFault || hasStorePageFault) {
-    val tval = Mux(hasInstrPageFault,
-      Mux(io.cfIn.crossPageIPFFix, SignExt(io.cfIn.pc + 2.U, XLEN), imemExceptionAddr),
-      dmemExceptionAddr
-    )
-    when(priviledgeMode === ModeM){
-      mtval := tval
-    }.otherwise{
-      stval := tval
-    }
-    Debug("[PF] %d: ipf %b tval %x := addr %x pc %x priviledgeMode %x\n",
-      GTimer(), hasInstrPageFault, tval, dmemExceptionAddr, io.cfIn.pc, priviledgeMode)
-  }.elsewhen (hasInstrAccessFault || hasLoadAccessFault || hasStoreAccessFault) {
-    val tval = Mux(hasInstrAccessFault, imemExceptionAddr, dmemExceptionAddr)
-    when(priviledgeMode === ModeM) {
-      mtval := tval
-    }.otherwise {
-      stval := tval
-    }
-  }
-
   // Exception and Intr
 
   // interrupts
@@ -737,13 +708,39 @@ class CSR(implicit val p: NutCoreConfig) extends NutCoreModule with HasCSRConst 
   val isPageFault = hasInstrPageFault || hasLoadPageFault || hasStorePageFault
   val isAddrMisAligned = hasLoadAddrMisaligned || hasStoreAddrMisaligned
   val isAccessFault = hasInstrAccessFault || hasLoadAccessFault || hasStoreAccessFault
-  val tvalWen = !(isPageFault || isAddrMisAligned || isAccessFault) || raiseIntr // in nutcore-riscv64, no exception will come together with PF
 
   ret := isMret || isSret || isUret
   trapTarget := Mux(delegS, stvec, mtvec)
   retTarget := DontCare
-  // TODO redirect target
-  // val illegalEret = TODO
+
+  when(hasLoadAddrMisaligned || hasStoreAddrMisaligned) {
+    when (delegS) {
+      stval := dmemExceptionAddr
+    }.otherwise {
+      mtval := dmemExceptionAddr
+    }
+    Debug("[ML] %d: addr %x pc %x delegS %x\n",
+      GTimer(), dmemExceptionAddr, io.cfIn.pc, delegS)
+  }.elsewhen(hasInstrPageFault || hasLoadPageFault || hasStorePageFault) {
+    val tval = Mux(hasInstrPageFault,
+      Mux(io.cfIn.crossPageIPFFix, SignExt(io.cfIn.pc + 2.U, XLEN), imemExceptionAddr),
+      dmemExceptionAddr
+    )
+    when (delegS) {
+      stval := tval
+    }.otherwise {
+      mtval := tval
+    }
+    Debug("[PF] %d: ipf %b tval %x := addr %x pc %x priviledgeMode %x\n",
+      GTimer(), hasInstrPageFault, tval, dmemExceptionAddr, io.cfIn.pc, priviledgeMode)
+  }.elsewhen(hasInstrAccessFault || hasLoadAccessFault || hasStoreAccessFault) {
+    val tval = Mux(hasInstrAccessFault, imemExceptionAddr, dmemExceptionAddr)
+    when (delegS) {
+      stval := tval
+    }.otherwise {
+      mtval := tval
+    }
+  }
 
   when (valid && isMret) {
     val mstatusOld = WireInit(mstatus.asTypeOf(new MstatusStruct))
@@ -782,6 +779,7 @@ class CSR(implicit val p: NutCoreConfig) extends NutCoreModule with HasCSRConst 
     retTarget := uepc
   }
 
+  val tvalZeroWen = !(isPageFault || isAddrMisAligned || isAccessFault) || raiseIntr
   when (raiseExceptionIntr) {
     val mstatusOld = WireInit(mstatus.asTypeOf(new MstatusStruct))
     val mstatusNew = WireInit(mstatus.asTypeOf(new MstatusStruct))
@@ -793,7 +791,9 @@ class CSR(implicit val p: NutCoreConfig) extends NutCoreModule with HasCSRConst 
       mstatusNew.pie.s := mstatusOld.ie.s
       mstatusNew.ie.s := false.B
       priviledgeMode := ModeS
-      when(tvalWen){stval := 0.U} // TODO: should not use =/=
+      when (tvalZeroWen) {
+        stval := 0.U
+      }
       // printf("[*] mstatusNew.spp %x\n", mstatusNew.spp)
       // trapTarget := stvec(VAddrBits-1. 0)
     }.otherwise {
@@ -803,7 +803,9 @@ class CSR(implicit val p: NutCoreConfig) extends NutCoreModule with HasCSRConst 
       mstatusNew.pie.m := mstatusOld.ie.m
       mstatusNew.ie.m := false.B
       priviledgeMode := ModeM
-      when(tvalWen){mtval := 0.U} // TODO: should not use =/=
+      when (tvalZeroWen) {
+        mtval := 0.U
+      }
       // trapTarget := mtvec(VAddrBits-1. 0)
     }
     // mstatusNew.pie.m := LookupTree(priviledgeMode, List(
