@@ -140,25 +140,15 @@ class Decoder(implicit val p: NutCoreConfig) extends NutCoreModule with HasInstr
   io.isBranch := VecInit(RV32I_BRUInstr.table.map(i => i._2.tail(1) === fuOpType)).asUInt.orR && fuType === FuType.bru
 
   val numInstrTypes = Instructions.DecodeTable.length
-  println(s"Number of supported instructions: $numInstrTypes")
-  val coverageMap = RegInit(VecInit.fill(numInstrTypes)(false.B))
   val instrMatchVec = Instructions.DecodeTable.map(_._1 === instr)
-  for ((m, i) <- instrMatchVec.zipWithIndex) {
-    when (io.out.fire && m && !coverageMap(i)) {
-      coverageMap(i) := true.B
-    }
-  }
 
-  val instrCovTotal = WireInit(numInstrTypes.U(32.W))
-  val instrCovCurrent = Wire(UInt(32.W))
-  instrCovCurrent := PopCount(coverageMap).asUInt
-  val instrCovBitmap = Wire(Vec((numInstrTypes + 63) / 64, UInt(64.W)))
-  for ((bitmap, i) <- instrCovBitmap.zipWithIndex) {
-    bitmap := VecInit(coverageMap.drop(64 * i)).asUInt
-  }
-  BoringUtils.addSource(instrCovTotal, "instrCovTotal")
-  BoringUtils.addSource(instrCovCurrent, "instrCovCurrent")
-  BoringUtils.addSource(instrCovBitmap, "instrCovBitmap")
+  class DiffInstrCover extends DiffCoverage("icover", numInstrTypes)
+  val difftest = DifftestModule(new DiffInstrCover)
+  difftest.clock   := clock
+  difftest.coreid  := 0.U
+  difftest.valid   := io.out.fire && VecInit(instrMatchVec).asUInt.orR
+  difftest.address := OHToUInt(instrMatchVec)
+  difftest.covered := true.B
 }
 
 class IDU(implicit val p: NutCoreConfig) extends NutCoreModule with HasInstrType {
