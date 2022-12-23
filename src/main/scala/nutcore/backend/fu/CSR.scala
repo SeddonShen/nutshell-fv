@@ -265,7 +265,10 @@ class CSR(implicit val p: NutCoreConfig) extends NutCoreModule with HasCSRConst 
   val mcounteren = RegInit(UInt(XLEN.W), 0.U)
   val mcause = RegInit(UInt(XLEN.W), 0.U)
   val mtval = RegInit(UInt(XLEN.W), 0.U)
-  val mepc = Reg(UInt(XLEN.W))
+
+  // The low bit of mepc (mepc[0]) is always zero.
+  val mepc = RegInit(UInt(XLEN.W), 0.U)
+  val mepcMask = "hfffffffffffffffe".U(64.W)
 
   val mie = RegInit(0.U(XLEN.W))
   val mipWire = WireInit(0.U.asTypeOf(new Interrupt))
@@ -368,7 +371,10 @@ class CSR(implicit val p: NutCoreConfig) extends NutCoreModule with HasCSRConst 
   val satpStruct = satp.asTypeOf(new SatpStruct)
   val vmEnable = satpStruct.vmEnable(priviledgeMode)
 
+  // The low bit of sepc (sepc[0]) is always zero.
   val sepc = RegInit(UInt(XLEN.W), 0.U)
+  val sepcMask = "hfffffffffffffffe".U(64.W)
+
   val scause = RegInit(UInt(XLEN.W), 0.U)
   val stval = Reg(UInt(XLEN.W))
   val sscratch = RegInit(UInt(XLEN.W), 0.U)
@@ -442,7 +448,7 @@ class CSR(implicit val p: NutCoreConfig) extends NutCoreModule with HasCSRConst 
 
     // Supervisor Trap Handling
     MaskedRegMap(Sscratch, sscratch),
-    MaskedRegMap(Sepc, sepc),
+    MaskedRegMap(Sepc, sepc, sepcMask),
     MaskedRegMap(Scause, scause),
     MaskedRegMap(Stval, stval),
     MaskedRegMap(Sip, mip.asUInt, sipMask, MaskedRegMap.Unwritable, sipMask),
@@ -468,7 +474,7 @@ class CSR(implicit val p: NutCoreConfig) extends NutCoreModule with HasCSRConst 
 
     // Machine Trap Handling
     MaskedRegMap(Mscratch, mscratch),
-    MaskedRegMap(Mepc, mepc),
+    MaskedRegMap(Mepc, mepc, mepcMask),
     MaskedRegMap(Mcause, mcause),
     MaskedRegMap(Mtval, mtval),
     MaskedRegMap(Mip, mip.asUInt, 0.U(64.W), MaskedRegMap.Unwritable),
