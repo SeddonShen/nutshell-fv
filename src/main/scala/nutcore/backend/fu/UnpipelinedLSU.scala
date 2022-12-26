@@ -78,7 +78,7 @@ class UnpipelinedLSU extends NutCoreModule with HasLSUConst {
   BoringUtils.addSink(dtlbEnable, "vmEnable")
 
   // also need to check access fault for the SC instruction
-  val hasScAccessFault = in_valid && isSc && !dtlbEnable && !isLegalStoreAddr(in_vaddr)
+  val hasScAccessFault = in_valid && isSc && !dtlbEnable && !isLegalAMOAddr(in_vaddr)
 
   val valid = in_valid && addrAligned && !hasScAccessFault
 
@@ -494,7 +494,7 @@ class LSExecUnit extends NutCoreModule {
   val vmEnable = WireInit(false.B)
   BoringUtils.addSink(vmEnable, "vmEnable")
   io.loadAccessFault  := valid && !vmEnable && !(isStore || isAMO) && !isLegalLoadAddr(addr)
-  io.storeAccessFault := valid && !vmEnable &&  (isStore || isAMO) && !isLegalStoreAddr(addr)
+  io.storeAccessFault := valid && !vmEnable && ((isStore && !isLegalStoreAddr(addr)) || (isAMO && !isLegalAMOAddr(addr)))
 
   BoringUtils.addSource(dmem.isRead() && dmem.req.fire(), "perfCntCondMloadInstr")
   BoringUtils.addSource(BoolStopWatch(dmem.isRead(), dmem.resp.fire()), "perfCntCondMloadStall")

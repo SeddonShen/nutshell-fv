@@ -48,8 +48,9 @@ trait HasNutCoreParameter {
   val EnableOutOfOrderExec = Settings.get("EnableOutOfOrderExec")
   val EnableMultiCyclePredictor = false // false unless a customized condition branch predictor is included
   val EnableOutOfOrderMemAccess = false // enable out of order mem access will improve OoO backend's performance
+  val memoryAddressSet = (0x80000000L, 0x100000000L)
   val instrAddressSet = Seq(
-    (0x80000000L, 0x100000000L)
+    memoryAddressSet
   )
   val loadAddressSet = Seq(
     (0x38000000L, 0x38000000L + 0x00010000L), // CLINT
@@ -61,7 +62,7 @@ trait HasNutCoreParameter {
     (0x40002000L, 0x40002000L + 0x1000L), // dummy sdcard
     // (0x40004000L, 0x40004000L + 0x1000L), // meipGen
     // (0x40003000L, 0x40003000L + 0x1000L),  // dma
-    (0x80000000L, 0x100000000L)
+    memoryAddressSet
   )
   val storeAddressSet = loadAddressSet
   def isLegalAddress(addr: UInt, set: Seq[(Long, Long)]): Bool = {
@@ -70,6 +71,7 @@ trait HasNutCoreParameter {
   def isLegalInstrAddr(addr: UInt): Bool = isLegalAddress(addr, instrAddressSet)
   def isLegalLoadAddr(addr: UInt): Bool = isLegalAddress(addr, loadAddressSet)
   def isLegalStoreAddr(addr: UInt): Bool = isLegalAddress(addr, storeAddressSet)
+  def isLegalAMOAddr(addr: UInt): Bool = isLegalAddress(addr, Seq(memoryAddressSet))
 }
 
 trait HasNutCoreConst extends HasNutCoreParameter {
