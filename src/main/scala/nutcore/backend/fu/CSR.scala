@@ -509,8 +509,15 @@ class CSR(implicit val p: NutCoreConfig) extends NutCoreModule with HasCSRConst 
   // General CSR wen check
   val wen = (valid && func =/= CSROpType.jmp) && (addr =/= Satp.U || satpLegalMode) && !io.isBackendException
   val isIllegalMode  = priviledgeMode < addr(9, 8)
-  val justRead = (func === CSROpType.set || func === CSROpType.seti) && src1 === 0.U  // csrrs and csrrsi are exceptions when their src1 is zero
-  val isIllegalWrite = wen && (addr(11, 10) === "b11".U) && !justRead  // Write a read-only CSR register
+  // From RISC-V specification Zicsr:
+  // For both CSRRS and CSRRC, if rs1=x0, then the instruction will not write to the CSR at all,
+  // and so shall not cause any of the side effects that might otherwise occur on a CSR write,
+  // such as raising illegal instruction exceptions on accesses to read-only CSRs.
+  val isCSRRS = func === CSROpType.set || func === CSROpType.seti
+  val isCSRRC = func === CSROpType.clr || func === CSROpType.clri
+  val noWriteSideEffect = (isCSRRS || isCSRRC) && src1 === 0.U
+  // Write a read-only CSR register
+  val isIllegalWrite = wen && (addr(11, 10) === "b11".U) && !noWriteSideEffect
   val isIllegalAccess = isIllegalMode || isIllegalWrite
 
   MaskedRegMap.generate(mapping, addr, rdata, wen && !isIllegalAccess, wdata)
