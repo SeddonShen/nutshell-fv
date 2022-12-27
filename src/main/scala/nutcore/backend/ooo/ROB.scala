@@ -497,7 +497,7 @@ class ROB(implicit val p: NutCoreConfig) extends NutCoreModule with HasInstrType
   
   if (!p.FPGAPlatform) {
     for (i <- 0 until RetireWidth) {
-      val difftest_commit = DifftestModule(new DiffInstrCommit)
+      val difftest_commit = DifftestModule(new DiffInstrCommit(robSize * robWidth))
       difftest_commit.clock    := clock
       difftest_commit.coreid   := 0.U
       difftest_commit.index    := i.U
