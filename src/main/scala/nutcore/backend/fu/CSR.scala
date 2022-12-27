@@ -516,7 +516,7 @@ class CSR(implicit val p: NutCoreConfig) extends NutCoreModule with HasCSRConst 
   // such as raising illegal instruction exceptions on accesses to read-only CSRs.
   val isCSRRS = func === CSROpType.set || func === CSROpType.seti
   val isCSRRC = func === CSROpType.clr || func === CSROpType.clri
-  val noWriteSideEffect = (isCSRRS || isCSRRC) && src1 === 0.U
+  val noWriteSideEffect = (isCSRRS || isCSRRC) && io.cfIn.instr(19, 15) === 0.U
   // Write a read-only CSR register
   val isIllegalWrite = wen && (addr(11, 10) === "b11".U) && !noWriteSideEffect
   val isIllegalAccess = isIllegalMode || isIllegalWrite
