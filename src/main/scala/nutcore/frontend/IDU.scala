@@ -156,7 +156,7 @@ class Decoder(implicit val p: NutCoreConfig) extends NutCoreModule with HasInstr
 
   // instruction-imm coverage
   val enableInstrImmCoverage = true
-  val instrImmCoverMatchVec = Instructions.DecodeTable.map(_._2.map(_.litValue)).map(t => {
+  val instrImmCoverMatch = Instructions.DecodeTable.map(_._2.map(_.litValue)).map(t => {
     if (t.head == InstrI.litValue.toInt) {
       if (t.tail.head == FuType.csr.litValue.toInt) (1 << 12, instr(31, 20))
       else (1 << 2, Cat(instr(31), instr(20)))
@@ -172,16 +172,20 @@ class Decoder(implicit val p: NutCoreConfig) extends NutCoreModule with HasInstr
     else if (t.head == InstrSA.litValue.toInt)
       (1 << 2, Cat(instr(31), instr(7)))
     else (1 << 0, 0.U)
-  }).zip(instrMatchVec).flatMap(x => Seq.tabulate(x._1._1)(i => x._2 && x._1._2 === i.U))
-  val numInstrImmCover = instrImmCoverMatchVec.length
+  })
+  val numInstrImmCover = instrImmCoverMatch.map(_._1).sum
+  val baseAddress = instrImmCoverMatch.indices.map(i => instrImmCoverMatch.map(_._1).take(i).sum)
+  val baseAddressU = PriorityMux(instrMatchVec, baseAddress.map(_.U(log2Ceil(numInstrImmCover).W)))
+  val offsetU = PriorityMux(instrMatchVec, instrImmCoverMatch.map(_._2))
+  val coverAddress = baseAddressU + offsetU
 
   if (enableInstrImmCoverage) {
     class DiffInstrImmCover extends DiffCoverage("instr_imm_cover", numInstrImmCover)
     val difftest = DifftestModule(new DiffInstrImmCover)
     difftest.clock   := clock
     difftest.coreid  := 0.U
-    difftest.valid   := io.out.fire && VecInit(instrImmCoverMatchVec).asUInt.orR
-    difftest.address := OHToUInt(instrImmCoverMatchVec)
+    difftest.valid   := io.out.fire && VecInit(instrMatchVec).asUInt.orR
+    difftest.address := coverAddress
     difftest.covered := true.B
   }
 }
