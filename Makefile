@@ -20,13 +20,15 @@ CORE  ?= inorder  # inorder  ooo  embedded
 help:
 	mill -i NutShell.runMain top.$(TOP) --help BOARD=$(BOARD) CORE=$(CORE)
 
-MILL_ARGS = -td $(@D) --output-file $(@F) BOARD=$(BOARD) CORE=$(CORE)
+MILL_ARGS  = -td $(@D) --output-file $(@F)
+MILL_ARGS += BOARD=$(BOARD) CORE=$(CORE)
+MILL_ARGS += --gen-mem-verilog full
 
 $(TOP_V): $(SCALA_FILE)
 	mkdir -p $(@D)
-	mill -i NutShell.runMain top.$(TOP) $(MILL_ARGS) \
-		--infer-rw $(FPGATOP) --repl-seq-mem         \
-		-c:$(FPGATOP):-o:$(@D)/$(@F).conf
+	mill -i NutShell.runMain top.$(TOP) $(MILL_ARGS)     \
+		--repl-seq-mem -c:$(FPGATOP):-o:$(@D)/$(@F).conf \
+		--infer-rw $(FPGATOP)
 	sed -i -e 's/_\(aw\|ar\|w\|r\|b\)_\(\|bits_\)/_\1/g' $@
 	@git log -n 1 >> .__head__
 	@git diff >> .__diff__
@@ -50,7 +52,9 @@ SIM_TOP = SimTop
 SIM_TOP_V = $(BUILD_DIR)/$(SIM_TOP).v
 $(SIM_TOP_V): $(SCALA_FILE) $(TEST_FILE)
 	mkdir -p $(@D)
-	mill -i NutShell.test.runMain $(SIMTOP) $(MILL_ARGS)
+	mill -i NutShell.test.runMain $(SIMTOP) $(MILL_ARGS) \
+		--repl-seq-mem -c:$(SIM_TOP):-o:$(@D)/$(@F).conf \
+		--infer-rw $(SIM_TOP)
 	sed -i -e 's/$$fatal/xs_assert(`__LINE__)/g' $(SIM_TOP_V)
 
 sim-verilog: $(SIM_TOP_V)
