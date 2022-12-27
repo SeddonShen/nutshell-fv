@@ -209,6 +209,7 @@ class IDU(implicit val p: NutCoreConfig) extends NutCoreModule with HasInstrType
   }
 
   io.out(0).bits.cf.isBranch := decoder.io.isBranch
+  io.out(0).bits.cf.isExit := false.B
   io.out(0).bits.cf.runahead_checkpoint_id := 0.U
   // when(runahead.io.valid) {
   //   printf("fire pc %x branch %x inst %x\n", runahead.io.pc, runahead.io.branch, io.out(0).bits.cf.instr)

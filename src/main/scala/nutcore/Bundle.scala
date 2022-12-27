@@ -66,6 +66,7 @@ class CtrlFlowIO extends NutCoreBundle {
   val crossPageIPFFix = Output(Bool())
   val runahead_checkpoint_id = Output(UInt(64.W))
   val isBranch = Output(Bool())
+  val isExit = Output(Bool())
 }
 
 class DecodeIO extends NutCoreBundle {
@@ -85,6 +86,7 @@ class CommitIO extends NutCoreBundle {
   val isMMIO = Output(Bool())
   val intrNO = Output(UInt(XLEN.W))
   val commits = Output(Vec(FuType.num, UInt(XLEN.W)))
+  val isExit = Output(Bool())
 }
 
 class OOCommitIO extends NutCoreBundle with HasBackendConst{

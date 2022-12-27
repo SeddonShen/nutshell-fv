@@ -191,6 +191,7 @@ class CSRIO extends FunctionUnitIO {
   val dmemMMU = Flipped(new MMUIO)
   val wenFix = Output(Bool())
   val isPerfRead = Output(Bool())
+  val isExit = Output(Bool())
 }
 
 class CSR(implicit val p: NutCoreConfig) extends NutCoreModule with HasCSRConst with Sv39Const{
@@ -525,6 +526,7 @@ class CSR(implicit val p: NutCoreConfig) extends NutCoreModule with HasCSRConst 
   val resetSatp = addr === Satp.U && wen // write to satp will cause the pipeline be flushed
   io.out.bits := rdata
   io.isPerfRead := io.out.valid && addr >= 0xb00.U && addr < (0xb00 + nrPerfCnts).U
+  io.isExit := io.out.valid && addr === Mip.U && func =/= CSROpType.jmp
 
   // Fix Mip/Sip write
   val fixMapping = Map(

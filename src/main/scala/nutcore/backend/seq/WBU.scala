@@ -57,28 +57,37 @@ class WBU(implicit val p: NutCoreConfig) extends NutCoreModule{
   BoringUtils.addSource(falseWire, "perfCntCondMultiCommit")
 
   if (!p.FPGAPlatform) {
-    val difftest_commit = DifftestModule(new DiffInstrCommit)
-    difftest_commit.clock    := clock
-    difftest_commit.coreid   := 0.U
-    difftest_commit.index    := 0.U
+    val difftest = DifftestModule(new DiffInstrCommit)
+    difftest.clock := clock
+    difftest.coreid := 0.U
+    difftest.index := 0.U
+    difftest.valid := RegNext(io.in.valid)
+    difftest.pc := RegNext(SignExt(io.in.bits.decode.cf.pc, AddrBits))
+    difftest.instr := RegNext(io.in.bits.decode.cf.instr)
+    difftest.skip := RegNext(io.in.bits.isMMIO)
+    difftest.isRVC := RegNext(io.in.bits.decode.cf.instr(1, 0) =/= "b11".U)
+    difftest.rfwen := RegNext(io.wb.rfWen && io.wb.rfDest =/= 0.U) // && valid(ringBufferTail)(i) && commited(ringBufferTail)(i)
+    difftest.fpwen := false.B
+    difftest.special := 0.U
+    difftest.wdest := RegNext(io.wb.rfDest)
+    difftest.wpdest := RegNext(io.wb.rfDest)
+    difftest.setSpecial(isExit = RegNext(io.in.bits.isExit))
+  }
+  else {
+    BoringUtils.addSource(io.in.valid, "ilaWBUvalid")
+    BoringUtils.addSource(io.in.bits.decode.cf.pc, "ilaWBUpc")
+    BoringUtils.addSource(io.wb.rfWen, "ilaWBUrfWen")
+    BoringUtils.addSource(io.wb.rfDest, "ilaWBUrfDest")
+    BoringUtils.addSource(io.wb.rfData, "ilaWBUrfData")
+  }
 
-    difftest_commit.valid    := RegNext(io.in.valid)
-    difftest_commit.pc       := RegNext(SignExt(io.in.bits.decode.cf.pc, AddrBits))
-    difftest_commit.instr    := RegNext(io.in.bits.decode.cf.instr)
-    difftest_commit.skip     := RegNext(io.in.bits.isMMIO)
-    difftest_commit.isRVC    := RegNext(io.in.bits.decode.cf.instr(1,0)=/="b11".U)
-    difftest_commit.rfwen    := RegNext(io.wb.rfWen && io.wb.rfDest =/= 0.U) // && valid(ringBufferTail)(i) && commited(ringBufferTail)(i)
-    difftest_commit.fpwen    := false.B
-    difftest_commit.special  := 0.U
-    difftest_commit.wdest    := RegNext(io.wb.rfDest)
-    difftest_commit.wpdest   := RegNext(io.wb.rfDest)
-
-    val difftest_wb = DifftestModule(new DiffIntWriteback)
-    difftest_wb.clock := clock
-    difftest_wb.coreid := 0.U
-    difftest_wb.valid := RegNext(io.wb.rfWen && io.wb.rfDest =/= 0.U)
-    difftest_wb.address := RegNext(io.wb.rfDest)
-    difftest_wb.data := RegNext(io.wb.rfData)
+  if (!p.FPGAPlatform) {
+    val difftest = DifftestModule(new DiffIntWriteback)
+    difftest.clock := clock
+    difftest.coreid := 0.U
+    difftest.valid := RegNext(io.wb.rfWen && io.wb.rfDest =/= 0.U)
+    difftest.address := RegNext(io.wb.rfDest)
+    difftest.data := RegNext(io.wb.rfData)
 
     // val runahead_commit = DifftestModule(new DiffRunaheadCommitEvent)
     // runahead_commit.clock := clock
@@ -86,11 +95,5 @@ class WBU(implicit val p: NutCoreConfig) extends NutCoreModule{
     // runahead_commit.index := 0.U
     // runahead_commit.valid := RegNext(io.in.valid && io.in.bits.decode.cf.isBranch)
     // runahead_commit.pc    := RegNext(SignExt(io.in.bits.decode.cf.pc, AddrBits))
-  } else {
-    BoringUtils.addSource(io.in.valid, "ilaWBUvalid")
-    BoringUtils.addSource(io.in.bits.decode.cf.pc, "ilaWBUpc")
-    BoringUtils.addSource(io.wb.rfWen, "ilaWBUrfWen")
-    BoringUtils.addSource(io.wb.rfDest, "ilaWBUrfDest")
-    BoringUtils.addSource(io.wb.rfData, "ilaWBUrfData")
   }
 }
