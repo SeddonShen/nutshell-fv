@@ -141,52 +141,16 @@ class Decoder(implicit val p: NutCoreConfig) extends NutCoreModule with HasInstr
 
   // instruction coverage
   val enableInstrCoverage = true
-  val numInstrTypes = Instructions.DecodeTable.length
-  val instrMatchVec = Instructions.DecodeTable.map(_._1 === instr)
-
   if (enableInstrCoverage) {
-    class DiffInstrCover extends DiffCoverage("icover", numInstrTypes)
-    val difftest = DifftestModule(new DiffInstrCover)
-    difftest.clock   := clock
-    difftest.coreid  := 0.U
-    difftest.valid   := io.out.fire && VecInit(instrMatchVec).asUInt.orR
-    difftest.address := OHToUInt(instrMatchVec)
-    difftest.covered := true.B
+    val c = Module(new CoverInstr(Instructions.DecodeTable.map(_._1)))
+    c.cover(io.out.fire, instr)
   }
 
   // instruction-imm coverage
   val enableInstrImmCoverage = true
-  val instrImmCoverMatch = Instructions.DecodeTable.map(_._2.map(_.litValue)).map(t => {
-    if (t.head == InstrI.litValue.toInt) {
-      if (t.tail.head == FuType.csr.litValue.toInt) (1 << 12, instr(31, 20))
-      else (1 << 2, Cat(instr(31), instr(20)))
-    }
-    else if (t.head == InstrS.litValue.toInt)
-      (1 << 2, Cat(instr(31), instr(7)))
-    else if (t.head == InstrB.litValue.toInt)
-      (1 << 1, instr(31))
-    else if (t.head == InstrU.litValue.toInt)
-      (1 << 1, instr(31))
-    else if (t.head == InstrJ.litValue.toInt)
-      (1 << 1, instr(31))
-    else if (t.head == InstrSA.litValue.toInt)
-      (1 << 2, Cat(instr(31), instr(7)))
-    else (1 << 0, 0.U)
-  })
-  val numInstrImmCover = instrImmCoverMatch.map(_._1).sum
-  val baseAddress = instrImmCoverMatch.indices.map(i => instrImmCoverMatch.map(_._1).take(i).sum)
-  val baseAddressU = PriorityMux(instrMatchVec, baseAddress.map(_.U(log2Ceil(numInstrImmCover).W)))
-  val offsetU = PriorityMux(instrMatchVec, instrImmCoverMatch.map(_._2))
-  val coverAddress = baseAddressU + offsetU
-
   if (enableInstrImmCoverage) {
-    class DiffInstrImmCover extends DiffCoverage("instr_imm_cover", numInstrImmCover)
-    val difftest = DifftestModule(new DiffInstrImmCover)
-    difftest.clock   := clock
-    difftest.coreid  := 0.U
-    difftest.valid   := io.out.fire && VecInit(instrMatchVec).asUInt.orR
-    difftest.address := coverAddress
-    difftest.covered := true.B
+    val c = Module(new CoverInstrImm(Instructions.DecodeTable))
+    c.cover(io.out.fire, instr)
   }
 }
 
