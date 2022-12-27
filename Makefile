@@ -29,7 +29,7 @@ $(TOP_V): $(SCALA_FILE)
 	mill -i NutShell.runMain top.$(TOP) $(MILL_ARGS)     \
 		--repl-seq-mem -c:$(FPGATOP):-o:$(@D)/$(@F).conf \
 		--infer-rw $(FPGATOP)
-	sed -i -e 's/_\(aw\|ar\|w\|r\|b\)_\(\|bits_\)/_\1/g' $@
+	@sed -i -e 's/_\(aw\|ar\|w\|r\|b\)_\(\|bits_\)/_\1/g' $@
 	@git log -n 1 >> .__head__
 	@git diff >> .__diff__
 	@sed -i 's/^/\/\// ' .__head__
@@ -55,12 +55,12 @@ $(SIM_TOP_V): $(SCALA_FILE) $(TEST_FILE)
 	mill -i NutShell.test.runMain $(SIMTOP) $(MILL_ARGS) \
 		--repl-seq-mem -c:$(SIM_TOP):-o:$(@D)/$(@F).conf \
 		--infer-rw $(SIM_TOP)
-	sed -i -e 's/$$fatal/xs_assert(`__LINE__)/g' $(SIM_TOP_V)
+	@sed -i -e 's/$$fatal/xs_assert(`__LINE__)/g' $(SIM_TOP_V)
 
 sim-verilog: $(SIM_TOP_V)
 
 emu: sim-verilog
-	$(MAKE) -C ./difftest emu
+	@$(MAKE) -C ./difftest emu
 
 init:
 	git submodule update --init
