@@ -20,8 +20,9 @@ import chisel3.util._
 import difftest._
 import nutcore.{FuType, HasInstrType}
 
-abstract class Coverage(n_cover: Int) extends Module {
-  val out = IO(ValidIO(UInt(log2Ceil(n_cover).W)))
+abstract class Coverage extends Module {
+  def n_cover: Int
+  lazy val out = Wire(Valid(UInt(log2Ceil(n_cover).W)))
 
   def createDiffMod[T <: DiffCoverage](coverType: => T): Unit = {
     val difftest = DifftestModule(coverType)
@@ -33,7 +34,7 @@ abstract class Coverage(n_cover: Int) extends Module {
   }
 }
 
-class CoverInstr(decodeTable: Seq[BitPat]) extends Coverage(decodeTable.length) {
+class CoverInstr(decodeTable: Seq[BitPat]) extends Coverage {
   val in = IO(Flipped(ValidIO(UInt(32.W))))
   def cover(v: Bool, i: UInt): Unit = {
     in.valid := v
@@ -43,15 +44,15 @@ class CoverInstr(decodeTable: Seq[BitPat]) extends Coverage(decodeTable.length) 
   val numInstrTypes = decodeTable.length
   val instrMatchVec = decodeTable.map(_ === in.bits)
 
+  override def n_cover: Int = numInstrTypes
+  class DiffInstrCover extends DiffCoverage("icover", n_cover)
+  createDiffMod(new DiffInstrCover)
+
   out.valid := in.valid && VecInit(instrMatchVec).asUInt.orR
   out.bits  := OHToUInt(instrMatchVec)
-
-  class DiffInstrCover extends DiffCoverage("icover", numInstrTypes)
-  createDiffMod(new DiffInstrCover)
 }
 
-class CoverInstrImm(decodeTable: Seq[(BitPat, List[UInt])])
-  extends Coverage(decodeTable.length) with HasInstrType {
+class CoverInstrImm(decodeTable: Seq[(BitPat, List[UInt])]) extends Coverage with HasInstrType {
   val in = IO(Flipped(ValidIO(UInt(32.W))))
   def cover(v: Bool, i: UInt): Unit = {
     in.valid := v
@@ -82,9 +83,10 @@ class CoverInstrImm(decodeTable: Seq[(BitPat, List[UInt])])
   val offsetU = PriorityMux(instrMatchVec, instrImmCoverMatch.map(_._2))
   val coverAddress = baseAddressU + offsetU
 
+  override def n_cover: Int = numInstrImmCover
+  class DiffInstrImmCover extends DiffCoverage("instr_imm_cover", n_cover)
+  createDiffMod(new DiffInstrImmCover)
+
   out.valid := in.valid && VecInit(instrMatchVec).asUInt.orR
   out.bits  := coverAddress
-
-  class DiffInstrImmCover extends DiffCoverage("instr_imm_cover", numInstrImmCover)
-  createDiffMod(new DiffInstrImmCover)
 }
