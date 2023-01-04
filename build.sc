@@ -20,6 +20,8 @@ import mill._
 import scalalib._
 import publish._
 // import coursier.maven.MavenRepository
+import $file.difftest.build
+import $file.difftest.instrumentation.instrumentation.build
 
 object ivys {
   val sv = "2.12.16"
@@ -61,7 +63,16 @@ trait NSModule extends ScalaModule with PublishModule {
   )
 }
 
-object difftest extends NSModule with SbtModule {
+object difftestDep extends difftest.build.CommonDiffTest {
+
+  object fuzz extends difftest.instrumentation.instrumentation.build.CommonRFuzz {
+    def sourceRoot = T.sources { T.workspace / "difftest" / "instrumentation" / "instrumentation" / "src" }
+
+    def allSources = T { sourceRoot().flatMap(p => os.walk(p.path)).map(PathRef(_)) }
+  }
+
+  override def fuzzModule: PublishModule = fuzz
+
   override def millSourcePath = os.pwd / "difftest"
 }
 
@@ -91,5 +102,5 @@ trait CommonNutShell extends NSModule with SbtModule { m =>
 }
 
 object NutShell extends CommonNutShell {
-  override def difftestModule = difftest
+  override def difftestModule = difftestDep
 }
