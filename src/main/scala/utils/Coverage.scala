@@ -16,9 +16,12 @@
 package utils
 
 import chisel3._
+import chisel3.experimental.ChiselAnnotation
 import chisel3.util._
 import difftest._
+import firrtl.annotations.Annotation
 import nutcore.{FuType, HasInstrType}
+import rfuzz.DoNotProfileModule
 
 abstract class Coverage extends Module {
   def n_cover: Int
@@ -32,6 +35,11 @@ abstract class Coverage extends Module {
     difftest.address := out.bits
     difftest.covered := true.B
   }
+
+  val noProfileMod = this.toNamed
+   chisel3.experimental.annotate(new ChiselAnnotation {
+     override def toFirrtl: Annotation = DoNotProfileModule(noProfileMod)
+   })
 }
 
 class CoverInstr(decodeTable: Seq[BitPat]) extends Coverage {
