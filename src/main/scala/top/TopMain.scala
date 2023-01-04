@@ -18,11 +18,12 @@ package top
 
 import nutcore.NutCoreConfig
 import system.NutShell
-import device.{AXI4VGA}
+import device.AXI4VGA
 import sim.SimTop
-
 import chisel3._
 import chisel3.stage._
+import firrtl.stage.RunFirrtlTransformAnnotation
+import rfuzz.{NoDedupTransform, ProfilingTransform, SplitMuxConditions}
 
 class Top extends Module {
   val io = IO(new Bundle{})
@@ -38,9 +39,8 @@ class Top extends Module {
 object TopMain extends App {
   def parseArgs(info: String, args: Array[String]): String = {
     var target = ""
-    for (arg <- args) { if (arg.startsWith(info + "=") == true) { target = arg } }
-    require(target != "")
-    target.substring(info.length()+1)
+    for (arg <- args) { if (arg.startsWith(info + "=")) { target = arg } }
+    if (target == "") "" else target.substring(info.length() + 1)
   }
   val board = parseArgs("BOARD", args)
   val core = parseArgs("CORE", args)
@@ -63,13 +63,23 @@ object TopMain extends App {
     case (f, v) =>
       println(f + " = " + v)
   }
+
+  val cover = parseArgs("COVER", args)
+  val customTransforms = cover.split(",").flatMap {
+    case "mux" => Seq(
+      RunFirrtlTransformAnnotation(new NoDedupTransform),
+      RunFirrtlTransformAnnotation(new SplitMuxConditions),
+      RunFirrtlTransformAnnotation(new ProfilingTransform)
+    )
+    case _ => Seq()
+  }
   if (board == "sim") {
     (new ChiselStage).execute(args, Seq(
-      ChiselGeneratorAnnotation(() => new SimTop))
-    )
+      ChiselGeneratorAnnotation(() => new SimTop)
+    ) ++ customTransforms)
   } else {
     (new ChiselStage).execute(args, Seq(
-      ChiselGeneratorAnnotation(() => new Top))
-    )
+      ChiselGeneratorAnnotation(() => new Top)
+    ) ++ customTransforms)
   }
 }

@@ -24,6 +24,11 @@ MILL_ARGS  = -td $(@D) --output-file $(@F)
 MILL_ARGS += BOARD=$(BOARD) CORE=$(CORE)
 MILL_ARGS += --gen-mem-verilog full
 
+# Fuzzer support
+ifeq ($(FUZZING),1)
+MILL_ARGS += COVER=mux
+endif
+
 $(TOP_V): $(SCALA_FILE)
 	mkdir -p $(@D)
 	mill -i NutShell.runMain top.$(TOP) $(MILL_ARGS)     \
