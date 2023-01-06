@@ -16,14 +16,15 @@
 
 package top
 
-import nutcore.NutCoreConfig
-import system.NutShell
-import device.AXI4VGA
-import sim.SimTop
 import chisel3._
 import chisel3.stage._
+import device.AXI4VGA
 import firrtl.stage.RunFirrtlTransformAnnotation
+import nutcore.NutCoreConfig
 import rfuzz.{NoDedupTransform, ProfilingTransform, SplitMuxConditions}
+import sim.SimTop
+import system.NutShell
+import xfuzz.{CoverPointTransform, DontTouchClockAndResetTransform, MuxCoverTransform}
 
 class Top extends Module {
   val io = IO(new Bundle{})
@@ -66,10 +67,17 @@ object TopMain extends App {
 
   val cover = parseArgs("COVER", args)
   val customTransforms = cover.split(",").flatMap {
-    case "mux" => Seq(
+    case "mux_old" => Seq(
       RunFirrtlTransformAnnotation(new NoDedupTransform),
       RunFirrtlTransformAnnotation(new SplitMuxConditions),
       RunFirrtlTransformAnnotation(new ProfilingTransform)
+    )
+    case "mux" => Seq(
+      RunFirrtlTransformAnnotation(new NoDedupTransform),
+      RunFirrtlTransformAnnotation(new DontTouchClockAndResetTransform),
+      RunFirrtlTransformAnnotation(new SplitMuxConditions),
+      RunFirrtlTransformAnnotation(new MuxCoverTransform),
+      RunFirrtlTransformAnnotation(new CoverPointTransform)
     )
     case _ => Seq()
   }

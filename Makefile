@@ -24,9 +24,9 @@ MILL_ARGS  = -td $(@D) --output-file $(@F)
 MILL_ARGS += BOARD=$(BOARD) CORE=$(CORE)
 MILL_ARGS += --gen-mem-verilog full
 
-# Fuzzer support
-ifeq ($(FUZZING),1)
-MILL_ARGS += COVER=mux
+# Coverage support
+ifneq ($(FIRRTL_COVER),)
+MILL_ARGS += COVER=$(FIRRTL_COVER)
 endif
 
 $(TOP_V): $(SCALA_FILE)
