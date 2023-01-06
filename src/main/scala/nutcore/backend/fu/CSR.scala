@@ -466,7 +466,7 @@ class CSR(implicit val p: NutCoreConfig) extends NutCoreModule with HasCSRConst 
     // Machine Trap Setup
     // MaskedRegMap(Mstatus, mstatus, "hffffffffffffffee".U, (x=>{printf("mstatus write: %x time: %d\n", x, GTimer()); x})),
     MaskedRegMap(Mstatus, mstatus, mstatusWMask, mstatusUpdateSideEffect, mstatusMask),
-    MaskedRegMap(Misa, misa), // now MXL, EXT is not changeable
+    MaskedRegMap(Misa, misa, 0.U, MaskedRegMap.Unwritable),
     MaskedRegMap(Medeleg, medeleg, "hb3ff".U(64.W)),
     MaskedRegMap(Mideleg, mideleg, "h222".U(64.W)),
     MaskedRegMap(Mie, mie),
