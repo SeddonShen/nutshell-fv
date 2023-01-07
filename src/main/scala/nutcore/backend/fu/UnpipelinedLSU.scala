@@ -119,7 +119,7 @@ class UnpipelinedLSU extends NutCoreModule with HasLSUConst {
   BoringUtils.addSink(lr, "lr")
   BoringUtils.addSink(lrAddr, "lr_addr")
 
-  val scInvalid = !(src1 === lrAddr) && scReq
+  val scInvalid = (src1 =/= lrAddr || !lr) && scReq
 
   // LSU control FSM state
   val s_idle :: s_exec :: s_load :: s_lr :: s_sc :: s_amo_l :: s_amo_a :: s_amo_s :: Nil = Enum(8)
