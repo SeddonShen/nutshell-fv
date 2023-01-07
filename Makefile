@@ -69,6 +69,7 @@ emu: sim-verilog
 
 init:
 	git submodule update --init
+	$(MAKE) -C ./difftest init
 
 clean:
 	rm -rf $(BUILD_DIR)
