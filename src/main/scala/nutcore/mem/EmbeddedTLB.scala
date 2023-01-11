@@ -493,7 +493,7 @@ class PTERequestFilter extends Module with HasNutCoreParameter {
   // PMP/PMA check
   val hasInflight = RegInit(false.B)
   val isLegal = isLegalLoadAddr(io.in.req.bits.addr)
-  io.out.req.valid := io.in.req.valid && !isLegal
+  io.out.req.valid := io.in.req.valid && isLegal
   io.in.req.ready := Mux(isLegal, io.out.req.ready, !hasInflight)
 
   hasInflight := io.in.req.fire && !isLegal
