@@ -480,6 +480,40 @@ class EmbeddedTLB_fake(implicit val tlbConfig: TLBConfig) extends TlbModule with
   io.ipf := false.B
 }
 
+// This module filters out memory requests that fail in PMP/PMA check.
+class PTERequestFilter extends Module with HasNutCoreParameter {
+  val io = IO(new Bundle() {
+    val in = Flipped(new SimpleBusUC())
+    val out = new SimpleBusUC()
+  })
+
+  // default connection
+  io.out <> io.in
+
+  // PMP/PMA check
+  val hasInflight = RegInit(false.B)
+  val isLegal = isLegalLoadAddr(io.in.req.bits.addr)
+  io.out.req.valid := io.in.req.valid && !isLegal
+  io.in.req.ready := Mux(isLegal, io.out.req.ready, !hasInflight)
+
+  hasInflight := io.in.req.fire && !isLegal
+  val request = RegEnable(io.in.req.bits, io.in.req.fire && !isLegal)
+  when (!io.out.resp.valid && hasInflight) {
+    io.in.resp.valid := true.B
+    io.in.resp.bits.cmd := request.cmd
+    // PTE: V=1, others=0; should cause access fault exception
+    io.in.resp.bits.rdata := 1.U
+    if (io.in.resp.bits.user.isDefined) {
+      io.in.resp.bits.user.get := request.user.get
+    }
+    if (io.in.resp.bits.id.isDefined) {
+      io.in.resp.bits.id.get := request.id.get
+    }
+    when (io.in.resp.ready) {
+      hasInflight := false.B
+    }
+  }
+}
 
 object EmbeddedTLB {
   def apply(in: SimpleBusUC, mem: SimpleBusUC, flush: Bool, csrMMU: MMUIO, enable: Boolean = true)(implicit tlbConfig: TLBConfig) = {
@@ -488,8 +522,10 @@ object EmbeddedTLB {
     } else {
       Module(new EmbeddedTLB_fake)
     }
+    val filter = Module(new PTERequestFilter)
     tlb.io.in <> in
-    tlb.io.mem <> mem
+    tlb.io.mem <> filter.io.in
+    filter.io.out <> mem
     tlb.io.flush := flush
     tlb.io.csrMMU <> csrMMU
     tlb
