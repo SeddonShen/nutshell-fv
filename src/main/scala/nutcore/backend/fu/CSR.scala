@@ -654,6 +654,10 @@ class CSR(implicit val p: NutCoreConfig) extends NutCoreModule with HasCSRConst 
   val raiseIntr = io.cfIn.intrVec.asUInt.orR
 
   // exceptions
+  val illegalMret = io.in.valid && isMret && priviledgeMode < ModeM
+  val illegalSret = io.in.valid && isSret && priviledgeMode < ModeS
+  val illegalSModeSret = io.in.valid && isSret && priviledgeMode === ModeS && mstatusStruct.tsr.asBool
+  val isIllegalPrivOp = illegalMret || illegalSret || illegalSModeSret
 
   // TODO: merge iduExceptionVec, csrExceptionVec as raiseExceptionVec
   val csrExceptionVec = Wire(Vec(16, Bool()))
@@ -662,7 +666,7 @@ class CSR(implicit val p: NutCoreConfig) extends NutCoreModule with HasCSRConst 
   csrExceptionVec(ecallM) := priviledgeMode === ModeM && io.in.valid && isEcall
   csrExceptionVec(ecallS) := priviledgeMode === ModeS && io.in.valid && isEcall
   csrExceptionVec(ecallU) := priviledgeMode === ModeU && io.in.valid && isEcall
-  csrExceptionVec(illegalInstr) := (isIllegalAddr || isIllegalAccess) && wen && !io.isBackendException // Trigger an illegal instr exception when unimplemented csr is being read/written or not having enough priviledge
+  csrExceptionVec(illegalInstr) := ((isIllegalAddr || isIllegalAccess) && wen || isIllegalPrivOp) && !io.isBackendException // Trigger an illegal instr exception when unimplemented csr is being read/written or not having enough priviledge
   csrExceptionVec(loadPageFault) := hasLoadPageFault
   csrExceptionVec(storePageFault) := hasStorePageFault
   csrExceptionVec(instrAccessFault) := hasInstrAccessFault
@@ -757,7 +761,7 @@ class CSR(implicit val p: NutCoreConfig) extends NutCoreModule with HasCSRConst 
     }
   }
 
-  when (valid && isMret) {
+  when (valid && isMret && !illegalMret) {
     val mstatusOld = WireInit(mstatus.asTypeOf(new MstatusStruct))
     val mstatusNew = WireInit(mstatus.asTypeOf(new MstatusStruct))
     // mstatusNew.mpp.m := ModeU //TODO: add mode U
@@ -773,7 +777,7 @@ class CSR(implicit val p: NutCoreConfig) extends NutCoreModule with HasCSRConst 
     retTarget := mepc
   }
 
-  when (valid && isSret) {
+  when (valid && isSret && !illegalSret && !illegalSModeSret) {
     val mstatusOld = WireInit(mstatus.asTypeOf(new MstatusStruct))
     val mstatusNew = WireInit(mstatus.asTypeOf(new MstatusStruct))
     // mstatusNew.mpp.m := ModeU //TODO: add mode U
