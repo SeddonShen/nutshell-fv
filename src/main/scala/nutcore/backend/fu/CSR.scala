@@ -763,7 +763,7 @@ class CSR(implicit val p: NutCoreConfig) extends NutCoreModule with HasCSRConst 
     // mstatusNew.mpp.m := ModeU //TODO: add mode U
     mstatusNew.ie.m := mstatusOld.pie.m
     priviledgeMode := mstatusOld.mpp
-    when (mstatusOld.spp =/= ModeM) {
+    when (mstatusOld.mpp =/= ModeM) {
       mstatusNew.mprv := 0.U
     }
     mstatusNew.pie.m := true.B
