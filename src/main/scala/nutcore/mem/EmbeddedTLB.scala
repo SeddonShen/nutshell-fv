@@ -482,9 +482,10 @@ class EmbeddedTLB_fake(implicit val tlbConfig: TLBConfig) extends TlbModule with
 
 // This module filters out memory requests that fail in PMP/PMA check.
 class PTERequestFilter extends Module with HasNutCoreParameter {
-  val io = IO(new Bundle() {
+  val io = IO(new Bundle {
     val in = Flipped(new SimpleBusUC())
     val out = new SimpleBusUC()
+    val u = Input(Bool())
   })
 
   // default connection
@@ -501,8 +502,8 @@ class PTERequestFilter extends Module with HasNutCoreParameter {
   when (!io.out.resp.valid && hasInflight) {
     io.in.resp.valid := true.B
     io.in.resp.bits.cmd := request.cmd
-    // PTE: V=1, others=0; should cause access fault exception
-    io.in.resp.bits.rdata := 1.U
+    // PTE: all attributes set to valid. Should not cause page faults.
+    io.in.resp.bits.rdata := Cat(0x7.U(3.W), io.u, 0xf.U(4.W))
     if (io.in.resp.bits.user.isDefined) {
       io.in.resp.bits.user.get := request.user.get
     }
@@ -523,6 +524,7 @@ object EmbeddedTLB {
       Module(new EmbeddedTLB_fake)
     }
     val filter = Module(new PTERequestFilter)
+    filter.io.u := csrMMU.priviledgeMode === 0.U
     tlb.io.in <> in
     tlb.io.mem <> filter.io.in
     filter.io.out <> mem
