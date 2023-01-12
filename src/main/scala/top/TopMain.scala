@@ -19,6 +19,7 @@ package top
 import chisel3._
 import chisel3.stage._
 import device.AXI4VGA
+import difuzz.ControlRegisterCoverage
 import firrtl.stage.RunFirrtlTransformAnnotation
 import nutcore.NutCoreConfig
 import rfuzz.{NoDedupTransform, ProfilingTransform, SplitMuxConditions}
@@ -78,6 +79,9 @@ object TopMain extends App {
       RunFirrtlTransformAnnotation(new SplitMuxConditions),
       RunFirrtlTransformAnnotation(new MuxCoverTransform),
       RunFirrtlTransformAnnotation(new CoverPointTransform)
+    )
+    case "control_old" => Seq(
+      RunFirrtlTransformAnnotation(new ControlRegisterCoverage)
     )
     case _ => Seq()
   }
