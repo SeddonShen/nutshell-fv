@@ -25,7 +25,7 @@ import nutcore.NutCoreConfig
 import rfuzz.{NoDedupTransform, ProfilingTransform, SplitMuxConditions}
 import sim.SimTop
 import system.NutShell
-import xfuzz.{CoverPointTransform, DontTouchClockAndResetTransform, MuxCoverTransform}
+import xfuzz.{ControlRegisterCoverTransform, CoverPointTransform, DontTouchClockAndResetTransform, MuxCoverTransform}
 
 class Top extends Module {
   val io = IO(new Bundle{})
@@ -67,14 +67,15 @@ object TopMain extends App {
   }
 
   val cover = parseArgs("COVER", args)
-  val customTransforms = cover.split(",").flatMap {
+  val coverTransforms = Seq(
+    RunFirrtlTransformAnnotation(new NoDedupTransform)
+  )
+  val customTransforms = coverTransforms ++ cover.split(",").flatMap {
     case "mux_old" => Seq(
-      RunFirrtlTransformAnnotation(new NoDedupTransform),
       RunFirrtlTransformAnnotation(new SplitMuxConditions),
       RunFirrtlTransformAnnotation(new ProfilingTransform)
     )
     case "mux" => Seq(
-      RunFirrtlTransformAnnotation(new NoDedupTransform),
       RunFirrtlTransformAnnotation(new DontTouchClockAndResetTransform),
       RunFirrtlTransformAnnotation(new SplitMuxConditions),
       RunFirrtlTransformAnnotation(new MuxCoverTransform),
@@ -82,6 +83,11 @@ object TopMain extends App {
     )
     case "control_old" => Seq(
       RunFirrtlTransformAnnotation(new ControlRegisterCoverage)
+    )
+    case "control" => Seq(
+      RunFirrtlTransformAnnotation(new DontTouchClockAndResetTransform),
+      RunFirrtlTransformAnnotation(new ControlRegisterCoverTransform),
+      RunFirrtlTransformAnnotation(new CoverPointTransform)
     )
     case _ => Seq()
   }
