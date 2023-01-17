@@ -508,7 +508,8 @@ class CSR(implicit val p: NutCoreConfig) extends NutCoreModule with HasCSRConst 
   val satpLegalMode = (wdata.asTypeOf(new SatpStruct).mode === 0.U) || (wdata.asTypeOf(new SatpStruct).mode === 8.U)
 
   // General CSR wen check
-  val wen = (valid && func =/= CSROpType.jmp) && (addr =/= Satp.U || satpLegalMode) && !io.isBackendException
+  val wen = (valid && !io.cfIn.exceptionVec.asUInt.orR && func =/= CSROpType.jmp) &&
+    (addr =/= Satp.U || satpLegalMode) && !io.isBackendException
   val isIllegalMode  = priviledgeMode < addr(9, 8)
   // From RISC-V specification Zicsr:
   // For both CSRRS and CSRRC, if rs1=x0, then the instruction will not write to the CSR at all,
@@ -538,11 +539,11 @@ class CSR(implicit val p: NutCoreConfig) extends NutCoreModule with HasCSRConst 
 
   // CSR inst decode
   val ret = Wire(Bool())
-  val isEbreak = addr === privEbreak && func === CSROpType.jmp && !io.isBackendException
-  val isEcall = addr === privEcall && func === CSROpType.jmp && !io.isBackendException
-  val isMret = addr === privMret   && func === CSROpType.jmp && !io.isBackendException
-  val isSret = addr === privSret   && func === CSROpType.jmp && !io.isBackendException
-  val isUret = addr === privUret   && func === CSROpType.jmp && !io.isBackendException
+  val isEbreak = addr === privEbreak && func === CSROpType.jmp && !io.isBackendException && !io.cfIn.exceptionVec.asUInt.orR
+  val isEcall = addr === privEcall && func === CSROpType.jmp && !io.isBackendException && !io.cfIn.exceptionVec.asUInt.orR
+  val isMret = addr === privMret   && func === CSROpType.jmp && !io.isBackendException && !io.cfIn.exceptionVec.asUInt.orR
+  val isSret = addr === privSret   && func === CSROpType.jmp && !io.isBackendException && !io.cfIn.exceptionVec.asUInt.orR
+  val isUret = addr === privUret   && func === CSROpType.jmp && !io.isBackendException && !io.cfIn.exceptionVec.asUInt.orR
 
   Debug(wen, "csr write: pc %x addr %x rdata %x wdata %x func %x\n", io.cfIn.pc, addr, rdata, wdata, func)
   Debug(wen, "[MST] time %d pc %x mstatus %x mideleg %x medeleg %x mode %x\n", GTimer(), io.cfIn.pc, mstatus, mideleg , medeleg, priviledgeMode)
