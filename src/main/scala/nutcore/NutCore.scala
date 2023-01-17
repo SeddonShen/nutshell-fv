@@ -70,6 +70,9 @@ trait HasNutCoreParameter {
   }
   def isLegalInstrAddr(addr: UInt): Bool = isLegalAddress(addr, instrAddressSet)
   def isLegalLoadAddr(addr: UInt): Bool = isLegalAddress(addr, loadAddressSet)
+  // Only PTEs in the memory are allowed, because NEMU does not have any peripherals.
+  // Also, difftest cannot handle this case with skip.
+  def isLegalPTEAddr(addr: UInt): Bool = isLegalAddress(addr, Seq(memoryAddressSet))
   def isLegalStoreAddr(addr: UInt): Bool = isLegalAddress(addr, storeAddressSet)
   def isLegalAMOAddr(addr: UInt): Bool = isLegalAddress(addr, Seq(memoryAddressSet))
 }
