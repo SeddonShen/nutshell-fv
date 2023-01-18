@@ -91,7 +91,11 @@ class EXU(implicit val p: NutCoreConfig) extends NutCoreModule {
     fuValids.zipWithIndex.foreach{ case (v, index) =>
       v := (index == FuType.csr.litValue).B
     }
-    csr.io.cfIn.exceptionVec(instrAccessFault) := true.B
+    when (csr.io.vmEnable) {
+      csr.io.cfIn.exceptionVec(instrPageFault) := true.B
+    }.otherwise {
+      csr.io.cfIn.exceptionVec(instrAccessFault) := true.B
+    }
   }
 
   // read requests to performance counters should be skipped.

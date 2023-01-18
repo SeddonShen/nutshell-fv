@@ -192,6 +192,7 @@ class CSRIO extends FunctionUnitIO {
   val wenFix = Output(Bool())
   val isPerfRead = Output(Bool())
   val isExit = Output(Bool())
+  val vmEnable = Output(Bool())
 }
 
 class CSR(implicit val p: NutCoreConfig) extends NutCoreModule with HasCSRConst with Sv39Const{
@@ -712,6 +713,7 @@ class CSR(implicit val p: NutCoreConfig) extends NutCoreModule with HasCSRConst 
   }
   io.xretIsIllegal.valid := hasIllegalXRET
   io.xretIsIllegal.bits := redirectTargetReg
+  io.vmEnable := vmEnable
 
 
   Debug(raiseExceptionIntr, "excin %b excgen %b", csrExceptionVec.asUInt(), iduExceptionVec.asUInt())
