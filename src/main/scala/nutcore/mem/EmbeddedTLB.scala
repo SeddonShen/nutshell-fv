@@ -416,6 +416,12 @@ class EmbeddedTLBExec(implicit val tlbConfig: TLBConfig) extends TlbModule{
     asid = RegNext(Mux(hitWB, hitMeta.asid, satp.asid)), mask = RegNext(Mux(hitWB, hitMask, missMask)),
     flag = RegNext(Mux(hitWB, hitRefillFlag, missRefillFlag)), ppn = RegNext(Mux(hitWB, hitData.ppn, memRdata.ppn)),
     pteaddr = RegNext((Mux(hitWB, hitData.pteaddr, raddr))))
+  val mdWriteAddr = Cat(memRdata.ppn, 0.U(offLen.W))
+  val mdMayHasAF = !isLegalInstrAddr(mdWriteAddr) || !isLegalLoadAddr(mdWriteAddr) || !isLegalStoreAddr(mdWriteAddr)
+  val blockRefill = RegNext(missMetaRefill && !isFlush && mdMayHasAF, false.B)
+  when (blockRefill) {
+    io.mdWrite.wen := false.B
+  }
 
   // io
   io.out.bits := req
