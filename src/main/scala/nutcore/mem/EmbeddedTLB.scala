@@ -180,12 +180,12 @@ class EmbeddedTLB(implicit val tlbConfig: TLBConfig) extends TlbModule with HasT
 
   // instruction page fault
   if (tlbname == "itlb") {
-    when (tlbExec.io.ipf && vmEnable) {
+    when ((tlbExec.io.ipf || tlbExec.io.iaf) && vmEnable) {
       tlbExec.io.out.ready := io.cacheEmpty && io.in.resp.ready
       io.out.req.valid := false.B
     }
 
-    when (tlbExec.io.ipf && vmEnable && io.cacheEmpty) {
+    when ((tlbExec.io.ipf || tlbExec.io.iaf) && vmEnable && io.cacheEmpty) {
       io.in.resp.valid := true.B
       io.in.resp.bits.rdata := 0.U
       io.in.resp.bits.cmd := SimpleBusCmd.readLast
