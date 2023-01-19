@@ -521,11 +521,18 @@ class CSR(implicit val p: NutCoreConfig) extends NutCoreModule with HasCSRConst 
   val noWriteSideEffect = (isCSRRS || isCSRRC) && io.cfIn.instr(19, 15) === 0.U
   // Write a read-only CSR register
   val isIllegalWrite = wen && (addr(11, 10) === "b11".U) && !noWriteSideEffect
-  val isIllegalAccess = isIllegalMode || isIllegalWrite
+  // The TVM (Trap Virtual Memory) bit is a WARL field that supports intercepting supervisor
+  // virtual-memory management operations. When TVM=1, attempts to read or write the satp CSR
+  // or execute an SFENCE.VMA or SINVAL.VMA instruction while executing in S-mode will raise an
+  // illegal instruction exception. When TVM=0, these operations are permitted in S-mode. TVM is
+  // read-only 0 when S-mode is not supported.
+  val isIllegalTVM = wen && addr === Satp.U && mstatusStruct.tvm =/= 0.U && priviledgeMode =/= ModeM
+  val isIllegalAccess = isIllegalMode || isIllegalWrite || isIllegalTVM
 
   MaskedRegMap.generate(mapping, addr, rdata, wen && !isIllegalAccess, wdata)
   val isIllegalAddr = MaskedRegMap.isIllegalAddr(mapping, addr)
-  val resetSatp = addr === Satp.U && wen // write to satp will cause the pipeline be flushed
+  // write to satp will cause the pipeline be flushed
+  val resetSatp = addr === Satp.U && wen && !isIllegalTVM
   io.out.bits := rdata
   io.isPerfRead := io.out.valid && addr >= 0xb00.U && addr < (0xb00 + nrPerfCnts).U
   io.isExit := io.out.valid && (addr === Mip.U || addr === Sip.U) && func =/= CSROpType.jmp
