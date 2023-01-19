@@ -316,7 +316,8 @@ class CSR(implicit val p: NutCoreConfig) extends NutCoreModule with HasCSRConst 
   val mstatusStruct = mstatus.asTypeOf(new MstatusStruct)
   def mstatusUpdateSideEffect(mstatus: UInt): UInt = {
     val mstatusOld = WireInit(mstatus.asTypeOf(new MstatusStruct))
-    val mstatusNew = Cat(mstatusOld.fs === "b11".U, mstatus(XLEN-2, 0))
+    val mppFix = Mux(mstatusOld.mpp === ModeH, mstatusStruct.mpp, mstatusOld.mpp)
+    val mstatusNew = Cat(mstatusOld.fs === "b11".U, mstatus(XLEN - 2, 13), mppFix, mstatus(10, 0))
     mstatusNew
   }
 
