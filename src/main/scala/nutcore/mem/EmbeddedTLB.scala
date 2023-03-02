@@ -354,10 +354,12 @@ class EmbeddedTLBExec(implicit val tlbConfig: TLBConfig) extends TlbModule{
             raddr := paddrApply(memRdata.ppn, Mux(level === 3.U, vpn.vpn1, vpn.vpn0))
           }
         }.elsewhen (level =/= 0.U) { //TODO: fix needFlush
+          val pg_mask = Mux(level === 2.U, 0x1ff.U, 0x3ffff.U)
+          val misaligned = level(1) && (memRdata.ppn & pg_mask).asUInt.orR // non-leaf and misaligned
           val permCheck = missflag.v && !(pf.priviledgeMode === ModeU && !missflag.u) && !(pf.priviledgeMode === ModeS && missflag.u && (!pf.status_sum || ifecth))
-          val permExec = permCheck && missflag.x
-          val permLoad = permCheck && (missflag.r || pf.status_mxr && missflag.x)
-          val permStore = permCheck && missflag.w
+          val permExec = permCheck && !misaligned && missflag.x
+          val permLoad = permCheck && !misaligned && (missflag.r || pf.status_mxr && missflag.x)
+          val permStore = permCheck && !misaligned && missflag.w
           val updateAD = if (Settings.get("FPGAPlatform")) !missflag.a || (!missflag.d && req.isWrite()) else false.B
           val updateData = Cat( 0.U(56.W), req.isWrite(), 1.U(1.W), 0.U(6.W) )
           missRefillFlag := Cat(req.isWrite(), 1.U(1.W), 0.U(6.W)) | missflag.asUInt
