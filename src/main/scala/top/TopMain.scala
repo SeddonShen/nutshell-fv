@@ -23,6 +23,7 @@ import difuzz.ControlRegisterCoverage
 import firrtl.stage.RunFirrtlTransformAnnotation
 import nutcore.NutCoreConfig
 import rfuzz.{NoDedupTransform, ProfilingTransform, SplitMuxConditions}
+import sic.{FsmCoverage, LineCoverage, ReadyValidCoverage, ToggleCoverage}
 import sim.SimTop
 import system.NutShell
 import xfuzz.{ControlRegisterCoverTransform, CoverPointTransform, DontTouchClockAndResetTransform, MuxCoverTransform}
@@ -41,24 +42,31 @@ class Top extends Module {
 object TopMain extends App {
   def parseArgs(info: String, args: Array[String]): String = {
     var target = ""
-    for (arg <- args) { if (arg.startsWith(info + "=")) { target = arg } }
+    for (arg <- args) {
+      if (arg.startsWith(info + "=")) {
+        target = arg
+      }
+    }
     if (target == "") "" else target.substring(info.length() + 1)
   }
+
   val board = parseArgs("BOARD", args)
   val core = parseArgs("CORE", args)
-  
+
   val s = (board match {
-    case "sim"    => Nil
-    case "pynq"   => PynqSettings()
+    case "sim" => Nil
+    case "pynq" => PynqSettings()
     case "axu3cg" => Axu3cgSettings()
-    case "PXIe"   => PXIeSettings()
-  } ) ++ ( core match {
-    case "inorder"  => InOrderSettings()
-    case "ooo"  => OOOSettings()
-    case "embedded"=> EmbededSettings()
-  } )
-  s.foreach{Settings.settings += _} // add and overwrite DefaultSettings
-  println("====== Settings = (" + board + ", " +  core + ") ======")
+    case "PXIe" => PXIeSettings()
+  }) ++ (core match {
+    case "inorder" => InOrderSettings()
+    case "ooo" => OOOSettings()
+    case "embedded" => EmbededSettings()
+  })
+  s.foreach {
+    Settings.settings += _
+  } // add and overwrite DefaultSettings
+  println("====== Settings = (" + board + ", " + core + ") ======")
   Settings.settings.toList.sortBy(_._1)(Ordering.String).foreach {
     case (f, v: Long) =>
       println(f + " = 0x" + v.toHexString)
@@ -66,38 +74,46 @@ object TopMain extends App {
       println(f + " = " + v)
   }
 
-  val cover = parseArgs("COVER", args)
-  val coverTransforms = Seq(
-    RunFirrtlTransformAnnotation(new NoDedupTransform)
-  )
-  val customTransforms = coverTransforms ++ cover.split(",").flatMap {
+  val covers = parseArgs("COVER", args).split(",")
+  val coverTransforms = scala.collection.mutable.ListBuffer[firrtl.annotations.Annotation]()
+  if (covers.nonEmpty) {
+    coverTransforms.append(RunFirrtlTransformAnnotation(new NoDedupTransform))
+  }
+  if (covers.exists(x => !x.endsWith("_old"))) {
+    coverTransforms.append(
+      RunFirrtlTransformAnnotation(new DontTouchClockAndResetTransform),
+      RunFirrtlTransformAnnotation(new CoverPointTransform),
+    )
+  }
+  coverTransforms.appendAll(covers.flatMap {
     case "mux_old" => Seq(
       RunFirrtlTransformAnnotation(new SplitMuxConditions),
       RunFirrtlTransformAnnotation(new ProfilingTransform)
     )
     case "mux" => Seq(
-      RunFirrtlTransformAnnotation(new DontTouchClockAndResetTransform),
       RunFirrtlTransformAnnotation(new SplitMuxConditions),
       RunFirrtlTransformAnnotation(new MuxCoverTransform),
-      RunFirrtlTransformAnnotation(new CoverPointTransform)
     )
     case "control_old" => Seq(
       RunFirrtlTransformAnnotation(new ControlRegisterCoverage)
     )
     case "control" => Seq(
-      RunFirrtlTransformAnnotation(new DontTouchClockAndResetTransform),
       RunFirrtlTransformAnnotation(new ControlRegisterCoverTransform),
-      RunFirrtlTransformAnnotation(new CoverPointTransform)
     )
+    case "line" => LineCoverage.annotations
+    case "fsm" => FsmCoverage.annotations
+    case "toggle" => ToggleCoverage.all
+    case "ready_valid" => ReadyValidCoverage.annotations
     case _ => Seq()
-  }
+  })
+
   if (board == "sim") {
     (new ChiselStage).execute(args, Seq(
       ChiselGeneratorAnnotation(() => new SimTop)
-    ) ++ customTransforms)
+    ) ++ coverTransforms)
   } else {
     (new ChiselStage).execute(args, Seq(
       ChiselGeneratorAnnotation(() => new Top)
-    ) ++ customTransforms)
+    ) ++ coverTransforms)
   }
 }
