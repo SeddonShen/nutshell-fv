@@ -352,10 +352,22 @@ class EmbeddedTLBExec(implicit val tlbConfig: TLBConfig) extends TlbModule{
           }.otherwise {
             state := s_memReadReq
             raddr := paddrApply(memRdata.ppn, Mux(level === 3.U, vpn.vpn1, vpn.vpn0))
+            val is_reserved = memRdata.reserved =/= 0.U
+            when (is_reserved) {
+              state := s_wait_resp
+              if (tlbname == "itlb") {
+                missIPF := true.B
+              }
+              if (tlbname == "dtlb") {
+                state := s_miss_slpf
+                loadPF := req.isRead() && !isAMO
+                storePF := req.isWrite() || isAMO
+              }
+            }
           }
         }.elsewhen (level =/= 0.U) { //TODO: fix needFlush
           val pg_mask = Mux(level === 2.U, 0x1ff.U, 0x3ffff.U)
-          val misaligned = level(1) && (memRdata.ppn & pg_mask).asUInt.orR // non-leaf and misaligned
+          val misaligned = level(1) && (memRdata.ppn & pg_mask).asUInt.orR || memRdata.reserved =/= 0.U // non-leaf and misaligned
           val permCheck = missflag.v && !(pf.priviledgeMode === ModeU && !missflag.u) && !(pf.priviledgeMode === ModeS && missflag.u && (!pf.status_sum || ifecth))
           val permExec = permCheck && !misaligned && missflag.x
           val permLoad = permCheck && !misaligned && (missflag.r || pf.status_mxr && missflag.x)
