@@ -56,7 +56,7 @@ class EXU(implicit val p: NutCoreConfig) extends NutCoreModule {
   val lsuOut = lsu.access(valid = fuValids(FuType.lsu), src1 = src1, src2 = io.in.bits.data.imm, func = fuOpType, dtlbPF = lsuTlbPF)
   lsu.io.wdata := src2
   lsu.io.instr := io.in.bits.cf.instr
-  io.out.bits.isMMIO := lsu.io.isMMIO || (AddressSpace.isMMIO(io.in.bits.cf.pc) && io.out.valid)
+  io.out.bits.isMMIO := lsu.io.isMMIO
   io.dmem <> lsu.io.dmem
   lsu.io.out.ready := true.B
 

@@ -50,6 +50,7 @@ trait HasNutCoreParameter {
   val EnableOutOfOrderMemAccess = false // enable out of order mem access will improve OoO backend's performance
   val memoryAddressSet = (0x80000000L, 0x100000000L)
   val instrAddressSet = Seq(
+    (0x40000000L, 0x40000000L + 0x1000L),  // flash
     memoryAddressSet
   )
   val loadAddressSet = Seq(
