@@ -102,7 +102,8 @@ object TopMain extends App {
     )
     case "line" => LineCoverage.annotations
     case "fsm" => FsmCoverage.annotations
-    case "toggle" => ToggleCoverage.all
+    case "toggle" => ToggleCoverage.registers
+    case "toggle_full" => ToggleCoverage.all
     case "ready_valid" => ReadyValidCoverage.annotations
     case _ => Seq()
   })
