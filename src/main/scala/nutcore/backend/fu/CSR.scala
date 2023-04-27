@@ -991,10 +991,6 @@ class CSR(implicit val p: NutCoreConfig) extends NutCoreModule with HasCSRConst 
   def readWithScala(addr: Int): UInt = mapping(addr)._1
 
   if (!p.FPGAPlatform) {
-    // to monitor
-    BoringUtils.addSource(readWithScala(perfCntList("Mcycle")._1), "simCycleCnt")
-    BoringUtils.addSource(readWithScala(perfCntList("Minstret")._1), "simInstrCnt")
-
     if (hasPerfCnt) {
       // display all perfcnt when nutcoretrap is executed
       val PrintPerfCntToCSV = true
@@ -1046,11 +1042,6 @@ class CSR(implicit val p: NutCoreConfig) extends NutCoreModule with HasCSRConst 
     difftestArchEvent.exceptionInst := RegNext(RegNext(io.cfIn.instr))
 
   } else {
-    if (!p.FPGAPlatform) {
-      BoringUtils.addSource(readWithScala(perfCntList("Mcycle")._1), "simCycleCnt")
-      BoringUtils.addSource(readWithScala(perfCntList("Minstret")._1), "simInstrCnt")
-    } else {
-      BoringUtils.addSource(readWithScala(perfCntList("Minstret")._1), "ilaInstrCnt")
-    }
+    BoringUtils.addSource(readWithScala(perfCntList("Minstret")._1), "ilaInstrCnt")
   }
 }

@@ -158,12 +158,17 @@ class EXU(implicit val p: NutCoreConfig) extends NutCoreModule {
   BoringUtils.addSource(csr.io.out.fire(), "perfCntCondMcsrInstr")
 
   if (!p.FPGAPlatform) {
-    val cycleCnt = WireInit(0.U(64.W))
-    val instrCnt = WireInit(0.U(64.W))
-    val nutcoretrap = io.in.bits.ctrl.isNutCoreTrap && io.in.valid && !io.flush
+    // We are using the real counters for DiffTest to avoid being overridden by instructions
+    val cycleCnt = RegInit(0.U(64.W))
+    cycleCnt := cycleCnt + 1.U
+    val instrCnt = RegInit(0.U(64.W))
+    val instrCommit = WireInit(false.B)
+    when (instrCommit) {
+      instrCnt := instrCnt + 1.U
+    }
+    BoringUtils.addSink(instrCommit, "perfCntCondMinstret")
 
-    BoringUtils.addSink(cycleCnt, "simCycleCnt")
-    BoringUtils.addSink(instrCnt, "simInstrCnt")
+    val nutcoretrap = io.in.bits.ctrl.isNutCoreTrap && io.in.valid && !io.flush
     BoringUtils.addSource(nutcoretrap, "nutcoretrap")
 
     val difftest = DifftestModule(new DiffTrapEvent)
