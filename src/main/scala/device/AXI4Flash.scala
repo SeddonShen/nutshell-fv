@@ -1,17 +1,17 @@
 /**************************************************************************************
 * Copyright (c) 2020 Institute of Computing Technology, CAS
 * Copyright (c) 2020 University of Chinese Academy of Sciences
-* 
-* NutShell is licensed under Mulan PSL v2.
-* You can use this software according to the terms and conditions of the Mulan PSL v2. 
-* You may obtain a copy of Mulan PSL v2 at:
-*             http://license.coscl.org.cn/MulanPSL2 
-* 
-* THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER 
-* EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY OR 
-* FIT FOR A PARTICULAR PURPOSE.  
 *
-* See the Mulan PSL v2 for more details.  
+* NutShell is licensed under Mulan PSL v2.
+* You can use this software according to the terms and conditions of the Mulan PSL v2.
+* You may obtain a copy of Mulan PSL v2 at:
+*             http://license.coscl.org.cn/MulanPSL2
+*
+* THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER
+* EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY OR
+* FIT FOR A PARTICULAR PURPOSE.
+*
+* See the Mulan PSL v2 for more details.
 ***************************************************************************************/
 
 package device
@@ -29,10 +29,10 @@ class AXI4Flash extends AXI4SlaveModule(new AXI4Lite) {
 
   val mapping = Map(
     RegMap(0x0, jmpToDramInstr1, RegMap.Unwritable),
-    RegMap(0x4, jmpToDramInstr2, RegMap.Unwritable),
-    RegMap(0x8, jmpToDramInstr3, RegMap.Unwritable)
+    RegMap(0x1, jmpToDramInstr2, RegMap.Unwritable),
+    RegMap(0x2, jmpToDramInstr3, RegMap.Unwritable)
   )
-  def getOffset(addr: UInt) = addr(12,0)
+  def getOffset(addr: UInt) = addr(12,2)
 
   val rdata = Wire(UInt(64.W))
   RegMap.generate(mapping, getOffset(raddr), rdata,
