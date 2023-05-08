@@ -533,7 +533,7 @@ class CSR(implicit val p: NutCoreConfig) extends NutCoreModule with HasCSRConst 
   MaskedRegMap.generate(mapping, addr, rdata, wen && !isIllegalAccess, wdata)
   val isIllegalAddr = MaskedRegMap.isIllegalAddr(mapping, addr)
   // write to satp will cause the pipeline be flushed
-  val resetSatp = addr === Satp.U && wen && !isIllegalTVM
+  val resetSatp = addr === Satp.U && wen && !isIllegalAccess
   io.out.bits := rdata
   io.isPerfRead := io.out.valid && addr >= 0xb00.U && addr < (0xb00 + nrPerfCnts).U
   io.isExit := io.out.valid && (addr === Mip.U || addr === Sip.U) && func =/= CSROpType.jmp
