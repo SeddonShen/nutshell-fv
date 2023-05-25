@@ -63,5 +63,5 @@ class SimTop extends Module {
 
   io.uart <> mmio.io.uart
 
-  DifftestModule.finish()
+  DifftestModule.finish("nutshell")
 }
