@@ -17,12 +17,14 @@
 package nutcore
 
 import chisel3._
+import chisel3.experimental.ChiselAnnotation
 import chisel3.util._
 import chisel3.util.experimental.BoringUtils
-
-import utils._
-import top.Settings
 import difftest._
+import firrtl.annotations.Annotation
+import rfuzz.DoNotProfileModule
+import top.Settings
+import utils._
 
 object CSROpType {
   def jmp  = "b000".U
@@ -1016,36 +1018,57 @@ class CSR(implicit val p: NutCoreConfig) extends NutCoreModule with HasCSRConst 
       }
     }
 
-    // for differential testing
-    val difftest = DifftestModule(new DiffCSRState)
-    difftest.clock := clock
-    difftest.coreid := 0.U // TODO
-    difftest.priviledgeMode := RegNext(priviledgeMode)
-    difftest.mstatus := RegNext(mstatus)
-    difftest.sstatus := RegNext(mstatus & sstatusRmask)
-    difftest.mepc := RegNext(mepc)
-    difftest.sepc := RegNext(sepc)
-    difftest.mtval:= RegNext(mtval)
-    difftest.stval:= RegNext(stval)
-    difftest.mtvec := RegNext(mtvec)
-    difftest.stvec := RegNext(stvec)
-    difftest.mcause := RegNext(mcause)
-    difftest.scause := RegNext(scause)
-    difftest.satp := RegNext(satp)
-    difftest.mip := RegNext(mipReg)
-    difftest.mie := RegNext(mie)
-    difftest.mscratch := RegNext(mscratch)
-    difftest.sscratch := RegNext(sscratch)
-    difftest.mideleg := RegNext(mideleg)
-    difftest.medeleg := RegNext(medeleg)
+    class CSRDiffWrapper extends Module {
+      val io = IO(new Bundle {
+        val csrState = Input(new DiffCSRState)
+        val archEvent = Input(new DiffArchEvent)
+      })
 
-    val difftestArchEvent = DifftestModule(new DiffArchEvent)
-    difftestArchEvent.clock := clock
-    difftestArchEvent.coreid := 0.U // TODO
-    difftestArchEvent.interrupt     := RegNext(RegNext(Mux(raiseIntr && io.instrValid && valid, intrNO, 0.U)))
-    difftestArchEvent.exception     := RegNext(RegNext(Mux(raiseException && io.instrValid && valid, exceptionNO, 0.U)))
-    difftestArchEvent.exceptionPC   := RegNext(RegNext(imemExceptionAddr))
-    difftestArchEvent.exceptionInst := RegNext(RegNext(io.cfIn.instr))
+      val difftest = DifftestModule(new DiffCSRState)
+      difftest := RegNext(io.csrState)
+      difftest.clock := clock
+      difftest.coreid := 0.U // TODO
+
+      val difftestArchEvent = DifftestModule(new DiffArchEvent)
+      difftestArchEvent := RegNext(RegNext(io.archEvent))
+      difftestArchEvent.clock := clock
+      difftestArchEvent.coreid := 0.U // TODO
+
+      val noProfileMod = this.toNamed
+      chisel3.experimental.annotate(new ChiselAnnotation {
+        override def toFirrtl: Annotation = DoNotProfileModule(noProfileMod)
+      })
+    }
+
+    // for differential testing
+    val diffWrapper = Module(new CSRDiffWrapper).io
+    diffWrapper := DontCare
+
+    val difftest = diffWrapper.csrState
+    difftest.priviledgeMode := priviledgeMode
+    difftest.mstatus := mstatus
+    difftest.sstatus := mstatus & sstatusRmask
+    difftest.mepc := mepc
+    difftest.sepc := sepc
+    difftest.mtval:= mtval
+    difftest.stval:= stval
+    difftest.mtvec := mtvec
+    difftest.stvec := stvec
+    difftest.mcause := mcause
+    difftest.scause := scause
+    difftest.satp := satp
+    difftest.mip := mipReg
+    difftest.mie := mie
+    difftest.mscratch := mscratch
+    difftest.sscratch := sscratch
+    difftest.mideleg := mideleg
+    difftest.medeleg := medeleg
+
+    val difftestArchEvent = diffWrapper.archEvent
+    difftestArchEvent.interrupt     := Mux(raiseIntr && io.instrValid && valid, intrNO, 0.U)
+    difftestArchEvent.exception     := Mux(raiseException && io.instrValid && valid, exceptionNO, 0.U)
+    difftestArchEvent.exceptionPC   := imemExceptionAddr
+    difftestArchEvent.exceptionInst := io.cfIn.instr
 
   } else {
     BoringUtils.addSource(readWithScala(perfCntList("Minstret")._1), "ilaInstrCnt")
