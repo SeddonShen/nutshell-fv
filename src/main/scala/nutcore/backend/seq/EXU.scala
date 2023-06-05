@@ -16,14 +16,15 @@
 
 package nutcore
 
+import bus.simplebus._
 import chisel3._
+import chisel3.experimental.ChiselAnnotation
 import chisel3.util._
 import chisel3.util.experimental.BoringUtils
-
-import utils._
-import bus.simplebus._
-import top.Settings
 import difftest._
+import firrtl.annotations.Annotation
+import rfuzz.DoNotProfileModule
+import utils._
 
 class EXU(implicit val p: NutCoreConfig) extends NutCoreModule {
   val io = IO(new Bundle {
@@ -158,27 +159,46 @@ class EXU(implicit val p: NutCoreConfig) extends NutCoreModule {
   BoringUtils.addSource(csr.io.out.fire(), "perfCntCondMcsrInstr")
 
   if (!p.FPGAPlatform) {
-    // We are using the real counters for DiffTest to avoid being overridden by instructions
-    val cycleCnt = RegInit(0.U(64.W))
-    cycleCnt := cycleCnt + 1.U
-    val instrCnt = RegInit(0.U(64.W))
-    val instrCommit = WireInit(false.B)
-    when (instrCommit) {
-      instrCnt := instrCnt + 1.U
-    }
-    BoringUtils.addSink(instrCommit, "perfCntCondMinstret")
-
-    val nutcoretrap = io.in.bits.ctrl.isNutCoreTrap && io.in.valid && !io.flush
-    BoringUtils.addSource(nutcoretrap, "nutcoretrap")
-
-    val difftest = DifftestModule(new DiffTrapEvent)
-    difftest.clock    := clock
-    difftest.coreid   := 0.U // TODO: nutshell does not support coreid auto config
-    difftest.hasTrap  := nutcoretrap
-    difftest.code     := io.in.bits.data.src1
-    difftest.pc       := io.in.bits.cf.pc
-    difftest.cycleCnt := cycleCnt
-    difftest.instrCnt := instrCnt
-    difftest.hasWFI   := false.B
+    val diffMod = Module(new EXUDiffWrapper)
+    diffMod.io.in.valid := io.in.valid
+    diffMod.io.in.bits := io.in.bits
+    diffMod.io.flush := io.flush
   }
+}
+
+// This module is not profiled by the fuzz environment
+class EXUDiffWrapper(implicit val p: NutCoreConfig) extends NutCoreModule {
+  val io = IO(new Bundle {
+    val in = Flipped(ValidIO(new DecodeIO))
+    val flush = Input(Bool())
+  })
+
+  // We are using the real counters for DiffTest to avoid being overridden by instructions
+  val cycleCnt = RegInit(0.U(64.W))
+  cycleCnt := cycleCnt + 1.U
+  val instrCnt = RegInit(0.U(64.W))
+  val instrCommit = WireInit(false.B)
+  when (instrCommit) {
+    instrCnt := instrCnt + 1.U
+  }
+  BoringUtils.addSink(instrCommit, "perfCntCondMinstret")
+
+  val nutcoretrap = io.in.bits.ctrl.isNutCoreTrap && io.in.valid && !io.flush
+  BoringUtils.addSource(nutcoretrap, "nutcoretrap")
+
+  val difftest = DifftestModule(new DiffTrapEvent)
+  difftest.clock    := clock
+  difftest.coreid   := 0.U // TODO: nutshell does not support coreid auto config
+  difftest.hasTrap  := nutcoretrap
+  difftest.code     := io.in.bits.data.src1
+  difftest.pc       := io.in.bits.cf.pc
+  difftest.cycleCnt := cycleCnt
+  difftest.instrCnt := instrCnt
+  difftest.hasWFI   := false.B
+
+  val noProfileMod = this.toNamed
+  chisel3.experimental.annotate(new ChiselAnnotation {
+    override def toFirrtl: Annotation = DoNotProfileModule(noProfileMod)
+  })
+
 }
