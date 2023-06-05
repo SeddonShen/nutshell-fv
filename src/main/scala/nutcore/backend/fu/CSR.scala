@@ -960,7 +960,8 @@ class CSR(implicit val p: NutCoreConfig) extends NutCoreModule with HasCSRConst 
   val perfCntList = generalPerfCntList ++  (if (EnableOutOfOrderExec) outOfOrderPerfCntList else sequentialPerfCntList)
 
   val perfCntCond = List.fill(0x80)(WireInit(false.B))
-  (perfCnts zip perfCntCond).map { case (c, e) => { when (e) { c := c + 1.U } } }
+  val perfCntCondDisable = List.fill(0x80)(WireInit(false.B))
+  perfCnts.zip(perfCntCond.zip(perfCntCondDisable)).map { case (c, (e, d)) => { when (e && !d) { c := c + 1.U } } }
   // Manually update perf counter
   val pendingLS = WireInit(0.U(5.W))
   val pendingSCmt = WireInit(0.U(5.W))
@@ -976,12 +977,17 @@ class CSR(implicit val p: NutCoreConfig) extends NutCoreModule with HasCSRConst 
   }
 
   BoringUtils.addSource(WireInit(true.B), "perfCntCondMcycle")
-  perfCntList.foreach { case (name, (addr, boringId)) => {
-    BoringUtils.addSink(perfCntCond(addr & 0x7f), boringId)
+  perfCntList.foreach { case (name, (perfAddr, boringId)) => {
+    BoringUtils.addSink(perfCntCond(perfAddr & 0x7f), boringId)
     if (!hasPerfCnt) {
       // do not enable perfcnts except for Mcycle and Minstret
-      if (addr != perfCntList("Mcycle")._1 && addr != perfCntList("Minstret")._1) {
-        perfCntCond(addr & 0x7f) := false.B
+      if (perfAddr != perfCntList("Mcycle")._1 && perfAddr != perfCntList("Minstret")._1) {
+        perfCntCondDisable(perfAddr & 0x7f) := true.B
+      }
+      else {
+        when (wen && addr === perfAddr.U && !isIllegalMode) {
+          perfCntCondDisable(perfAddr & 0x7f) := true.B
+        }
       }
     }
   }}
