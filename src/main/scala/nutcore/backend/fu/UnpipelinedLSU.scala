@@ -15,14 +15,17 @@
 ***************************************************************************************/
 
 package nutcore
+
+import bus.simplebus._
 import chisel3._
+import chisel3.experimental.ChiselAnnotation
 import chisel3.util._
 import chisel3.util.experimental.BoringUtils
-
-import utils._
-import bus.simplebus._
 import difftest._
+import firrtl.annotations.Annotation
+import rfuzz.DoNotProfileModule
 import top.Settings
+import utils._
 
 class UnpipeLSUIO extends FunctionUnitIO {
   val wdata = Input(UInt(XLEN.W))
@@ -331,14 +334,33 @@ class UnpipelinedLSU extends NutCoreModule with HasLSUConst {
   val storeAddr = Cat(RegEnable(io.dmem.req.bits.addr >> 3, io.dmem.req.fire), 0.U(3.W))
   val storeData = RegEnable((MaskExpand(io.dmem.req.bits.wmask) & io.dmem.req.bits.wdata).asUInt, io.dmem.req.fire)
   val storeMask = RegEnable(io.dmem.req.bits.wmask, io.dmem.req.fire)
-  val difftest = DifftestModule(new DiffStoreEvent)
-  difftest.clock  := clock
-  difftest.coreid := 0.U
-  difftest.index  := 0.U
-  difftest.valid  := RegNext(RegNext(RegNext(isStore && isMemStore)))
-  difftest.addr   := RegNext(RegNext(RegNext(storeAddr)))
-  difftest.data   := RegNext(RegNext(RegNext(storeData)))
-  difftest.mask   := RegNext(RegNext(RegNext(storeMask)))
+  class LSUDiffWrapper() extends Module {
+    val io = IO(new Bundle {
+      val valid = Input(Bool())
+      val addr = Input(UInt(64.W))
+      val data = Input(UInt(64.W))
+      val mask = Input(UInt(8.W))
+    })
+
+    val difftest = DifftestModule(new DiffStoreEvent)
+    difftest.clock  := clock
+    difftest.coreid := 0.U
+    difftest.index  := 0.U
+    difftest.valid  := RegNext(RegNext(RegNext(io.valid)))
+    difftest.addr   := RegNext(RegNext(RegNext(io.addr)))
+    difftest.data   := RegNext(RegNext(RegNext(io.data)))
+    difftest.mask   := RegNext(RegNext(RegNext(io.mask)))
+
+    val noProfileMod = this.toNamed
+    chisel3.experimental.annotate(new ChiselAnnotation {
+      override def toFirrtl: Annotation = DoNotProfileModule(noProfileMod)
+    })
+  }
+  val difftest = Module(new LSUDiffWrapper).io
+  difftest.valid  := isStore && isMemStore
+  difftest.addr   := storeAddr
+  difftest.data   := storeData
+  difftest.mask   := storeMask
 }
 
 class LSExecUnit extends NutCoreModule {
