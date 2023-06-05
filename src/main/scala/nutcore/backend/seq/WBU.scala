@@ -17,10 +17,13 @@
 package nutcore
 
 import chisel3._
+import chisel3.experimental.ChiselAnnotation
 import chisel3.util._
 import chisel3.util.experimental.BoringUtils
-import utils._
 import difftest._
+import firrtl.annotations.Annotation
+import rfuzz.DoNotProfileModule
+import utils._
 
 class WBU(implicit val p: NutCoreConfig) extends NutCoreModule{
   val io = IO(new Bundle {
@@ -57,21 +60,34 @@ class WBU(implicit val p: NutCoreConfig) extends NutCoreModule{
   BoringUtils.addSource(falseWire, "perfCntCondMultiCommit")
 
   if (!p.FPGAPlatform) {
-    val difftest = DifftestModule(new DiffInstrCommit)
-    difftest.clock := clock
-    difftest.coreid := 0.U
-    difftest.index := 0.U
-    difftest.valid := RegNext(io.in.valid)
-    difftest.pc := RegNext(SignExt(io.in.bits.decode.cf.pc, AddrBits))
-    difftest.instr := RegNext(io.in.bits.decode.cf.instr)
-    difftest.skip := RegNext(io.in.bits.isMMIO)
-    difftest.isRVC := RegNext(io.in.bits.decode.cf.instr(1, 0) =/= "b11".U)
-    difftest.rfwen := RegNext(io.wb.rfWen && io.wb.rfDest =/= 0.U) // && valid(ringBufferTail)(i) && commited(ringBufferTail)(i)
-    difftest.fpwen := false.B
-    difftest.special := 0.U
-    difftest.wdest := RegNext(io.wb.rfDest)
-    difftest.wpdest := RegNext(io.wb.rfDest)
-    difftest.setSpecial(isExit = RegNext(io.in.bits.isExit))
+    class DiffInstrCommitWrapper extends Module {
+      val io = IO(Input(new DiffInstrCommit))
+
+      val difftest = DifftestModule(new DiffInstrCommit)
+      difftest := RegNext(io)
+      difftest.clock := clock
+      difftest.coreid := 0.U
+      difftest.index := 0.U
+      difftest.fpwen := false.B
+      difftest.special := 0.U
+
+      val noProfileMod = this.toNamed
+      chisel3.experimental.annotate(new ChiselAnnotation {
+        override def toFirrtl: Annotation = DoNotProfileModule(noProfileMod)
+      })
+    }
+
+    val difftest = Module(new DiffInstrCommitWrapper).io
+    difftest := DontCare
+    difftest.valid := io.in.valid
+    difftest.pc := SignExt(io.in.bits.decode.cf.pc, AddrBits)
+    difftest.instr := io.in.bits.decode.cf.instr
+    difftest.skip := io.in.bits.isMMIO
+    difftest.isRVC := io.in.bits.decode.cf.instr(1, 0) =/= "b11".U
+    difftest.rfwen := io.wb.rfWen && io.wb.rfDest =/= 0.U // && valid(ringBufferTail)(i) && commited(ringBufferTail)(i)
+    difftest.wdest := io.wb.rfDest
+    difftest.wpdest := io.wb.rfDest
+    difftest.setSpecial(isExit = io.in.bits.isExit)
   }
   else {
     BoringUtils.addSource(io.in.valid, "ilaWBUvalid")
@@ -82,12 +98,23 @@ class WBU(implicit val p: NutCoreConfig) extends NutCoreModule{
   }
 
   if (!p.FPGAPlatform) {
-    val difftest = DifftestModule(new DiffIntWriteback)
-    difftest.clock := clock
-    difftest.coreid := 0.U
-    difftest.valid := RegNext(io.wb.rfWen && io.wb.rfDest =/= 0.U)
-    difftest.address := RegNext(io.wb.rfDest)
-    difftest.data := RegNext(io.wb.rfData)
+    class DiffIntWbWrapper extends Module {
+      val io = IO(Input(new DiffIntWriteback))
+      val difftest = DifftestModule(new DiffIntWriteback)
+      difftest := RegNext(io)
+      difftest.clock := clock
+      difftest.coreid := 0.U
+
+      val noProfileMod = this.toNamed
+      chisel3.experimental.annotate(new ChiselAnnotation {
+        override def toFirrtl: Annotation = DoNotProfileModule(noProfileMod)
+      })
+    }
+    val difftest = Module(new DiffIntWbWrapper).io
+    difftest := DontCare
+    difftest.valid := io.wb.rfWen && io.wb.rfDest =/= 0.U
+    difftest.address := io.wb.rfDest
+    difftest.data := io.wb.rfData
 
     // val runahead_commit = DifftestModule(new DiffRunaheadCommitEvent)
     // runahead_commit.clock := clock
