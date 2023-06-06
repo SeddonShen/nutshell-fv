@@ -69,7 +69,6 @@ class WBU(implicit val p: NutCoreConfig) extends NutCoreModule{
       difftest.coreid := 0.U
       difftest.index := 0.U
       difftest.fpwen := false.B
-      difftest.special := 0.U
 
       val noProfileMod = this.toNamed
       chisel3.experimental.annotate(new ChiselAnnotation {
