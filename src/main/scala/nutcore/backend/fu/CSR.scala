@@ -538,7 +538,8 @@ class CSR(implicit val p: NutCoreConfig) extends NutCoreModule with HasCSRConst 
   val resetSatp = addr === Satp.U && wen && !isIllegalAccess
   io.out.bits := rdata
   io.isPerfRead := io.out.valid && addr >= 0xb00.U && addr < (0xb00 + nrPerfCnts).U
-  io.isExit := io.out.valid && (addr === Mip.U || addr === Sip.U) && func =/= CSROpType.jmp
+  io.isExit := io.out.valid && (addr === Mip.U || addr === Sip.U) && func =/= CSROpType.jmp &&
+    (wen && !isIllegalAccess && wdata =/= 0.U || !wen && rdata =/= 0.U)
 
   // Fix Mip/Sip write
   val fixMapping = Map(
