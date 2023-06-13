@@ -30,7 +30,7 @@ trait Sv39Const extends HasNutCoreParameter{
   val offLen  = 12
   val ppn0Len = 9
   val ppn1Len = 9
-  val ppn2Len = PAddrBits - offLen - ppn0Len - ppn1Len // 2
+  val ppn2Len = 26
   val ppnLen = ppn2Len + ppn1Len + ppn0Len
   val vpn2Len = 9
   val vpn1Len = 9

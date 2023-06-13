@@ -438,15 +438,23 @@ class EmbeddedTLBExec(implicit val tlbConfig: TLBConfig) extends TlbModule{
     io.mdWrite.wen := false.B
   }
 
+  // SV39 supports 56-bit physical address
+  val vaddr_ext = ZeroExt(req.addr(PAddrBits - 1, 0), 56)
+  val paddr = Wire(UInt(56.W))
+  paddr := Mux(hit,
+    maskPaddr(hitData.ppn, vaddr_ext, hitMask),
+    maskPaddr(memRespStore.asTypeOf(pteBundle).ppn, vaddr_ext, missMaskStore)
+  )
+
   // io
   io.out.bits := req
-  io.out.bits.addr := Mux(hit, maskPaddr(hitData.ppn, req.addr(PAddrBits-1, 0), hitMask), maskPaddr(memRespStore.asTypeOf(pteBundle).ppn, req.addr(PAddrBits-1, 0), missMaskStore))
+  io.out.bits.addr := paddr
   if (isITLB) {
-    instrAF := io.in.valid && !isLegalInstrAddr(io.out.bits.addr) && ((hit && !hitWB) || state === s_wait_resp)
+    instrAF := io.in.valid && !isLegalInstrAddr(paddr) && ((hit && !hitWB) || state === s_wait_resp)
   }
   if (isDTLB) {
-    loadAF := io.in.valid && req.isRead() && !isLegalLoadAddr(io.out.bits.addr) && ((hit && !hitWB) || state === s_wait_resp)
-    storeAF := io.in.valid && req.isWrite() && !isLegalStoreAddr(io.out.bits.addr) && ((hit && !hitWB) || state === s_wait_resp)
+    loadAF := io.in.valid && req.isRead() && !isLegalLoadAddr(paddr) && ((hit && !hitWB) || state === s_wait_resp)
+    storeAF := io.in.valid && req.isWrite() && !isLegalStoreAddr(paddr) && ((hit && !hitWB) || state === s_wait_resp)
   }
   val hasException = io.pf.hasException || loadPF || storePF || loadAF || storeAF
 
