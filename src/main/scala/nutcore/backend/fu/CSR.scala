@@ -746,32 +746,34 @@ class CSR(implicit val p: NutCoreConfig) extends NutCoreModule with HasCSRConst 
   trapTarget := Mux(delegS, stvec, mtvec)
   retTarget := DontCare
 
-  when(hasLoadAddrMisaligned || hasStoreAddrMisaligned) {
-    when (delegS) {
-      stval := dmemExceptionAddr
-    }.otherwise {
-      mtval := dmemExceptionAddr
-    }
-    Debug("[ML] %d: addr %x pc %x delegS %x\n",
-      GTimer(), dmemExceptionAddr, io.cfIn.pc, delegS)
-  }.elsewhen(hasInstrPageFault || hasLoadPageFault || hasStorePageFault) {
-    val tval = Mux(hasInstrPageFault,
-      Mux(io.cfIn.crossPageIPFFix, SignExt(io.cfIn.pc + 2.U, XLEN), imemExceptionAddr),
-      dmemExceptionAddr
-    )
-    when (delegS) {
-      stval := tval
-    }.otherwise {
-      mtval := tval
-    }
-    Debug("[PF] %d: ipf %b tval %x := addr %x pc %x priviledgeMode %x\n",
-      GTimer(), hasInstrPageFault, tval, dmemExceptionAddr, io.cfIn.pc, priviledgeMode)
-  }.elsewhen(hasInstrAccessFault || hasLoadAccessFault || hasStoreAccessFault) {
-    val tval = Mux(hasInstrAccessFault, imemExceptionAddr, dmemExceptionAddr)
-    when (delegS) {
-      stval := tval
-    }.otherwise {
-      mtval := tval
+  when (io.instrValid) {
+    when (hasLoadAddrMisaligned || hasStoreAddrMisaligned) {
+      when (delegS) {
+        stval := dmemExceptionAddr
+      }.otherwise {
+        mtval := dmemExceptionAddr
+      }
+      Debug("[ML] %d: addr %x pc %x delegS %x\n",
+        GTimer(), dmemExceptionAddr, io.cfIn.pc, delegS)
+    }.elsewhen (hasInstrPageFault || hasLoadPageFault || hasStorePageFault) {
+      val tval = Mux(hasInstrPageFault,
+        Mux(io.cfIn.crossPageIPFFix, SignExt(io.cfIn.pc + 2.U, XLEN), imemExceptionAddr),
+        dmemExceptionAddr
+      )
+      when (delegS) {
+        stval := tval
+      }.otherwise {
+        mtval := tval
+      }
+      Debug("[PF] %d: ipf %b tval %x := addr %x pc %x priviledgeMode %x\n",
+        GTimer(), hasInstrPageFault, tval, dmemExceptionAddr, io.cfIn.pc, priviledgeMode)
+    }.elsewhen (hasInstrAccessFault || hasLoadAccessFault || hasStoreAccessFault) {
+      val tval = Mux(hasInstrAccessFault, imemExceptionAddr, dmemExceptionAddr)
+      when (delegS) {
+        stval := tval
+      }.otherwise {
+        mtval := tval
+      }
     }
   }
 
