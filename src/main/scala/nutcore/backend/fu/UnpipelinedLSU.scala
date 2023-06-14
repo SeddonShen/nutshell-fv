@@ -427,7 +427,7 @@ class LSExecUnit extends NutCoreModule {
     BoringUtils.addSink(dtlbEnable, "vmEnable")
   }
 
-  val vaddrPF = dtlbEnable && Cat((39 until 63).map(i => io.vaddr(i) =/= io.vaddr(38))).orR
+  val vaddrPF = dtlbEnable && Cat((39 until 64).map(i => io.vaddr(i) =/= io.vaddr(38))).orR
   io.dtlbPF := dtlbPF || vaddrPF
   io.dtlbAF := dtlbAF
 
