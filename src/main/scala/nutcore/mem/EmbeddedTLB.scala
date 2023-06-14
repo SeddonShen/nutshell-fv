@@ -468,7 +468,7 @@ class EmbeddedTLBExec(implicit val tlbConfig: TLBConfig) extends TlbModule{
   }
   val hasException = io.pf.hasException || loadPF || storePF || loadAF || storeAF
 
-  io.out.valid := io.in.valid && Mux(hit && !hitWB, !hasException, state === s_wait_resp)// && !alreadyOutFire
+  io.out.valid := io.in.valid && (hit && !hitWB || state === s_wait_resp) && !hasException// && !alreadyOutFire
   //maybe be optimized
   io.in.ready := io.out.ready && (state === s_idle) && !miss && !hitWB && io.mdReady && !hasException
 
