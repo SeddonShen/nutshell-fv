@@ -297,7 +297,8 @@ class EmbeddedTLBExec(implicit val tlbConfig: TLBConfig) extends TlbModule{
   val missMetaRefill = WireInit(false.B)
   val missRefillFlag = WireInit(0.U(8.W))
   val memRdata = io.mem.resp.bits.rdata.asTypeOf(pteBundle)
-  val raddr = Reg(UInt(PAddrBits.W))
+  val raddr = Reg(UInt(56.W))
+  val raddrCancel = !isLegalPTEAddr(raddr)
   val alreadyOutFire = RegEnable(true.B, init = false.B, io.out.fire)
 
   //handle flush
@@ -308,6 +309,7 @@ class EmbeddedTLBExec(implicit val tlbConfig: TLBConfig) extends TlbModule{
   when (io.out.fire() && needFlush) { needFlush := false.B}
 
   val missIPF = RegInit(false.B)
+  val missPTEAF = RegInit(false.B)
 
   // state machine to handle miss(ptw) and pte-writing-back
   switch (state) {
@@ -329,7 +331,12 @@ class EmbeddedTLBExec(implicit val tlbConfig: TLBConfig) extends TlbModule{
       when (isFlush) {
         state := s_idle
         needFlush := false.B
-      }.elsewhen (io.mem.req.fire()) { state := s_memReadResp}
+      }.elsewhen (io.mem.req.fire()) {
+        state := s_memReadResp
+      }.elsewhen (raddrCancel) {
+        state := s_wait_resp
+        missPTEAF := true.B
+      }
     }
 
     is (s_memReadResp) {
@@ -411,6 +418,7 @@ class EmbeddedTLBExec(implicit val tlbConfig: TLBConfig) extends TlbModule{
     is (s_wait_resp) { when (io.out.fire() || ioFlush || alreadyOutFire){
       state := s_idle
       missIPF := false.B
+      missPTEAF := false.B
       alreadyOutFire := false.B
     }}
 
@@ -422,7 +430,7 @@ class EmbeddedTLBExec(implicit val tlbConfig: TLBConfig) extends TlbModule{
   // mem
   val cmd = Mux(state === s_write_pte, SimpleBusCmd.write, SimpleBusCmd.read)
   io.mem.req.bits.apply(addr = Mux(hitWB, hitData.pteaddr, raddr), cmd = cmd, size = (if (XLEN == 64) "b11".U else "b10".U), wdata =  Mux( hitWB, hitWBStore, memRespStore), wmask = 0xff.U)
-  io.mem.req.valid := ((state === s_memReadReq || state === s_write_pte) && !isFlush)
+  io.mem.req.valid := (state === s_memReadReq || state === s_write_pte) && !isFlush && !raddrCancel
   io.mem.resp.ready := true.B
 
   // tlb refill
@@ -449,12 +457,13 @@ class EmbeddedTLBExec(implicit val tlbConfig: TLBConfig) extends TlbModule{
   // io
   io.out.bits := req
   io.out.bits.addr := paddr
+  val af_valid = io.in.valid && ((hit && !hitWB) || state === s_wait_resp)
   if (isITLB) {
-    instrAF := io.in.valid && !isLegalInstrAddr(paddr) && ((hit && !hitWB) || state === s_wait_resp)
+    instrAF := af_valid && (!isLegalInstrAddr(paddr) || missPTEAF)
   }
   if (isDTLB) {
-    loadAF := io.in.valid && req.isRead() && !isLegalLoadAddr(paddr) && ((hit && !hitWB) || state === s_wait_resp)
-    storeAF := io.in.valid && req.isWrite() && !isLegalStoreAddr(paddr) && ((hit && !hitWB) || state === s_wait_resp)
+    loadAF := af_valid && req.isRead() && (!isLegalLoadAddr(paddr) || missPTEAF)
+    storeAF := af_valid && req.isWrite() && (!isLegalStoreAddr(paddr) || missPTEAF)
   }
   val hasException = io.pf.hasException || loadPF || storePF || loadAF || storeAF
 
