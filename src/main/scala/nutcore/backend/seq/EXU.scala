@@ -73,6 +73,8 @@ class EXU(implicit val p: NutCoreConfig) extends NutCoreModule {
   csr.io.cfIn.exceptionVec(storeAddrMisaligned) := lsu.io.storeAddrMisaligned
   csr.io.cfIn.exceptionVec(loadAccessFault) := lsu.io.loadAccessFault
   csr.io.cfIn.exceptionVec(storeAccessFault) := lsu.io.storeAccessFault
+  csr.io.cfIn.exceptionVec(loadPageFault) := lsu.io.dtlbPF && !LSUOpType.isStore(fuOpType)
+  csr.io.cfIn.exceptionVec(storePageFault) := lsu.io.dtlbPF && LSUOpType.isStore(fuOpType)
   csr.io.instrValid := io.in.valid && !io.flush
   csr.io.isBackendException := false.B
   io.out.bits.intrNO := csr.io.intrNO

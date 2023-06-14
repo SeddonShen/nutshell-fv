@@ -427,7 +427,8 @@ class LSExecUnit extends NutCoreModule {
     BoringUtils.addSink(dtlbEnable, "vmEnable")
   }
 
-  io.dtlbPF := dtlbPF
+  val vaddrPF = dtlbEnable && Cat((39 until 63).map(i => io.vaddr(i) =/= io.vaddr(38))).orR
+  io.dtlbPF := dtlbPF || vaddrPF
   io.dtlbAF := dtlbAF
 
   val dtlbHasException = dtlbPF || dtlbAF
@@ -460,7 +461,7 @@ class LSExecUnit extends NutCoreModule {
     wmask = reqWmask,
     cmd = Mux(isStore, SimpleBusCmd.write, SimpleBusCmd.read))
 
-  val hasException = io.loadAccessFault || io.storeAccessFault
+  val hasException = io.loadAccessFault || io.storeAccessFault || vaddrPF
   dmem.req.valid := valid && (state === s_idle) && !hasException
   dmem.resp.ready := true.B
 
