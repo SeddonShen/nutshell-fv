@@ -171,7 +171,7 @@ class EmbeddedTLB(implicit val tlbConfig: TLBConfig) extends TlbModule with HasT
   if(tlbname == "dtlb") {
     val alreadyOutFinish = RegEnable(true.B, init=false.B, tlbExec.io.out.valid && !tlbExec.io.out.ready)
     when(alreadyOutFinish && tlbExec.io.out.fire()) { alreadyOutFinish := false.B}
-    val tlbFinish = (tlbExec.io.out.valid && !alreadyOutFinish) || tlbExec.io.pf.isPF()
+    val tlbFinish = (tlbExec.io.out.valid && !alreadyOutFinish) || tlbExec.io.pf.hasException
     BoringUtils.addSource(tlbFinish, "DTLBFINISH")
     BoringUtils.addSource(io.csrMMU.isPF(), "DTLBPF")
     BoringUtils.addSource(io.csrMMU.isAF, "DTLBAF")
@@ -334,7 +334,7 @@ class EmbeddedTLBExec(implicit val tlbConfig: TLBConfig) extends TlbModule{
       }.elsewhen (io.mem.req.fire()) {
         state := s_memReadResp
       }.elsewhen (raddrCancel) {
-        state := s_wait_resp
+        if (isITLB) { state := s_wait_resp } else { state := s_miss_slpf }
         missPTEAF := true.B
       }
     }
@@ -424,6 +424,7 @@ class EmbeddedTLBExec(implicit val tlbConfig: TLBConfig) extends TlbModule{
 
     is (s_miss_slpf) {
       state := s_idle
+      missPTEAF := false.B
     }
   }
 
@@ -457,13 +458,13 @@ class EmbeddedTLBExec(implicit val tlbConfig: TLBConfig) extends TlbModule{
   // io
   io.out.bits := req
   io.out.bits.addr := paddr
-  val af_valid = io.in.valid && ((hit && !hitWB) || state === s_wait_resp)
+  val out_req_valid = io.in.valid && ((hit && !hitWB) || state === s_wait_resp)
   if (isITLB) {
-    instrAF := af_valid && (!isLegalInstrAddr(paddr) || missPTEAF)
+    instrAF := out_req_valid && (!isLegalInstrAddr(paddr) || missPTEAF)
   }
   if (isDTLB) {
-    loadAF := af_valid && req.isRead() && (!isLegalLoadAddr(paddr) || missPTEAF)
-    storeAF := af_valid && req.isWrite() && (!isLegalStoreAddr(paddr) || missPTEAF)
+    loadAF := (out_req_valid  && !isLegalLoadAddr(paddr) || missPTEAF) && req.isRead()
+    storeAF := (out_req_valid && !isLegalStoreAddr(paddr) || missPTEAF) && req.isWrite()
   }
   val hasException = io.pf.hasException || loadPF || storePF || loadAF || storeAF
 
