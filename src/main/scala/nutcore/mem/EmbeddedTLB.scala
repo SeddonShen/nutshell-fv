@@ -377,10 +377,11 @@ class EmbeddedTLBExec(implicit val tlbConfig: TLBConfig) extends TlbModule{
           val pg_mask = Mux(level === 2.U, 0x1ff.U, 0x3ffff.U)
           val misaligned = level(1) && (memRdata.ppn & pg_mask).asUInt.orR || memRdata.reserved =/= 0.U // non-leaf and misaligned
           val permCheck = missflag.v && !(pf.priviledgeMode === ModeU && !missflag.u) && !(pf.priviledgeMode === ModeS && missflag.u && (!pf.status_sum || ifecth))
+          val permWNoR = !missflag.r && missflag.w
           val permAD = !missflag.a || (!missflag.d && req.isWrite())
-          val permExec = permCheck && !permAD && !misaligned && missflag.x
-          val permLoad = permCheck && !permAD && !misaligned && (missflag.r || pf.status_mxr && missflag.x)
-          val permStore = permCheck && !permAD && !misaligned && missflag.w
+          val permExec = permCheck && !permWNoR && !permAD && !misaligned && missflag.x
+          val permLoad = permCheck && !permWNoR && !permAD && !misaligned && (missflag.r || pf.status_mxr && missflag.x)
+          val permStore = permCheck && !permWNoR && !permAD && !misaligned && missflag.w
           val updateData = Cat( 0.U(56.W), req.isWrite(), 1.U(1.W), 0.U(6.W) )
           missRefillFlag := Cat(req.isWrite(), 1.U(1.W), 0.U(6.W)) | missflag.asUInt
           memRespStore := io.mem.resp.bits.rdata | updateData
