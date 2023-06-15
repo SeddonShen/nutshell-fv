@@ -196,7 +196,8 @@ class EmbeddedTLB(implicit val tlbConfig: TLBConfig) extends TlbModule with HasT
       io.in.resp.valid := true.B
       io.in.resp.bits.rdata := 0.U
       io.in.resp.bits.cmd := SimpleBusCmd.readLast
-      io.in.resp.bits.user.map(_ := tlbExec.io.in.bits.user.getOrElse(0.U))
+      val userBits = RegEnable(io.in.req.bits.user.getOrElse(0.U), io.in.req.fire && !io.flush)
+      io.in.resp.bits.user.map(_ := userBits)
     }
   }
 
