@@ -80,6 +80,7 @@ class EXU(implicit val p: NutCoreConfig) extends NutCoreModule {
   io.out.bits.intrNO := csr.io.intrNO
   csr.io.isBackendException := false.B
   csr.io.out.ready := true.B
+  csr.io.rfWenReal := io.in.bits.ctrl.rfWen && io.in.bits.ctrl.rfDest =/= 0.U
 
   csr.io.imemMMU <> io.memMMU.imem
   csr.io.dmemMMU <> io.memMMU.dmem
