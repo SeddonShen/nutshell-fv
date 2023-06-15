@@ -147,6 +147,10 @@ class EmbeddedTLB(implicit val tlbConfig: TLBConfig) extends TlbModule with HasT
       tlbEmpty.io.out.ready := true.B
       io.out.req.valid := io.in.req.valid
       io.in.req.ready := io.out.req.ready
+      io.csrMMU.loadPF := false.B
+      io.csrMMU.storePF := false.B
+      io.csrMMU.laf := false.B
+      io.csrMMU.saf := false.B
     }
     else {
       io.out.req.valid := io.in.req.valid && reqIsLegalInstr
