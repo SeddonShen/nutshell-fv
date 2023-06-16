@@ -126,22 +126,18 @@ trait HasCSRConst {
   def ModeS     = 0x1.U
   def ModeU     = 0x0.U
 
-  def IRQ_UEIP  = 0
   def IRQ_SEIP  = 1
   def IRQ_MEIP  = 3
 
-  def IRQ_UTIP  = 4
   def IRQ_STIP  = 5
   def IRQ_MTIP  = 7
 
-  def IRQ_USIP  = 8
   def IRQ_SSIP  = 9
   def IRQ_MSIP  = 11
 
   val IntPriority = Seq(
     IRQ_MEIP, IRQ_MSIP, IRQ_MTIP,
     IRQ_SEIP, IRQ_SSIP, IRQ_STIP,
-    IRQ_UEIP, IRQ_USIP, IRQ_UTIP
   )
 }
 
@@ -660,12 +656,13 @@ class CSR(implicit val p: NutCoreConfig) extends NutCoreModule with HasCSRConst 
   val intrVecEnable = Wire(Vec(12, Bool()))
   intrVecEnable.zip(ideleg.asBools).map{case(x,y) => x := priviledgedEnableDetect(y)}
   val intrVec = mie(11,0) & mipRaiseIntr.asUInt & intrVecEnable.asUInt
-  BoringUtils.addSource(intrVec, "intrVecIDU")
+  val intrVecIDU = VecInit.tabulate(12)(i => if (IntPriority.contains(i)) intrVec(i) else false.B).asUInt
+  BoringUtils.addSource(intrVecIDU, "intrVecIDU")
   // val intrNO = PriorityEncoder(intrVec)
 
   val intrNO = IntPriority.foldRight(0.U)((i: Int, sum: UInt) => Mux(io.cfIn.intrVec(i), i.U, sum))
   // val intrNO = PriorityEncoder(io.cfIn.intrVec)
-  val raiseIntr = io.cfIn.intrVec.asUInt.orR
+  val raiseIntr = VecInit(IntPriority.map(i => io.cfIn.intrVec(i))).asUInt.orR
 
   // exceptions
   val illegalMret = io.in.valid && isMret && priviledgeMode < ModeM
