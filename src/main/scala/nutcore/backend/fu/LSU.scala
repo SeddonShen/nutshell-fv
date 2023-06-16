@@ -61,6 +61,8 @@ object LSUOpType { //TODO: refactor LSU fuop
   def needMemRead(func: UInt): Bool = isLoad(func) || isAMO(func) || isLR(func)
   def needMemWrite(func: UInt): Bool = isStore(func) || isAMO(func) || isSC(func)
 
+  def hasStoreFault(func: UInt): Bool = isAtom(func) && !isLR(func) || isStore(func)
+  def hasLoadFault(func: UInt): Bool = !hasStoreFault(func)
   def atomW = "010".U
   def atomD = "011".U
 }
