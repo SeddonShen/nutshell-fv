@@ -115,7 +115,7 @@ class Decoder(implicit val p: NutCoreConfig) extends NutCoreModule with HasInstr
 
   //output signals
   io.out.valid := io.in.valid
-  io.in.ready := !io.in.valid || io.out.fire() && !hasIntr
+  io.in.ready := !io.in.valid || io.out.fire()
   io.out.bits.cf <> io.in.bits
   // fix c_break
 
