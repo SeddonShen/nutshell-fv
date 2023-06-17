@@ -1,17 +1,17 @@
 /**************************************************************************************
 * Copyright (c) 2020 Institute of Computing Technology, CAS
 * Copyright (c) 2020 University of Chinese Academy of Sciences
-* 
-* NutShell is licensed under Mulan PSL v2.
-* You can use this software according to the terms and conditions of the Mulan PSL v2. 
-* You may obtain a copy of Mulan PSL v2 at:
-*             http://license.coscl.org.cn/MulanPSL2 
-* 
-* THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER 
-* EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY OR 
-* FIT FOR A PARTICULAR PURPOSE.  
 *
-* See the Mulan PSL v2 for more details.  
+* NutShell is licensed under Mulan PSL v2.
+* You can use this software according to the terms and conditions of the Mulan PSL v2.
+* You may obtain a copy of Mulan PSL v2 at:
+*             http://license.coscl.org.cn/MulanPSL2
+*
+* THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER
+* EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY OR
+* FIT FOR A PARTICULAR PURPOSE.
+*
+* See the Mulan PSL v2 for more details.
 ***************************************************************************************/
 
 package nutcore
@@ -63,7 +63,7 @@ class CtrlFlowIO extends NutCoreBundle {
   val intrVec = Output(Vec(12, Bool()))
   val brIdx = Output(UInt(4.W))
   val isRVC = Output(Bool())
-  val crossPageIPFFix = Output(Bool())
+  val crossBoundaryFault = Output(Bool())
   val runahead_checkpoint_id = Output(UInt(64.W))
   val isBranch = Output(Bool())
   val isExit = Output(Bool())
@@ -158,7 +158,7 @@ class TLBExuIO extends NutCoreBundle {
 }
 
 class InstFetchIO extends NutCoreBundle {
-  val pc = Output(UInt(VAddrBits.W)) // real PC will be regenerated in IBF 
+  val pc = Output(UInt(VAddrBits.W)) // real PC will be regenerated in IBF
   val pnpc = Output(UInt(VAddrBits.W))
   val brIdx = Output(UInt(4.W))
   val instValid = Output(UInt(4.W))
