@@ -421,7 +421,7 @@ class EmbeddedTLBExec(implicit val tlbConfig: TLBConfig) extends TlbModule{
       }.elsewhen (io.mem.req.fire()) { state := s_wait_resp }
     }
 
-    is (s_wait_resp) { when (io.out.fire() || ioFlush || alreadyOutFire){
+    is (s_wait_resp) { when (io.isFinish || ioFlush || alreadyOutFire){
       state := s_idle
       missIPF := false.B
       missPTEAF := false.B
