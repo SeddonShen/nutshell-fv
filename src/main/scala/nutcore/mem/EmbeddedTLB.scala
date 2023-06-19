@@ -461,6 +461,21 @@ class EmbeddedTLBExec(implicit val tlbConfig: TLBConfig) extends TlbModule{
     maskPaddr(memRespStore.asTypeOf(pteBundle).ppn, vaddr_ext, missMaskStore)
   )
 
+  // handle SC store requests
+  val scIsSuccess = WireInit(true.B)
+  if (isDTLB) {
+    BoringUtils.addSource(scIsSuccess, "scIsSuccess")
+    val scInflight = WireInit(false.B)
+    val lr = WireInit(Bool(), false.B)
+    val lrAddr = WireInit(UInt(AddrBits.W), DontCare)
+    BoringUtils.addSink(scInflight, "scInflight")
+    BoringUtils.addSink(lr, "lr")
+    BoringUtils.addSink(lrAddr, "lr_addr")
+    assert(!scInflight || !io.in.valid || req.isWrite(), "SC is inflight but TLB receives a read request")
+    scIsSuccess := !scInflight || (lr && lrAddr === paddr)
+    BoringUtils.addSource(paddr, "dtlb_paddr")
+  }
+
   // io
   io.out.bits := req
   io.out.bits.addr := paddr
@@ -474,13 +489,13 @@ class EmbeddedTLBExec(implicit val tlbConfig: TLBConfig) extends TlbModule{
   }
   val hasException = io.pf.hasException || loadPF || storePF || loadAF || storeAF
 
-  io.out.valid := io.in.valid && (hit && !hitWB || state === s_wait_resp) && !hasException// && !alreadyOutFire
+  io.out.valid := io.in.valid && (hit && !hitWB || state === s_wait_resp) && !hasException && scIsSuccess// && !alreadyOutFire
   //maybe be optimized
   io.in.ready := io.out.ready && (state === s_idle) && !miss && !hitWB && io.mdReady && !hasException
 
   io.ipf := Mux(hit, hitinstrPF, missIPF)
   io.iaf := instrAF
-  io.isFinish := io.out.fire() || io.pf.hasException
+  io.isFinish := io.out.fire() || io.pf.hasException || !scIsSuccess
 
   Debug("In(%d, %d) Out(%d, %d) InAddr:%x OutAddr:%x cmd:%d \n",
     io.in.valid, io.in.ready, io.out.valid, io.out.ready, req.addr, io.out.bits.addr, req.cmd)

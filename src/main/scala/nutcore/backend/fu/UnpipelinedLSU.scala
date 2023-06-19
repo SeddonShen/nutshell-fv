@@ -122,7 +122,8 @@ class UnpipelinedLSU extends NutCoreModule with HasLSUConst {
   BoringUtils.addSink(lr, "lr")
   BoringUtils.addSink(lrAddr, "lr_addr")
 
-  val scInvalid = (src1 =/= lrAddr || !lr) && scReq
+  // check sc invalid when DTLB is disabled
+  val scInvalid = scReq && (src1 =/= lrAddr || !lr) && !dtlbEnable
 
   // LSU control FSM state
   val s_idle :: s_exec :: s_load :: s_lr :: s_sc :: s_amo_l :: s_amo_a :: s_amo_s :: Nil = Enum(8)
@@ -137,6 +138,10 @@ class UnpipelinedLSU extends NutCoreModule with HasLSUConst {
   atomALU.io.func := func
   atomALU.io.isWordOp := atomWidthW
 
+  // SC inflight state: for TLB
+  val scInflight = Wire(Bool())
+  scInflight := state === s_sc
+  BoringUtils.addSource(scInflight, "scInflight")
   val addr = if(IndependentAddrCalcState){RegNext(src1 + src2, state === s_idle)}else{DontCare}
 
   // StoreQueue
@@ -161,6 +166,8 @@ class UnpipelinedLSU extends NutCoreModule with HasLSUConst {
   io.out.valid               := false.B
   io.in.ready                := false.B
 
+  val scIsSuccess = WireInit(false.B)
+  BoringUtils.addSink(scIsSuccess, "scIsSuccess")
   switch (state) {
     is(s_idle){ // calculate address
       lsExecUnit.io.in.valid     := false.B
@@ -282,9 +289,9 @@ class UnpipelinedLSU extends NutCoreModule with HasLSUConst {
       lsExecUnit.io.in.bits.src2 := DontCare
       lsExecUnit.io.in.bits.func := Mux(atomWidthD, LSUOpType.sd, LSUOpType.sw)
       lsExecUnit.io.wdata        := io.wdata
-      io.in.ready                := lsExecUnit.io.out.fire()
-      io.out.valid               := lsExecUnit.io.out.fire()
-      when(lsExecUnit.io.out.fire()){
+      io.in.ready                := lsExecUnit.io.out.fire || !scIsSuccess
+      io.out.valid               := lsExecUnit.io.out.fire || !scIsSuccess
+      when(lsExecUnit.io.out.fire || !scIsSuccess){
         state := s_idle;
         Debug("[SC] \n")
       }
@@ -306,12 +313,15 @@ class UnpipelinedLSU extends NutCoreModule with HasLSUConst {
   // io.out.valid := lsExecUnit.io.out.valid
 
   //Set LR/SC bits
+  val lr_paddr = WireInit(0.U(PAddrBits.W))
+  BoringUtils.addSink(lr_paddr, "dtlb_paddr")
   setLr := io.out.fire && (lrReq || scReq)
-  setLrVal := lrReq
-  setLrAddr := src1
+  setLrVal := lrReq && !hasException
+  setLrAddr := Mux(dtlbEnable, lr_paddr, src1)
 
   io.dmem <> lsExecUnit.io.dmem
-  io.out.bits := Mux(scReq, scInvalid, Mux(state === s_amo_s, atomRegReg, lsExecUnit.io.out.bits))
+
+  io.out.bits := Mux(scReq, scInvalid || !scIsSuccess, Mux(state === s_amo_s, atomRegReg, lsExecUnit.io.out.bits))
 
   val lsuMMIO = WireInit(false.B)
   BoringUtils.addSink(lsuMMIO, "lsuMMIO")
