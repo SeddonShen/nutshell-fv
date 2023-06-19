@@ -70,6 +70,7 @@ class ALUIO extends FunctionUnitIO {
   val cfIn = Flipped(new CtrlFlowIO)
   val redirect = new RedirectIO
   val offset = Input(UInt(XLEN.W))
+  val iVmEnable = Input(Bool())
   val jumpIsIllegal = DecoupledIO(UInt(XLEN.W))
 }
 
@@ -135,9 +136,7 @@ class ALU(hasBru: Boolean = false) extends NutCoreModule {
   // Jump instruction may have generated illegal address that is out of the range of virtual address space.
   // In this case, we use registers to store the exceptional address here since PC in frontend has only VAddrBits.
   val hasIllegalJumpAddr = RegInit(false.B)
-  val vmEnable = WireInit(false.B)
-  BoringUtils.addSink(vmEnable, "vmEnable")
-  val addrNotLegal = Mux(vmEnable, target =/= SignExt(target(VAddrBits - 1, 0), XLEN), target(XLEN - 1, VAddrBits).orR)
+  val addrNotLegal = Mux(io.iVmEnable, target =/= SignExt(target(VAddrBits - 1, 0), XLEN), target(XLEN - 1, VAddrBits).orR)
   val isIllegalJumpAddr = io.redirect.valid && !isBranch && addrNotLegal
   when (isIllegalJumpAddr) {
     hasIllegalJumpAddr := true.B

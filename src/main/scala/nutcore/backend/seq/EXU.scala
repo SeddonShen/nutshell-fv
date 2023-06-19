@@ -83,6 +83,7 @@ class EXU(implicit val p: NutCoreConfig) extends NutCoreModule {
   csr.io.rfWenReal := io.in.bits.ctrl.rfWen && io.in.bits.ctrl.rfDest =/= 0.U
 
   csr.io.imemMMU <> io.memMMU.imem
+  alu.io.iVmEnable := csr.io.vmEnable
   csr.io.dmemMMU <> io.memMMU.dmem
   csr.io.dmemExceptionAddr := lsu.io.vaddr
 
