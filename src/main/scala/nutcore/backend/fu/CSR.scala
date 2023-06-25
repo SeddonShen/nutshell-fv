@@ -506,11 +506,12 @@ class CSR(implicit val p: NutCoreConfig) extends NutCoreModule with HasCSRConst 
   ))
 
   // SATP wen check
+  // Implementations are not required to support all MODE settings, and if satp is written with an
+  // unsupported MODE, the entire write has no effect; no fields in satp are modified.
   val satpLegalMode = (wdata.asTypeOf(new SatpStruct).mode === 0.U) || (wdata.asTypeOf(new SatpStruct).mode === 8.U)
 
   // General CSR wen check
-  val wen = (valid && !io.cfIn.exceptionVec.asUInt.orR && func =/= CSROpType.jmp) &&
-    (addr =/= Satp.U || satpLegalMode) && !io.isBackendException
+  val wen = (valid && !io.cfIn.exceptionVec.asUInt.orR && func =/= CSROpType.jmp) && !io.isBackendException
   val isIllegalMode  = priviledgeMode < addr(9, 8)
   // From RISC-V specification Zicsr:
   // For both CSRRS and CSRRC, if rs1=x0, then the instruction will not write to the CSR at all,
@@ -529,7 +530,8 @@ class CSR(implicit val p: NutCoreConfig) extends NutCoreModule with HasCSRConst 
   val isIllegalTVM = wen && addr === Satp.U && mstatusStruct.tvm =/= 0.U && priviledgeMode =/= ModeM
   val isIllegalAccess = isIllegalMode || isIllegalWrite || isIllegalTVM
 
-  MaskedRegMap.generate(mapping, addr, rdata, wen && !isIllegalAccess, wdata)
+  val canWriteCSR = wen && !isIllegalAccess && (addr =/= Satp.U || satpLegalMode)
+  MaskedRegMap.generate(mapping, addr, rdata, canWriteCSR, wdata)
   val isIllegalAddr = MaskedRegMap.isIllegalAddr(mapping, addr)
   // write to satp will cause the pipeline be flushed
   val resetSatp = addr === Satp.U && wen && !isIllegalAccess
