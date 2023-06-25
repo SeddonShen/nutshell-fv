@@ -472,7 +472,7 @@ class EmbeddedTLBExec(implicit val tlbConfig: TLBConfig) extends TlbModule{
     BoringUtils.addSink(lr, "lr")
     BoringUtils.addSink(lrAddr, "lr_addr")
     assert(!scInflight || !io.in.valid || req.isWrite(), "SC is inflight but TLB receives a read request")
-    scIsSuccess := !scInflight || (lr && lrAddr === paddr)
+    scIsSuccess := !scInflight || (lr && lrAddr === paddr) || !((hit && !hitWB) || state === s_wait_resp)
     BoringUtils.addSource(paddr, "dtlb_paddr")
   }
 
