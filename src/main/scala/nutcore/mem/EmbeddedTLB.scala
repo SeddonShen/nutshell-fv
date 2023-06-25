@@ -175,7 +175,9 @@ class EmbeddedTLB(implicit val tlbConfig: TLBConfig) extends TlbModule with HasT
   if(tlbname == "dtlb") {
     val alreadyOutFinish = RegEnable(true.B, init=false.B, tlbExec.io.out.valid && !tlbExec.io.out.ready)
     when(alreadyOutFinish && tlbExec.io.out.fire()) { alreadyOutFinish := false.B}
-    val tlbFinish = (tlbExec.io.out.valid && !alreadyOutFinish) || tlbExec.io.pf.hasException
+    val scIsSuccess = WireInit(true.B)
+    BoringUtils.addSink(scIsSuccess, "scIsSuccess")
+    val tlbFinish = (tlbExec.io.out.valid && !alreadyOutFinish) || tlbExec.io.pf.hasException || !scIsSuccess
     BoringUtils.addSource(tlbFinish, "DTLBFINISH")
     BoringUtils.addSource(io.csrMMU.isPF(), "DTLBPF")
     BoringUtils.addSource(io.csrMMU.isAF, "DTLBAF")

@@ -430,11 +430,13 @@ class LSExecUnit extends NutCoreModule {
   val dtlbPF = WireInit(false.B)
   val dtlbAF = WireInit(false.B)
   val dtlbEnable = WireInit(false.B)
+  val scIsSuccess = WireInit(true.B)
   if (Settings.get("HasDTLB")) {
     BoringUtils.addSink(dtlbFinish, "DTLBFINISH")
     BoringUtils.addSink(dtlbPF, "DTLBPF")
     BoringUtils.addSink(dtlbAF, "DTLBAF")
     BoringUtils.addSink(dtlbEnable, "vmEnable")
+    BoringUtils.addSink(scIsSuccess, "scIsSuccess")
   }
 
   val vaddrPF = valid && dtlbEnable && Cat((39 until 64).map(i => io.vaddr(i) =/= io.vaddr(38))).orR
@@ -449,8 +451,8 @@ class LSExecUnit extends NutCoreModule {
       //when (dmem.req.fire()) { state := Mux(isStore, s_partialLoad, s_wait_resp) }
     }
     is (s_wait_tlb) {
-      when (dtlbFinish && dtlbHasException) { state := s_idle }
-      when (dtlbFinish && !dtlbHasException) { state := s_wait_resp/*Mux(isStore, s_partialLoad, s_wait_resp) */}
+      when (dtlbFinish && (dtlbHasException || !scIsSuccess)) { state := s_idle }
+      when (dtlbFinish && !dtlbHasException && scIsSuccess) { state := s_wait_resp/*Mux(isStore, s_partialLoad, s_wait_resp) */}
     }
     is (s_wait_resp) { when (dmem.resp.fire()) { state := Mux(partialLoad, s_partialLoad, s_idle) } }
     is (s_partialLoad) { state := s_idle }
