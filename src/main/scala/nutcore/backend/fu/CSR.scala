@@ -601,6 +601,7 @@ class CSR(implicit val p: NutCoreConfig) extends NutCoreModule with HasCSRConst 
   val hasStoreAddrMisaligned = Wire(Bool())
   val hasLoadAddrMisaligned = Wire(Bool())
 
+  val exceptionPC = Wire(UInt(64.W))
   val imemExceptionAddr = Wire(UInt(64.W))
   val dmemExceptionAddr = Wire(UInt(64.W))
   val lsuAddr = WireInit(0.U(64.W))
@@ -624,10 +625,14 @@ class CSR(implicit val p: NutCoreConfig) extends NutCoreModule with HasCSRConst 
     dmemExceptionAddr := io.dmemExceptionAddr
     imemExceptionAddr := Mux(io.illegalJump.valid,
       io.illegalJump.bits,
-      Mux(vmEnable,
-        SignExt(io.cfIn.pc, XLEN),
-        ZeroExt(io.cfIn.pc, XLEN)
+      Mux(io.cfIn.crossBoundaryFault,
+        Mux(vmEnable, SignExt(io.cfIn.pc + 2.U, XLEN), ZeroExt(io.cfIn.pc + 2.U, XLEN)),
+        Mux(vmEnable, SignExt(io.cfIn.pc,       XLEN), ZeroExt(io.cfIn.pc,       XLEN))
       )
+    )
+    exceptionPC := Mux(io.illegalJump.valid,
+      io.illegalJump.bits,
+      Mux(vmEnable, SignExt(io.cfIn.pc,       XLEN), ZeroExt(io.cfIn.pc,       XLEN))
     )
   }
 
@@ -746,10 +751,6 @@ class CSR(implicit val p: NutCoreConfig) extends NutCoreModule with HasCSRConst 
   trapTarget := Mux(delegS, stvec, mtvec)
   retTarget := DontCare
 
-  val pcTval = Mux(io.cfIn.crossBoundaryFault,
-    Mux(vmEnable, SignExt(io.cfIn.pc + 2.U, XLEN), SignExt(io.cfIn.pc + 2.U, XLEN)),
-    imemExceptionAddr
-  )
   when (io.instrValid) {
     when (hasLoadAddrMisaligned || hasStoreAddrMisaligned) {
       when (delegS) {
@@ -760,7 +761,7 @@ class CSR(implicit val p: NutCoreConfig) extends NutCoreModule with HasCSRConst 
       Debug("[ML] %d: addr %x pc %x delegS %x\n",
         GTimer(), dmemExceptionAddr, io.cfIn.pc, delegS)
     }.elsewhen (hasInstrPageFault || hasLoadPageFault || hasStorePageFault) {
-      val tval = Mux(hasInstrPageFault, pcTval, dmemExceptionAddr)
+      val tval = Mux(hasInstrPageFault, imemExceptionAddr, dmemExceptionAddr)
       when (delegS) {
         stval := tval
       }.otherwise {
@@ -769,7 +770,7 @@ class CSR(implicit val p: NutCoreConfig) extends NutCoreModule with HasCSRConst 
       Debug("[PF] %d: ipf %b tval %x := addr %x pc %x priviledgeMode %x\n",
         GTimer(), hasInstrPageFault, tval, dmemExceptionAddr, io.cfIn.pc, priviledgeMode)
     }.elsewhen (hasInstrAccessFault || hasLoadAccessFault || hasStoreAccessFault) {
-      val tval = Mux(hasInstrAccessFault, pcTval, dmemExceptionAddr)
+      val tval = Mux(hasInstrAccessFault, imemExceptionAddr, dmemExceptionAddr)
       when (delegS) {
         stval := tval
       }.otherwise {
@@ -828,7 +829,7 @@ class CSR(implicit val p: NutCoreConfig) extends NutCoreModule with HasCSRConst 
 
     when (delegS) {
       scause := causeNO
-      sepc := imemExceptionAddr
+      sepc := exceptionPC
       mstatusNew.spp := priviledgeMode
       mstatusNew.pie.s := mstatusOld.ie.s
       mstatusNew.ie.s := false.B
@@ -840,7 +841,7 @@ class CSR(implicit val p: NutCoreConfig) extends NutCoreModule with HasCSRConst 
       // trapTarget := stvec(VAddrBits-1. 0)
     }.otherwise {
       mcause := causeNO
-      mepc := imemExceptionAddr
+      mepc := exceptionPC
       mstatusNew.mpp := priviledgeMode
       mstatusNew.pie.m := mstatusOld.ie.m
       mstatusNew.ie.m := false.B
@@ -1071,7 +1072,7 @@ class CSR(implicit val p: NutCoreConfig) extends NutCoreModule with HasCSRConst 
     val difftestArchEvent = diffWrapper.archEvent
     difftestArchEvent.interrupt     := Mux(raiseIntr && io.instrValid, intrNO, 0.U)
     difftestArchEvent.exception     := Mux(raiseException && io.instrValid, exceptionNO, 0.U)
-    difftestArchEvent.exceptionPC   := imemExceptionAddr
+    difftestArchEvent.exceptionPC   := exceptionPC
     difftestArchEvent.exceptionInst := io.cfIn.instr
 
   } else {

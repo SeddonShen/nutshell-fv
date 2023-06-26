@@ -67,6 +67,7 @@ class NaiveRVCAlignBuffer extends NutCoreModule with HasInstrType with HasExcept
   val specialNPCR = Reg(UInt(VAddrBits.W)) // reg for pnc for full inst jump that cross 2 inst line
   val specialInstR = Reg(UInt(16.W))
   val specialIPFR = RegInit(Bool(), false.B)
+  val hasCrossBoundaryFault = io.in.bits.exceptionVec(instrAccessFault) || io.in.bits.exceptionVec(instrPageFault)
   val redirectPC = Cat(io.in.bits.pc(VAddrBits-1,3), 0.U(3.W))+"b1010".U // IDU can got get full inst from a single inst line
   val rvcForceLoadNext = (pcOffset === 2.U && !isRVC && io.in.bits.pnpc(2,0) === 4.U && !brIdx(1))
   //------------------------------------------------------
@@ -112,14 +113,14 @@ class NaiveRVCAlignBuffer extends NutCoreModule with HasInstrType with HasExcept
           state := s_waitnext
           specialPCR := pcOut
           specialInstR := io.in.bits.instr(63,63-16+1)
-          specialIPFR := io.in.bits.exceptionVec(instrPageFault)
+          specialIPFR := hasCrossBoundaryFault
         }
         when(rvcSpecialJump && io.in.valid){
           state := s_waitnext_thenj
           specialPCR := pcOut
           specialNPCR := io.in.bits.pnpc
           specialInstR := io.in.bits.instr(63,63-16+1)
-          specialIPFR := io.in.bits.exceptionVec(instrPageFault)
+          specialIPFR := hasCrossBoundaryFault
         }
       }
       is(s_extra){//get 16 aligned inst, pc controled by this FSM
@@ -136,14 +137,14 @@ class NaiveRVCAlignBuffer extends NutCoreModule with HasInstrType with HasExcept
           state := s_waitnext
           specialPCR := pcOut
           specialInstR := io.in.bits.instr(63,63-16+1)
-          specialIPFR := io.in.bits.exceptionVec(instrPageFault)
+          specialIPFR := hasCrossBoundaryFault
         }
         when(rvcSpecialJump && io.in.valid){
           state := s_waitnext_thenj
           specialPCR := pcOut
           specialNPCR := io.in.bits.pnpc
           specialInstR := io.in.bits.instr(63,63-16+1)
-          specialIPFR := io.in.bits.exceptionVec(instrPageFault)
+          specialIPFR := hasCrossBoundaryFault
         }
       }
       is(s_waitnext){//require next 64bits, for this inst has size 32 and offset 6
@@ -196,6 +197,5 @@ class NaiveRVCAlignBuffer extends NutCoreModule with HasInstrType with HasExcept
 
   io.out.bits.exceptionVec := io.in.bits.exceptionVec
   io.out.bits.exceptionVec(instrPageFault) := io.in.bits.exceptionVec(instrPageFault) || specialIPFR && (state === s_waitnext_thenj || state === s_waitnext)
-  val hasCrossBoundaryFault = io.in.bits.exceptionVec(instrAccessFault) || io.in.bits.exceptionVec(instrPageFault)
   io.out.bits.crossBoundaryFault := hasCrossBoundaryFault && (state === s_waitnext_thenj || state === s_waitnext) && !specialIPFR
 }
