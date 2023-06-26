@@ -486,8 +486,10 @@ class EmbeddedTLBExec(implicit val tlbConfig: TLBConfig) extends TlbModule{
     instrAF := out_req_valid && (!isLegalInstrAddr(paddr) || missPTEAF)
   }
   if (isDTLB) {
-    loadAF := (out_req_valid  && !isLegalLoadAddr(paddr) || missPTEAF) && req.isRead()
-    storeAF := (out_req_valid && !isLegalStoreAddr(paddr) || missPTEAF) && req.isWrite()
+    val ldReqAF = out_req_valid  && !isLegalLoadAddr(paddr)
+    val stReqAF = out_req_valid && !isLegalStoreAddr(paddr)
+    loadAF := (ldReqAF || missPTEAF) && req.isRead() && !isAMO
+    storeAF := stReqAF && req.isWrite() || (ldReqAF && req.isRead() && isAMO) || missPTEAF && (req.isWrite() || isAMO)
   }
   val hasException = io.pf.hasException || loadPF || storePF || loadAF || storeAF
 
