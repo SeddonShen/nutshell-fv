@@ -19,6 +19,7 @@ package top
 import chisel3._
 import chisel3.stage._
 import device.AXI4VGA
+import difftest.DifftestModule
 import difuzz.ControlRegisterCoverage
 import firrtl.stage.RunFirrtlTransformAnnotation
 import nutcore.NutCoreConfig
@@ -26,7 +27,7 @@ import rfuzz.{NoDedupTransform, ProfilingTransform, SplitMuxConditions}
 import sic.{FsmCoverage, LineCoverage, ReadyValidCoverage, ToggleCoverage}
 import sim.SimTop
 import system.NutShell
-import xfuzz.{ControlRegisterCoverTransform, CoverPointTransform, DontTouchClockAndResetTransform, MuxCoverTransform}
+import xfuzz.{ControlRegisterCoverTransform, CoverPoint, CoverPointTransform, DontTouchClockAndResetTransform, MuxCoverTransform}
 
 class Top extends Module {
   val io = IO(new Bundle{})
@@ -74,47 +75,15 @@ object TopMain extends App {
       println(f + " = " + v)
   }
 
-  val covers = parseArgs("COVER", args).split(",")
-  val coverTransforms = scala.collection.mutable.ListBuffer[firrtl.annotations.Annotation]()
-  if (covers.nonEmpty) {
-    coverTransforms.append(RunFirrtlTransformAnnotation(new NoDedupTransform))
-  }
-  if (covers.exists(x => !x.endsWith("_old"))) {
-    coverTransforms.append(
-      RunFirrtlTransformAnnotation(new DontTouchClockAndResetTransform),
-      RunFirrtlTransformAnnotation(new CoverPointTransform),
-    )
-  }
-  coverTransforms.appendAll(covers.flatMap {
-    case "mux_old" => Seq(
-      RunFirrtlTransformAnnotation(new SplitMuxConditions),
-      RunFirrtlTransformAnnotation(new ProfilingTransform)
-    )
-    case "mux" => Seq(
-      RunFirrtlTransformAnnotation(new SplitMuxConditions),
-      RunFirrtlTransformAnnotation(new MuxCoverTransform),
-    )
-    case "control_old" => Seq(
-      RunFirrtlTransformAnnotation(new ControlRegisterCoverage)
-    )
-    case "control" => Seq(
-      RunFirrtlTransformAnnotation(new ControlRegisterCoverTransform),
-    )
-    case "line" => LineCoverage.annotations
-    case "fsm" => FsmCoverage.annotations
-    case "toggle" => ToggleCoverage.registers
-    case "toggle_full" => ToggleCoverage.all
-    case "ready_valid" => ReadyValidCoverage.annotations
-    case _ => Seq()
-  })
-
   if (board == "sim") {
     (new ChiselStage).execute(args, Seq(
       ChiselGeneratorAnnotation(() => new SimTop)
-    ) ++ coverTransforms)
+    ) ++ CoverPoint.getTransforms(args))
   } else {
     (new ChiselStage).execute(args, Seq(
       ChiselGeneratorAnnotation(() => new Top)
-    ) ++ coverTransforms)
+    ) ++ CoverPoint.getTransforms(args))
   }
+
+  DifftestModule.finish("nutshell")
 }

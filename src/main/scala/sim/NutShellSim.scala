@@ -18,12 +18,10 @@ package sim
 
 import bus.axi4._
 import chisel3._
-import chisel3.util.experimental.BoringUtils
 import device.AXI4RAM
 import difftest._
 import nutcore.NutCoreConfig
 import system._
-import utils.GTimer
 
 class SimTop extends Module {
   val io = IO(new Bundle{
@@ -62,6 +60,4 @@ class SimTop extends Module {
   // BoringUtils.addSink(dummyWire, "DISPLAY_ENABLE")
 
   io.uart <> mmio.io.uart
-
-  DifftestModule.finish("nutshell")
 }
