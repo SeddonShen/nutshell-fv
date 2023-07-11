@@ -1073,6 +1073,7 @@ class CSR(implicit val p: NutCoreConfig) extends NutCoreModule with HasCSRConst 
     difftest.medeleg := medeleg
 
     val difftestArchEvent = diffWrapper.archEvent
+    difftestArchEvent.valid         := raiseExceptionIntr
     difftestArchEvent.interrupt     := Mux(raiseIntr && io.instrValid, intrNO, 0.U)
     difftestArchEvent.exception     := Mux(raiseException && io.instrValid, exceptionNO, 0.U)
     difftestArchEvent.exceptionPC   := exceptionPC
