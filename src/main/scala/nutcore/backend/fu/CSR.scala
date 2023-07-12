@@ -192,6 +192,7 @@ class CSRIO extends FunctionUnitIO {
   val isExit = Output(Bool())
   val vmEnable = Output(Bool())
   val rfWenReal = Input(Bool())
+  val sfence_vma_invalid = Output(Bool())
 }
 
 class CSR(implicit val p: NutCoreConfig) extends NutCoreModule with HasCSRConst with Sv39Const{
@@ -527,7 +528,9 @@ class CSR(implicit val p: NutCoreConfig) extends NutCoreModule with HasCSRConst 
   // or execute an SFENCE.VMA or SINVAL.VMA instruction while executing in S-mode will raise an
   // illegal instruction exception. When TVM=0, these operations are permitted in S-mode. TVM is
   // read-only 0 when S-mode is not supported.
-  val isIllegalTVM = wen && addr === Satp.U && mstatusStruct.tvm =/= 0.U && priviledgeMode =/= ModeM
+  val tvm = mstatusStruct.tvm =/= 0.U && priviledgeMode === ModeS
+  io.sfence_vma_invalid := priviledgeMode === ModeU || tvm
+  val isIllegalTVM =  tvm && wen && addr === Satp.U
   val isIllegalAccess = isIllegalMode || isIllegalWrite || isIllegalTVM
 
   val canWriteCSR = wen && !isIllegalAccess && (addr =/= Satp.U || satpLegalMode)

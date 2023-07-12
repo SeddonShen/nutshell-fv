@@ -34,6 +34,7 @@ class EXU(implicit val p: NutCoreConfig) extends NutCoreModule {
     val dmem = new SimpleBusUC(addrBits = VAddrBits)
     val forward = new ForwardIO
     val memMMU = Flipped(new MemMMUIO)
+    val sfence_vma_invalid = Output(Bool())
   })
 
   val src1 = io.in.bits.data.src1(XLEN-1,0)
@@ -42,7 +43,7 @@ class EXU(implicit val p: NutCoreConfig) extends NutCoreModule {
   val (fuType, fuOpType) = (io.in.bits.ctrl.fuType, io.in.bits.ctrl.fuOpType)
 
   val fuValids = Wire(Vec(FuType.num, Bool()))
-  (0 until FuType.num).map (i => fuValids(i) := (fuType === i.U) && io.in.valid && !io.flush)
+  (0 until FuType.num).map (i => fuValids(i) := (fuType === i.U) && io.in.valid && !io.flush && !io.in.bits.cf.exceptionVec.asUInt.orR)
 
   val alu = Module(new ALU(hasBru = true))
   val aluOut = alu.access(valid = fuValids(FuType.alu), src1 = src1, src2 = src2, func = fuOpType)
@@ -81,6 +82,7 @@ class EXU(implicit val p: NutCoreConfig) extends NutCoreModule {
   csr.io.isBackendException := false.B
   csr.io.out.ready := true.B
   csr.io.rfWenReal := io.in.bits.ctrl.rfWen && io.in.bits.ctrl.rfDest =/= 0.U
+  io.sfence_vma_invalid := csr.io.sfence_vma_invalid
 
   csr.io.imemMMU <> io.memMMU.imem
   alu.io.iVmEnable := csr.io.vmEnable
