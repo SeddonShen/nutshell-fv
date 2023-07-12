@@ -617,8 +617,8 @@ class CSR(implicit val p: NutCoreConfig) extends NutCoreModule with HasCSRConst 
     hasLoadAddrMisaligned  := valid && io.cfIn.exceptionVec(loadAddrMisaligned)
     dmemExceptionAddr := src1 // LSU -> wbresult -> prf -> beUop.data.src1
   }else{
-    hasInstrPageFault := io.cfIn.exceptionVec(instrPageFault) && valid
-    hasInstrAccessFault := io.cfIn.exceptionVec(instrAccessFault) && valid
+    hasInstrPageFault := io.cfIn.exceptionVec(instrPageFault) && io.instrValid
+    hasInstrAccessFault := io.cfIn.exceptionVec(instrAccessFault) && io.instrValid
     hasLoadPageFault := io.dmemMMU.loadPF || io.cfIn.exceptionVec(loadPageFault)
     hasStorePageFault := io.dmemMMU.storePF || io.cfIn.exceptionVec(storePageFault)
     hasLoadAccessFault := io.dmemMMU.laf || io.cfIn.exceptionVec(loadAccessFault)
