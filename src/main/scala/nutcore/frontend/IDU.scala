@@ -30,6 +30,7 @@ class Decoder(implicit val p: NutCoreConfig) extends NutCoreModule with HasInstr
     val isWFI = Output(Bool()) // require NutCoreSim to advance mtime when wfi to reduce the idle time in Linux
     val isBranch = Output(Bool())
     val sfence_vma_invalid = Input(Bool())
+    val wfi_invalid = Input(Bool())
   })
   val expander = Module(new RVCExpander(XLEN))
   expander.io.in := io.in.bits.instr
@@ -134,7 +135,9 @@ class Decoder(implicit val p: NutCoreConfig) extends NutCoreModule with HasInstr
   io.out.bits.cf.exceptionVec.map(_ := false.B)
   val is_sfence_vma = fuType === FuType.mou && fuOpType === MOUOpType.sfence_vma
   val sfence_vma_illegal = is_sfence_vma && io.sfence_vma_invalid
-  io.out.bits.cf.exceptionVec(illegalInstr) := ((instrType === InstrN || isIllegalRVC || sfence_vma_illegal) && !hasIntr) && io.in.valid
+  val wfi_illegal = io.isWFI && io.wfi_invalid
+  val illegal_instr = instrType === InstrN || isIllegalRVC || sfence_vma_illegal || wfi_illegal
+  io.out.bits.cf.exceptionVec(illegalInstr) := illegal_instr && !hasIntr && io.in.valid
   io.out.bits.cf.exceptionVec(instrPageFault) := io.in.bits.exceptionVec(instrPageFault)
   io.out.bits.cf.exceptionVec(instrAccessFault) := io.in.bits.exceptionVec(instrAccessFault)
 
@@ -162,9 +165,11 @@ class IDU(implicit val p: NutCoreConfig) extends NutCoreModule with HasInstrType
     val in = Vec(2, Flipped(Decoupled(new CtrlFlowIO)))
     val out = Vec(2, Decoupled(new DecodeIO))
     val sfence_vma_invalid = Input(Bool())
+    val wfi_invalid = Input(Bool())
   })
   val decoder = Module(new Decoder)
   decoder.io.sfence_vma_invalid := io.sfence_vma_invalid
+  decoder.io.wfi_invalid := io.wfi_invalid
   io.in(0) <> decoder.io.in
   io.out(0) <> decoder.io.out
   val isWFI = WireInit(decoder.io.isWFI)

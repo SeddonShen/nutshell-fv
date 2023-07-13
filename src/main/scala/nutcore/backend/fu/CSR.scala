@@ -193,6 +193,7 @@ class CSRIO extends FunctionUnitIO {
   val vmEnable = Output(Bool())
   val rfWenReal = Input(Bool())
   val sfence_vma_invalid = Output(Bool())
+  val wfi_invalid = Output(Bool())
 }
 
 class CSR(implicit val p: NutCoreConfig) extends NutCoreModule with HasCSRConst with Sv39Const{
@@ -227,7 +228,7 @@ class CSR(implicit val p: NutCoreConfig) extends NutCoreModule with HasCSRConst 
     val pad0 = if (XLEN == 64) Output(UInt(9.W))  else Output(UInt(8.W))
 
     val tsr = Output(UInt(1.W))
-    val tw = Output(UInt(1.W))
+    val tw = Output(Bool())
     val tvm = Output(UInt(1.W))
     val mxr = Output(UInt(1.W))
     val sum = Output(UInt(1.W))
@@ -532,6 +533,8 @@ class CSR(implicit val p: NutCoreConfig) extends NutCoreModule with HasCSRConst 
   io.sfence_vma_invalid := priviledgeMode === ModeU || tvm
   val isIllegalTVM =  tvm && wen && addr === Satp.U
   val isIllegalAccess = isIllegalMode || isIllegalWrite || isIllegalTVM
+
+  io.wfi_invalid := priviledgeMode =/= ModeM && mstatusStruct.tw
 
   val canWriteCSR = wen && !isIllegalAccess && (addr =/= Satp.U || satpLegalMode)
   MaskedRegMap.generate(mapping, addr, rdata, canWriteCSR, wdata)

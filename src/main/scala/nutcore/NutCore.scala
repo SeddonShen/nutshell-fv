@@ -213,6 +213,7 @@ class NutCore(implicit val p: NutCoreConfig) extends NutCoreModule {
     )(CacheConfig(ro = false, name = "dcache"))
 
     frontend.io.sfence_vma_invalid := backend.io.sfence_vma_invalid
+    frontend.io.wfi_invalid := backend.io.wfi_invalid
     // redirect
     frontend.io.redirect <> backend.io.redirect
     backend.io.flush := frontend.io.flushVec(3,2)

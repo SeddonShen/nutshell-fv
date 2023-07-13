@@ -32,6 +32,7 @@ class FrontendIO(implicit val p: NutCoreConfig) extends Bundle with HasNutCoreCo
   val ipf = Input(Bool())
   val iaf = Input(Bool())
   val sfence_vma_invalid = Input(Bool())
+  val wfi_invalid = Input(Bool())
 }
 
 
@@ -110,6 +111,7 @@ class Frontend_inorder(implicit val p: NutCoreConfig) extends NutCoreModule with
   PipelineConnect(ibf.io.out, idu.io.in(0), idu.io.out(0).fire(), ifu.io.flushVec(1))
   idu.io.in(1) := DontCare
   idu.io.sfence_vma_invalid := io.sfence_vma_invalid
+  idu.io.wfi_invalid := io.wfi_invalid
 
   ibf.io.flush := ifu.io.flushVec(1)
   io.out <> idu.io.out

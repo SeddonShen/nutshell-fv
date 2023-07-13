@@ -674,6 +674,7 @@ class Backend_inorder(implicit val p: NutCoreConfig) extends NutCoreModule {
     val dmem = new SimpleBusUC(addrBits = VAddrBits)
     val memMMU = Flipped(new MemMMUIO)
     val sfence_vma_invalid = Output(Bool())
+    val wfi_invalid = Output(Bool())
     val redirect = new RedirectIO
   })
 
@@ -691,6 +692,7 @@ class Backend_inorder(implicit val p: NutCoreConfig) extends NutCoreModule {
 
   isu.io.wb <> wbu.io.wb
   io.sfence_vma_invalid := exu.io.sfence_vma_invalid
+  io.wfi_invalid := exu.io.wfi_invalid
   io.redirect <> wbu.io.redirect
   // forward
   isu.io.forward <> exu.io.forward

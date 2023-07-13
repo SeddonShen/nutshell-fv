@@ -35,6 +35,7 @@ class EXU(implicit val p: NutCoreConfig) extends NutCoreModule {
     val forward = new ForwardIO
     val memMMU = Flipped(new MemMMUIO)
     val sfence_vma_invalid = Output(Bool())
+    val wfi_invalid = Output(Bool())
   })
 
   val src1 = io.in.bits.data.src1(XLEN-1,0)
@@ -83,6 +84,7 @@ class EXU(implicit val p: NutCoreConfig) extends NutCoreModule {
   csr.io.out.ready := true.B
   csr.io.rfWenReal := io.in.bits.ctrl.rfWen && io.in.bits.ctrl.rfDest =/= 0.U
   io.sfence_vma_invalid := csr.io.sfence_vma_invalid
+  io.wfi_invalid := csr.io.wfi_invalid
 
   csr.io.imemMMU <> io.memMMU.imem
   alu.io.iVmEnable := csr.io.vmEnable
