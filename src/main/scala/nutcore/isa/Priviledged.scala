@@ -37,7 +37,7 @@ object Priviledged extends HasInstrType {
 
   val table = Array(
     ECALL          -> List(InstrI, FuType.csr, CSROpType.jmp),
-    // EBREAK         -> List(InstrI, FuType.csr, CSROpType.jmp),
+    EBREAK         -> List(InstrI, FuType.csr, CSROpType.jmp),
     MRET           -> List(InstrI, FuType.csr, CSROpType.jmp),
     FENCE          -> List(InstrS, FuType.mou, MOUOpType.fence), // nop    InstrS -> !wen
     WFI            -> List(InstrI, FuType.alu, ALUOpType.add) // nop
