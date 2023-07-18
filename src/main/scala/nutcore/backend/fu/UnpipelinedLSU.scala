@@ -334,43 +334,43 @@ class UnpipelinedLSU extends NutCoreModule with HasLSUConst {
   io.loadAccessFault := lsExecUnit.io.loadAccessFault
   io.storeAccessFault := lsExecUnit.io.storeAccessFault || hasScAccessFault
 
-  val isStore = io.out.fire && !hasException && (state === s_idle || state === s_sc || state === s_amo_s)
-  val isMemStore = RegInit(false.B)
-  when (io.out.fire) {
-    isMemStore := false.B
-  }.elsewhen (io.dmem.req.fire) {
-    isMemStore := io.dmem.req.bits.cmd === SimpleBusCmd.write && io.dmem.req.bits.addr >= 0x80000000L.U
-  }
-  val storeAddr = Cat(RegEnable(io.dmem.req.bits.addr >> 3, io.dmem.req.fire), 0.U(3.W))
-  val storeData = RegEnable((MaskExpand(io.dmem.req.bits.wmask) & io.dmem.req.bits.wdata).asUInt, io.dmem.req.fire)
-  val storeMask = RegEnable(io.dmem.req.bits.wmask, io.dmem.req.fire)
-  class LSUDiffWrapper() extends Module {
-    val io = IO(new Bundle {
-      val valid = Input(Bool())
-      val addr = Input(UInt(64.W))
-      val data = Input(UInt(64.W))
-      val mask = Input(UInt(8.W))
-    })
+  // val isStore = io.out.fire && !hasException && (state === s_idle || state === s_sc || state === s_amo_s)
+  // val isMemStore = RegInit(false.B)
+  // when (io.out.fire) {
+  //   isMemStore := false.B
+  // }.elsewhen (io.dmem.req.fire) {
+  //   isMemStore := io.dmem.req.bits.cmd === SimpleBusCmd.write && io.dmem.req.bits.addr >= 0x80000000L.U
+  // }
+  // val storeAddr = Cat(RegEnable(io.dmem.req.bits.addr >> 3, io.dmem.req.fire), 0.U(3.W))
+  // val storeData = RegEnable((MaskExpand(io.dmem.req.bits.wmask) & io.dmem.req.bits.wdata).asUInt, io.dmem.req.fire)
+  // val storeMask = RegEnable(io.dmem.req.bits.wmask, io.dmem.req.fire)
+  // class LSUDiffWrapper() extends Module {
+  //   val io = IO(new Bundle {
+  //     val valid = Input(Bool())
+  //     val addr = Input(UInt(64.W))
+  //     val data = Input(UInt(64.W))
+  //     val mask = Input(UInt(8.W))
+  //   })
 
-    val difftest = DifftestModule(new DiffStoreEvent)
-    difftest.clock  := clock
-    difftest.coreid := 0.U
-    difftest.index  := 0.U
-    difftest.valid  := RegNext(RegNext(RegNext(io.valid)))
-    difftest.addr   := RegNext(RegNext(RegNext(io.addr)))
-    difftest.data   := RegNext(RegNext(RegNext(io.data)))
-    difftest.mask   := RegNext(RegNext(RegNext(io.mask)))
+  //   val difftest = DifftestModule(new DiffStoreEvent)
+  //   difftest.clock  := clock
+  //   difftest.coreid := 0.U
+  //   difftest.index  := 0.U
+  //   difftest.valid  := RegNext(RegNext(RegNext(io.valid)))
+  //   difftest.addr   := RegNext(RegNext(RegNext(io.addr)))
+  //   difftest.data   := RegNext(RegNext(RegNext(io.data)))
+  //   difftest.mask   := RegNext(RegNext(RegNext(io.mask)))
 
-    val noProfileMod = this.toNamed
-    chisel3.experimental.annotate(new ChiselAnnotation {
-      override def toFirrtl: Annotation = DoNotProfileModule(noProfileMod)
-    })
-  }
-  val difftest = Module(new LSUDiffWrapper).io
-  difftest.valid  := isStore && isMemStore
-  difftest.addr   := storeAddr
-  difftest.data   := storeData
-  difftest.mask   := storeMask
+  //   val noProfileMod = this.toNamed
+  //   chisel3.experimental.annotate(new ChiselAnnotation {
+  //     override def toFirrtl: Annotation = DoNotProfileModule(noProfileMod)
+  //   })
+  // }
+  // val difftest = Module(new LSUDiffWrapper).io
+  // difftest.valid  := isStore && isMemStore
+  // difftest.addr   := storeAddr
+  // difftest.data   := storeData
+  // difftest.mask   := storeMask
 }
 
 class LSExecUnit extends NutCoreModule {
