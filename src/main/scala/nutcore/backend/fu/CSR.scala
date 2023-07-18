@@ -274,6 +274,7 @@ class CSR(implicit val p: NutCoreConfig) extends NutCoreModule with HasCSRConst 
   val mepcMask = "hfffffffffffffffe".U(64.W)
 
   val mie = RegInit(0.U(XLEN.W))
+  val mieMask = "haaa".U(64.W)
   val mipWire = WireInit(0.U.asTypeOf(new Interrupt))
   val mipReg  = RegInit(0.U(64.W))
   val mipFixMask = "h77f".U(64.W)
@@ -323,20 +324,24 @@ class CSR(implicit val p: NutCoreConfig) extends NutCoreModule with HasCSRConst 
   }
 
   val mstatusWMask = (~ZeroExt((
-    GenMask(XLEN - 2, 36) | // WPRI
+    GenMask(XLEN - 2, 36) | // {WPRI, MBE, SBE}
     GenMask(35, 32)       | // SXL and UXL cannot be changed
     GenMask(31, 23)       | // WPRI
     GenMask(16, 15)       | // XS is read-only
     GenMask(10, 9)        | // WPRI
-    GenMask(6)            | // WPRI
-    GenMask(2)              // WPRI
+    GenMask(6)            | // UBE
+    GenMask(4)            | // WPRI
+    GenMask(2)            | // WPRI
+    GenMask(0)              // WPRI
   ), 64)).asUInt
   val mstatusMask = (~ZeroExt((
-    GenMask(XLEN - 2, 36) | // WPRI
+    GenMask(XLEN - 2, 36) | // {WPRI, MBE, SBE}
     GenMask(31, 23)       | // WPRI
     GenMask(10, 9)        | // WPRI
-    GenMask(6)            | // WPRI
-    GenMask(2)              // WPRI
+    GenMask(6)            | // UBE
+    GenMask(4)            | // WPRI
+    GenMask(2)            | // WPRI
+    GenMask(0)              // WPRI
   ), 64)).asUInt
 
   val medeleg = RegInit(UInt(XLEN.W), 0.U)
@@ -472,7 +477,7 @@ class CSR(implicit val p: NutCoreConfig) extends NutCoreModule with HasCSRConst 
     MaskedRegMap(Misa, misa, 0.U, MaskedRegMap.Unwritable),
     MaskedRegMap(Medeleg, medeleg, "hb3ff".U(64.W)),
     MaskedRegMap(Mideleg, mideleg, "h222".U(64.W)),
-    MaskedRegMap(Mie, mie),
+    MaskedRegMap(Mie, mie, mieMask),
     MaskedRegMap(Mtvec, mtvec, mtvecMask),
     MaskedRegMap(Mcounteren, mcounteren),
 
