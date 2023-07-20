@@ -318,7 +318,10 @@ class CSR(implicit val p: NutCoreConfig) extends NutCoreModule with HasCSRConst 
   val mstatusStruct = mstatus.asTypeOf(new MstatusStruct)
   def mstatusUpdateSideEffect(mstatus: UInt): UInt = {
     val mstatusOld = WireInit(mstatus.asTypeOf(new MstatusStruct))
-    val mppFix = Mux(mstatusOld.mpp === ModeH, mstatusStruct.mpp, mstatusOld.mpp)
+    // This is what NEMU does. If it is written with an illegal value, it left unchanged.
+    // val mppFix = Mux(mstatusOld.mpp === ModeH, mstatusStruct.mpp, mstatusOld.mpp)
+    // This is what Spike does. It it is written with an illegal value, it is set with ModeU.
+    val mppFix = Mux(mstatusOld.mpp === ModeH, ModeU, mstatusOld.mpp)
     val mstatusNew = Cat(mstatusOld.fs === "b11".U, mstatus(XLEN - 2, 13), mppFix, mstatus(10, 0))
     mstatusNew
   }
@@ -328,7 +331,8 @@ class CSR(implicit val p: NutCoreConfig) extends NutCoreModule with HasCSRConst 
     GenMask(35, 32)       | // SXL and UXL cannot be changed
     GenMask(31, 23)       | // WPRI
     GenMask(16, 15)       | // XS is read-only
-    GenMask(10, 9)        | // WPRI
+    GenMask(14, 13)       | // FS is read-only
+    GenMask(10, 9)        | // VS is read-only
     GenMask(6)            | // UBE
     GenMask(4)            | // WPRI
     GenMask(2)            | // WPRI
@@ -360,7 +364,7 @@ class CSR(implicit val p: NutCoreConfig) extends NutCoreModule with HasCSRConst 
   // Superviser-Level CSRs
 
   // val sstatus = RegInit(UInt(XLEN.W), "h00000000".U)
-  val sstatusWmask = "hc6122".U(64.W)
+  val sstatusWmask = "hc6122".U(64.W) & mstatusWMask
   // Sstatus Write Mask
   // -------------------------------------------------------
   //    19           9   5     2
