@@ -73,7 +73,7 @@ class SRAMTemplate[T <: Data](gen: T, set: Int, way: Int = 1,
   })
 
   val wordType = UInt(gen.getWidth.W)
-  val array = SyncRegMem(set, Vec(way, wordType))
+  val array = SyncReadMem(set, Vec(way, wordType))
   val (resetState, resetSet) = (WireInit(false.B), WireInit(0.U))
 
   if (shouldReset) {

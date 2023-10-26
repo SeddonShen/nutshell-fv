@@ -20,7 +20,7 @@ class FlushableQueue[T <: Data](gen: T, val entries: Int,
 
   val io = IO(new FlushableQueueIO(genType, entries))
 
-  private val ram = RegMem(entries, genType)
+  private val ram = Mem(entries, genType)
   private val enq_ptr = Counter(entries)
   private val deq_ptr = Counter(entries)
   private val maybe_full = RegInit(false.B)

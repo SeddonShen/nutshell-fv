@@ -333,13 +333,13 @@ class BPU_inorder extends NutCoreModule {
   // Debug(btbHit, "[BTBHT5] btbReqValid:%d btbReqSetIdx:%x\n",btb.io.r.req.valid, btb.io.r.req.bits.setId)
   
   // PHT
-  val pht = RegMem(NRbtb, UInt(2.W))
+  val pht = Mem(NRbtb, UInt(2.W))
   val phtTaken = RegEnable(pht.read(btbAddr.getIdx(io.in.pc.bits))(1), io.in.pc.valid)
 
   // RAS
 
   val NRras = 16
-  val ras = RegMem(NRras, UInt(VAddrBits.W))
+  val ras = Mem(NRras, UInt(VAddrBits.W))
   // val raBrIdxs = Mem(NRras, UInt(2.W))
   val sp = Counter(NRras)
   val rasTarget = RegEnable(ras.read(sp.value), io.in.pc.valid)

@@ -48,7 +48,7 @@ class EmbeddedTLBMD(implicit val tlbConfig: TLBConfig) extends TlbModule {
   })
 
   //val tlbmd = Reg(Vec(Ways, UInt(tlbLen.W)))
-  val tlbmd = RegMem(Sets, Vec(Ways, UInt(tlbLen.W)))
+  val tlbmd = Mem(Sets, Vec(Ways, UInt(tlbLen.W)))
   io.tlbmd := tlbmd(io.rindex)
 
   //val reset = WireInit(false.B)
