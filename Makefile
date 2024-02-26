@@ -55,13 +55,24 @@ EMU_VSRC_DIR = $(abspath ./src/test/vsrc)
 EMU_CXXFILES = $(shell find $(EMU_CSRC_DIR) -name "*.cpp")
 EMU_VFILES = $(shell find $(EMU_VSRC_DIR) -name "*.v" -or -name "*.sv")
 
-EMU_CXXFLAGS  = -O3 -std=c++11 -static -g -Wall -I$(EMU_CSRC_DIR)
-EMU_CXXFLAGS += -DVERILATOR -Wno-maybe-uninitialized -D__RV$(DATAWIDTH)__
+## Old flags
+
+# EMU_CXXFLAGS  = -O3 -std=c++11 -static -g -Wall -I$(EMU_CSRC_DIR)
+# EMU_CXXFLAGS += -DVERILATOR -Wno-maybe-uninitialized -D__RV$(DATAWIDTH)__
+# EMU_LDFLAGS   = -lpthread -lSDL2 -ldl
+
+# New flags
+EMU_CXXFLAGS  = -O0 -std=c++11 -static -g -Wall -I$(EMU_CSRC_DIR)
+EMU_CXXFLAGS += -DVERILATOR -Wno-uninitialized -D__RV$(DATAWIDTH)__
+# EMU_CXXFLAGS += -fPIE -c -Xclang -disable-O0-optnone
+EMU_CXXFLAGS += -fPIE -emit-llvm -c -Xclang -disable-O0-optnone
+EMU_CXXFLAGS += -I /home/klee/klee_src/include
 EMU_LDFLAGS   = -lpthread -lSDL2 -ldl
 
 # dump vcd: --debug --trace
 # +define+RANDOMIZE_REG_INIT \
 # +define+RANDOMIZE_MEM_INIT
+# FIXME: this -O3 below may cause some bugs
 VERILATOR_FLAGS = --top-module $(SIM_TOP) \
   +define+RV$(DATAWIDTH)=1 \
   +define+VERILATOR=1 \
@@ -92,7 +103,7 @@ $(REF_SO):
 endif
 
 $(EMU): $(EMU_MK) $(EMU_DEPS) $(EMU_HEADERS) $(REF_SO)
-	CPPFLAGS=-DREF_SO=\\\"$(REF_SO)\\\" $(MAKE) VM_PARALLEL_BUILDS=1 -C $(dir $(EMU_MK)) -f $(abspath $(EMU_MK))
+	CPPFLAGS=-DREF_SO=\\\"$(REF_SO)\\\" $(MAKE) -j CC=clang CXX=clang++ VM_PARALLEL_BUILDS=1 -C $(dir $(EMU_MK)) -f $(abspath $(EMU_MK))
 
 SEED = -s $(shell seq 1 10000 | shuf | head -n 1)
 
@@ -104,6 +115,30 @@ LOG_LEVEL ?= ALL
 
 emu: $(EMU)
 	@$(EMU) -i $(IMAGE) $(SEED) -b $(LOG_BEGIN) -e $(LOG_END) -v $(LOG_LEVEL)
+
+mk: $(EMU_MK)
+	echo $(EMU_MK)
+
+deps: $(EMU_DEPS)
+	echo $(EMU_DEPS)
+
+headers: $(EMU_HEADERS)
+	echo $(EMU_HEADERS)
+
+so: $(REF_SO)
+	echo $(REF_SO)
+
+flags:
+	echo $(EMU) -i $(IMAGE) $(SEED) -b $(LOG_BEGIN) -e $(LOG_END) -v $(LOG_LEVEL)
+	echo $(EMU_MK) $(EMU_DEPS) $(EMU_HEADERS) $(REF_SO)
+	echo CPPFLAGS=-DREF_SO=\\\"$(REF_SO)\\\" $(MAKE) VM_PARALLEL_BUILDS=1 -C $(dir $(EMU_MK)) -f $(abspath $(EMU_MK))
+
+simtopv: $(SIM_TOP_V)
+	echo $(SIM_TOP_V)
+
+emufile: $(EMU)
+	echo $(EMU)
+	echo $(EMU) -i $(IMAGE) $(SEED) -b $(LOG_BEGIN) -e $(LOG_END) -v $(LOG_LEVEL)
 
 cache:
 	$(MAKE) emu IMAGE=Makefile
