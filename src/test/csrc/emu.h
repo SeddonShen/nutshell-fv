@@ -75,21 +75,30 @@ class Emulator {
 
     // init device
     extern void init_device(void);
+    eprintf(ANSI_COLOR_MAGENTA "[warning ssd] init_device begin\n");
     init_device();
-
+    eprintf(ANSI_COLOR_MAGENTA "[warning ssd] init_device end\n");
     // init core
     reset_ncycles(10);
   }
 
   void reset_ncycles(size_t cycles) {
+    eprintf(ANSI_COLOR_MAGENTA "[warning ssd] reset_ncycles begin\n");
     for(int i = 0; i < cycles; i++) {
+      eprintf(ANSI_COLOR_MAGENTA "[warning ssd] reset_ncycles reset1\n");
       dut_ptr->reset = 1;
+      eprintf(ANSI_COLOR_MAGENTA "[warning ssd] reset_ncycles clock0\n");
       dut_ptr->clock = 0;
+      eprintf(ANSI_COLOR_MAGENTA "[warning ssd] reset_ncycles eval\n");
       dut_ptr->eval();
+      eprintf(ANSI_COLOR_MAGENTA "[warning ssd] reset_ncycles clock1\n");
       dut_ptr->clock = 1;
+      eprintf(ANSI_COLOR_MAGENTA "[warning ssd] reset_ncycles eval\n");
       dut_ptr->eval();
+      eprintf(ANSI_COLOR_MAGENTA "[warning ssd] reset_ncycles reset0\n");
       dut_ptr->reset = 0;
     }
+    eprintf(ANSI_COLOR_MAGENTA "[warning ssd] reset_ncycles end\n");
   }
 
   void single_cycle() {
@@ -169,10 +178,10 @@ class Emulator {
       }
 
       uint32_t t = uptime();
-      if (t - lasttime > 100) {
-        poll_event();
-        lasttime = t;
-      }
+      // if (t - lasttime > 100) {
+      //   poll_event();
+      //   lasttime = t;
+      // }
     }
   }
 

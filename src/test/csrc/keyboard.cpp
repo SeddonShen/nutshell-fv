@@ -1,6 +1,6 @@
 #include "common.h"
 #include "macro.h"
-#include <SDL2/SDL.h>
+// #include <SDL2/SDL.h>
 
 // Note that this is not the standard
 #define _KEYS(f) \
@@ -47,13 +47,13 @@ static int key_f = 0, key_r = 0;
 #define KEYDOWN_MASK 0x8000
 
 void send_key(uint8_t scancode, bool is_keydown) {
-  if (keymap[scancode] != _KEY_NONE) {
-    uint32_t am_scancode = keymap[scancode] | (is_keydown ? KEYDOWN_MASK : 0);
-    key_queue[key_r] = am_scancode;
-    key_r = (key_r + 1) % KEY_QUEUE_LEN;
-    // detect key queue overflow
-    assert(key_r != key_f);
-  }
+  // if (keymap[scancode] != _KEY_NONE) {
+  //   uint32_t am_scancode = keymap[scancode] | (is_keydown ? KEYDOWN_MASK : 0);
+  //   key_queue[key_r] = am_scancode;
+  //   key_r = (key_r + 1) % KEY_QUEUE_LEN;
+  //   // detect key queue overflow
+  //   assert(key_r != key_f);
+  // }
 }
 
 uint32_t read_key(void) {

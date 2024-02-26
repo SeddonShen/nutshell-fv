@@ -1,6 +1,6 @@
 #include "common.h"
 #include <sys/time.h>
-#include <SDL2/SDL.h>
+// #include <SDL2/SDL.h>
 
 void send_key(uint8_t, bool);
 void init_sdl(void);
@@ -18,24 +18,24 @@ void init_device(void) {
   gettimeofday(&boot, NULL);
 }
 
-void poll_event() {
-  SDL_Event event;
-  while (SDL_PollEvent(&event)) {
-    switch (event.type) {
-      case SDL_QUIT: set_abort();
+// void poll_event() {
+//   SDL_Event event;
+//   while (SDL_PollEvent(&event)) {
+//     switch (event.type) {
+//       case SDL_QUIT: set_abort();
 
-                     // If a key was pressed
-      case SDL_KEYDOWN:
-      case SDL_KEYUP: {
-                        uint8_t k = event.key.keysym.scancode;
-                        bool is_keydown = (event.key.type == SDL_KEYDOWN);
-                        send_key(k, is_keydown);
-                        break;
-                      }
-      default: break;
-    }
-  }
-}
+//                      // If a key was pressed
+//       case SDL_KEYDOWN:
+//       case SDL_KEYUP: {
+//                         uint8_t k = event.key.keysym.scancode;
+//                         bool is_keydown = (event.key.type == SDL_KEYDOWN);
+//                         send_key(k, is_keydown);
+//                         break;
+//                       }
+//       default: break;
+//     }
+//   }
+// }
 
 uint32_t uptime(void) {
   struct timeval t;
