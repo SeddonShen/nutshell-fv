@@ -348,3 +348,6 @@ fpga/.Xil/
 
 # vscode temp file
 .vscode/
+.bloop/
+project/
+.metals/

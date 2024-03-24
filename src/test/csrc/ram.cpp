@@ -97,3 +97,20 @@ extern "C" void ram_helper(
   *rdata = ram[rIdx];
   if (wen) { ram[wIdx] = (ram[wIdx] & ~wmask) | (wdata & wmask); }
 }
+
+paddr_t read_instr(paddr_t addr) {
+  paddr_t ram_test[10];
+  ram_test[0] = 0x00100093;
+  ram_test[1] = 0x00100113;
+  ram_test[2] = 0x00100193;
+  ram_test[3] = 0x00100293;
+  ram_test[4] = 0x023140b3; //div
+  ram_test[5] = 0x00100313;
+  ram_test[6] = 0x00100393;
+  ram_test[7] = 0x00100413;
+  ram_test[8] = 0x00100493;
+  ram_test[9] = 0x00100513;
+  // return ram_test[addr - 0x80000000];
+  printf("[!!!!!!!!!]read_instr: inst= %lx , addr = %lx rIdx= %d\n", ram_test[((addr - 0x80000000) >> 2) % 10] , addr, ((addr - 0x80000000) >> 2) % 10);
+  return ram_test[((addr - 0x80000000) >> 2) % 10];
+}

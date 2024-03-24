@@ -93,54 +93,15 @@ class NutCore(implicit val p: NutCoreConfig) extends NutCoreModule {
     val dmem = new SimpleBusC
     val mmio = new SimpleBusUC
     val frontend = Flipped(new SimpleBusUC())
+    val symmemIMemIF = new IMemIF
   })
 
   // Frontend
-  val frontend = (Settings.get("IsRV32"), Settings.get("EnableOutOfOrderExec")) match {
-    case (true, _)      => Module(new Frontend_embedded)
-    case (false, true)  => Module(new Frontend_ooo)
-    case (false, false) => Module(new Frontend_inorder)
-  }
+  val frontend = Module(new Frontend_embedded)
   
+    io.symmemIMemIF <> frontend.io.symmemIMemIF
   // Backend
-  if (EnableOutOfOrderExec) {
-    val mmioXbar = Module(new SimpleBusCrossbarNto1(if (HasDcache) 2 else 3))
-    val backend = Module(new Backend_ooo)
-    PipelineVector2Connect(new DecodeIO, frontend.io.out(0), frontend.io.out(1), backend.io.in(0), backend.io.in(1), frontend.io.flushVec(1), 16)
-    backend.io.flush := frontend.io.flushVec(2)
-    frontend.io.redirect <> backend.io.redirect
-
-    val dmemXbar = Module(new SimpleBusAutoIDCrossbarNto1(4, userBits = if (HasDcache) DCacheUserBundleWidth else 0))
-
-    val itlb = TLB(in = frontend.io.imem, mem = dmemXbar.io.in(2), flush = frontend.io.flushVec(0) | frontend.io.bpFlush, csrMMU = backend.io.memMMU.imem)(TLBConfig(name = "itlb", userBits = ICacheUserBundleWidth, totalEntry = 4))
-    frontend.io.ipf := itlb.io.ipf
-    io.imem <> Cache(in = itlb.io.out, mmio = mmioXbar.io.in.take(1), flush = Fill(2, frontend.io.flushVec(0) | frontend.io.bpFlush), empty = itlb.io.cacheEmpty)(
-      CacheConfig(ro = true, name = "icache", userBits = ICacheUserBundleWidth))
-    
-    val dtlb = TLB(in = backend.io.dtlb, mem = dmemXbar.io.in(1), flush = frontend.io.flushVec(3), csrMMU = backend.io.memMMU.dmem)(TLBConfig(name = "dtlb", userBits = DCacheUserBundleWidth, totalEntry = 64))
-    dtlb.io.out := DontCare //FIXIT
-    dtlb.io.out.req.ready := true.B //FIXIT
-
-    if (EnableVirtualMemory) {
-      dmemXbar.io.in(3) <> backend.io.dmem
-      io.dmem <> Cache(in = dmemXbar.io.out, mmio = mmioXbar.io.in.drop(1), flush = "b00".U, empty = dtlb.io.cacheEmpty, enable = HasDcache)(
-        CacheConfig(ro = false, name = "dcache", userBits = DCacheUserBundleWidth, idBits = 4))
-    } else {
-      dmemXbar.io.in(1) := DontCare
-      dmemXbar.io.in(3) := DontCare
-      dmemXbar.io.out := DontCare
-      io.dmem <> Cache(in = backend.io.dmem, mmio = mmioXbar.io.in.drop(1), flush = "b00".U, empty = dtlb.io.cacheEmpty, enable = HasDcache)(
-        CacheConfig(ro = false, name = "dcache", userBits = DCacheUserBundleWidth))
-    }
-
-    // Make DMA access through L1 DCache to keep coherence
-    val expender = Module(new SimpleBusUCExpender(userBits = DCacheUserBundleWidth, userVal = 0.U))
-    expender.io.in <> io.frontend
-    dmemXbar.io.in(0) <> expender.io.out
-
-    io.mmio <> mmioXbar.io.out
-
-  } else {
+  
     val backend = Module(new Backend_inorder)
 
     PipelineVector2Connect(new DecodeIO, frontend.io.out(0), frontend.io.out(1), backend.io.in(0), backend.io.in(1), frontend.io.flushVec(1), 4)
@@ -165,7 +126,7 @@ class NutCore(implicit val p: NutCoreConfig) extends NutCoreModule {
     dmemXbar.io.in(3) <> io.frontend
 
     io.mmio <> mmioXbar.io.out
-  }
+  
 
   Debug("------------------------ BACKEND ------------------------\n")
 }

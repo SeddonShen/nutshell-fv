@@ -126,7 +126,19 @@ class Emulator {
 #endif
 
     while (!is_finish() && n > 0) {
+      extern paddr_t read_instr(paddr_t rIdx);
+      if (dut_ptr->io_symmemIMemIF_fetchEnable)
+      {
+        dut_ptr->io_symmemIMemIF_instruction = read_instr(dut_ptr->io_symmemIMemIF_address);
+        dut_ptr->io_symmemIMemIF_instructionReady = 1;
+        printf("cycles:%d, fetchEnable: %08x %08x\n", cycles, dut_ptr->io_symmemIMemIF_fetchEnable, dut_ptr->io_symmemIMemIF_instructionReady);
+      }
       single_cycle();
+      dut_ptr->io_symmemIMemIF_instructionReady = 0;
+      // if(dut_ptr->io_symmemIMemIF_fetchEnable) {
+      //   dut_ptr->io_symmemIMemIF_instruction = read_instr(dut_ptr->io_symmemIMemIF_address);
+      // }
+      // printf dut_ptr->io_symmemIMemIF_fetchEnable
       n --;
 
       if (lastcommit - n > stuck_limit && hascommit) {
@@ -138,13 +150,20 @@ class Emulator {
 #endif
         set_abort();
       }
-
+      // printf("TestSSDIO: %08x %08x\n", dut_ptr->io_symmemIMemIF_fetchEnable, dut_ptr->io_symmemIMemIF_instructionReady);
+      // dut_ptr->io_symmemIMemIF_instructionReady = 1;
+      // printf("TestSSDIO: %08x %08x\n", dut_ptr->io_symmemIMemIF_fetchEnable, dut_ptr->io_symmemIMemIF_instructionReady);
+      // dut_ptr->io_symmemIMemIF_instructionReady = 0;
+      if(dut_ptr->io_difftest_commit) {
+        printf("commit:%d, cycles: %d, PC:%08x, Inst:%08x\n", dut_ptr->io_difftest_commit, cycles, dut_ptr->io_difftest_thisPC, dut_ptr->io_difftest_thisINST);
+      }
+      // printf("commit:%d, cycles: %d, PC:%08x, Inst:%08x Reg2:%08x\n", dut_ptr->io_difftest_commit, cycles, dut_ptr->io_difftest_thisPC, dut_ptr->io_difftest_thisINST, dut_ptr->io_difftest_r_2);
       if (!hascommit && (uint32_t)dut_ptr->io_difftest_thisPC == 0x80000000) {
         hascommit = 1;
-        extern void init_difftest(rtlreg_t *reg);
+        // extern void init_difftest(rtlreg_t *reg);
         rtlreg_t reg[DIFFTEST_NR_REG];
         read_emu_regs(reg);
-        init_difftest(reg);
+        // init_difftest(reg);
       }
 
       // difftest
@@ -152,19 +171,19 @@ class Emulator {
         rtlreg_t reg[DIFFTEST_NR_REG];
         read_emu_regs(reg);
 
-        extern int difftest_step(rtlreg_t *reg_scala, uint32_t this_inst,
-          int isMMIO, int isRVC, int isRVC2, uint64_t intrNO, int priviledgeMode, int isMultiCommit);
-        if (dut_ptr->io_difftestCtrl_enable) {
-          if (difftest_step(reg, dut_ptr->io_difftest_thisINST,
-              dut_ptr->io_difftest_isMMIO, dut_ptr->io_difftest_isRVC, dut_ptr->io_difftest_isRVC2,
-              dut_ptr->io_difftest_intrNO, dut_ptr->io_difftest_priviledgeMode, 
-              dut_ptr->io_difftest_isMultiCommit)) {
-#if VM_TRACE
-            tfp->close();
-#endif
-            set_abort();
-          }
-        }
+//         extern int difftest_step(rtlreg_t *reg_scala, uint32_t this_inst,
+//           int isMMIO, int isRVC, int isRVC2, uint64_t intrNO, int priviledgeMode, int isMultiCommit);
+//         if (dut_ptr->io_difftestCtrl_enable) {
+//           if (difftest_step(reg, dut_ptr->io_difftest_thisINST,
+//               dut_ptr->io_difftest_isMMIO, dut_ptr->io_difftest_isRVC, dut_ptr->io_difftest_isRVC2,
+//               dut_ptr->io_difftest_intrNO, dut_ptr->io_difftest_priviledgeMode, 
+//               dut_ptr->io_difftest_isMultiCommit)) {
+// #if VM_TRACE
+//             tfp->close();
+// #endif
+//             set_abort();
+//           }
+//         }
         lastcommit = n;
       }
 

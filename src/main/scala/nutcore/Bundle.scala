@@ -170,3 +170,21 @@ class RenamedDecodeIO extends NutCoreBundle with HasBackendConst {
   val src2Rdy = Output(Bool())
   val brMask = Output(UInt(checkpointSize.W))
 }
+
+// Symbolic Memory Interface
+class IMemIF extends NutCoreBundle {
+  val instruction = Input(UInt(XLEN.W))
+  val address = Output(UInt(XLEN.W))
+  val fetchEnable = Output(Bool())
+  val instructionReady = Input(Bool())
+}
+
+class DMemIF extends NutCoreBundle {
+  val address = Output(UInt(XLEN.W))
+  val readData = Input(UInt(XLEN.W))
+  val writeData = Output(UInt(XLEN.W))
+  val readWrite = Output(Bool()) // false : read, true : write
+  val enable = Output(Bool())
+  val wrStrobe = Output(UInt(4.W))
+  val dataReady = Input(Bool())
+}

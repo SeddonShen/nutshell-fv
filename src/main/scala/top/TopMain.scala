@@ -51,7 +51,6 @@ object TopMain extends App {
     case "PXIe"   => PXIeSettings()
   } ) ++ ( core match {
     case "inorder"  => InOrderSettings()
-    case "ooo"  => OOOSettings()
     case "embedded"=> EmbededSettings()
   } )
   s.foreach{Settings.settings += _} // add and overwrite DefaultSettings
