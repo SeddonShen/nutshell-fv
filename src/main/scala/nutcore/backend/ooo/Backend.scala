@@ -45,14 +45,16 @@ class Backend_inorder(implicit val p: NutCoreConfig) extends NutCoreModule {
     val flush = Input(UInt(2.W))
     val dmem = new SimpleBusUC(addrBits = VAddrBits)
     val memMMU = Flipped(new MemMMUIO)
-
     val redirect = new RedirectIO
+    val symmemDMemIF = new DMemIF
   })
 
   val isu  = Module(new ISU)
   val exu  = Module(new EXU)
   val wbu  = Module(new WBU)
 
+  io.symmemDMemIF <> exu.io.symmemDMemIF
+  
   PipelineConnect(isu.io.out, exu.io.in, exu.io.out.fire(), io.flush(0))
   PipelineConnect(exu.io.out, wbu.io.in, true.B, io.flush(1))
 

@@ -31,6 +31,7 @@ class UnpipeLSUIO extends FunctionUnitIO {
   val dtlbPF = Output(Bool()) // TODO: refactor it for new backend
   val loadAddrMisaligned = Output(Bool()) // TODO: refactor it for new backend
   val storeAddrMisaligned = Output(Bool()) // TODO: refactor it for new backend
+  val symmemDMemIF = new DMemIF
 }
 
 class UnpipelinedLSU extends NutCoreModule with HasLSUConst {
@@ -47,7 +48,7 @@ class UnpipelinedLSU extends NutCoreModule with HasLSUConst {
     val lsExecUnit = Module(new LSExecUnit)
     lsExecUnit.io.instr := DontCare
     io.dtlbPF := lsExecUnit.io.dtlbPF
-
+    io.symmemDMemIF <> lsExecUnit.io.symmemDMemIF
     val storeReq = valid & LSUOpType.isStore(func)
     val loadReq  = valid & LSUOpType.isLoad(func)
     val atomReq  = valid & LSUOpType.isAtom(func)
@@ -328,12 +329,12 @@ class LSExecUnit extends NutCoreModule {
       "b10".U -> data
     ))
   }
-
+  io.symmemDMemIF := DontCare
   val dmem = io.dmem
   val addrLatch = RegNext(addr)
   val isStore = valid && LSUOpType.isStore(func)
   val partialLoad = !isStore && (func =/= LSUOpType.ld)
-
+  dmem := DontCare
   val s_idle :: s_wait_tlb :: s_wait_resp :: s_partialLoad :: Nil = Enum(4)
   val state = RegInit(s_idle)
 
@@ -350,15 +351,18 @@ class LSExecUnit extends NutCoreModule {
 
   switch (state) {
     is (s_idle) { 
-      when (dmem.req.fire() && dtlbEnable)  { state := s_wait_tlb  }
-      when (dmem.req.fire() && !dtlbEnable) { state := s_wait_resp } 
+      // when (dmem.req.fire() && dtlbEnable)  { state := s_wait_tlb  }
+      // when (dmem.req.fire() && !dtlbEnable) { state := s_wait_resp } 
+      when (io.symmemDMemIF.enable && io.symmemDMemIF.dataReady && dtlbEnable)  { state := s_wait_tlb  }
+      when (io.symmemDMemIF.enable && io.symmemDMemIF.dataReady && !dtlbEnable) { state := s_wait_resp } 
       //when (dmem.req.fire()) { state := Mux(isStore, s_partialLoad, s_wait_resp) }
     }
     is (s_wait_tlb) {
       when (dtlbFinish && dtlbPF ) { state := s_idle }
       when (dtlbFinish && !dtlbPF) { state := s_wait_resp/*Mux(isStore, s_partialLoad, s_wait_resp) */} 
     }
-    is (s_wait_resp) { when (dmem.resp.fire()) { state := Mux(partialLoad, s_partialLoad, s_idle) } }
+    is (s_wait_resp) {  state := Mux(partialLoad, s_partialLoad, s_idle) }
+    // is (s_wait_resp) { when (dmem.resp.fire()) { state := Mux(partialLoad, s_partialLoad, s_idle) } }
     is (s_partialLoad) { state := s_idle }
   }
 
@@ -366,25 +370,56 @@ class LSExecUnit extends NutCoreModule {
   Debug(dmem.req.fire(), "[LSU] dtlbFinish:%d dtlbEnable:%d dtlbPF:%d state:%d addr:%x dmemReqFire:%d dmemRespFire:%d dmemRdata:%x\n",dtlbFinish, dtlbEnable, dtlbPF, state,  dmem.req.bits.addr, dmem.req.fire(), dmem.resp.fire(), dmem.resp.bits.rdata)
   Debug(dtlbFinish && dtlbEnable, "[LSU] dtlbFinish:%d dtlbEnable:%d dtlbPF:%d state:%d addr:%x dmemReqFire:%d dmemRespFire:%d dmemRdata:%x\n",dtlbFinish, dtlbEnable, dtlbPF, state,  dmem.req.bits.addr, dmem.req.fire(), dmem.resp.fire(), dmem.resp.bits.rdata)
 
+//   when(dmem.req.fire()){
+//     printf("[LSU1] req get valuse: readdata:%x\n", io.symmemDMemIF.readData)
+//     printf("[LSU1] dmem.req.bits %x %x %x %x %x\n", dmem.req.bits.addr, dmem.req.bits.size, dmem.req.bits.wdata, dmem.req.bits.wmask, dmem.req.bits.cmd)
+//     printf("[LSU1] dmem req ready: %x\n", io.symmemDMemIF.dataReady)
+//  }
+//   when(dmem.resp.fire()){
+//     printf("[LSU1] resp get valuse: readdata:%x\n", io.symmemDMemIF.readData)
+//     printf("[LSU1] dmem.resp.bits %x\n", dmem.resp.bits.rdata)
+//     printf("[LSU1] dmem resp ready: %x\n", io.symmemDMemIF.dataReady)
+//   }
+
+
+  // 四向测试
+  // when(dmem.req.fire() || dmem.resp.fire() || io.symmemDMemIF.enable || io.symmemDMemIF.dataReady){
+  //   printf("[LSU1] dmem.req.fire() %x dmem.resp.fire() %x io.symmemDMemIF.enable %x io.symmemDMemIF.dataReady %x\n", dmem.req.fire(), dmem.resp.fire(), io.symmemDMemIF.enable, io.symmemDMemIF.dataReady)
+  // }
+  // io.symmemDMemIF.enable := dmem.req.valid
+  // io.symmemDMemIF.address := dmem.req.bits.addr
+  // io.symmemDMemIF.writeData := dmem.req.bits.wdata
+  // io.symmemDMemIF.readWrite := dmem.req.bits.cmd === SimpleBusCmd.write
+  // io.symmemDMemIF.wrStrobe := dmem.req.bits.wmask
+
   val size = func(1,0)
   val reqAddr  = if (XLEN == 32) SignExt(addr, VAddrBits) else addr(VAddrBits-1,0)
   val reqWdata = if (XLEN == 32) genWdata32(io.wdata, size) else genWdata(io.wdata, size)
   val reqWmask = if (XLEN == 32) genWmask32(addr, size) else genWmask(addr, size)
-  dmem.req.bits.apply(
-    addr = reqAddr, 
-    size = size, 
-    wdata = reqWdata,
-    wmask = reqWmask,
-    cmd = Mux(isStore, SimpleBusCmd.write, SimpleBusCmd.read))
-  dmem.req.valid := valid && (state === s_idle) && !io.loadAddrMisaligned && !io.storeAddrMisaligned
-  dmem.resp.ready := true.B
+  // dmem.req.bits.apply(
+  //   addr = reqAddr, 
+  //   size = size, 
+  //   wdata = reqWdata,
+  //   wmask = reqWmask,
+  //   cmd = Mux(isStore, SimpleBusCmd.write, SimpleBusCmd.read))
+  // dmem.req.valid := valid && (state === s_idle) && !io.loadAddrMisaligned && !io.storeAddrMisaligned
 
-  io.out.valid := Mux( dtlbPF && state =/= s_idle || io.loadAddrMisaligned || io.storeAddrMisaligned, true.B, Mux(partialLoad, state === s_partialLoad, dmem.resp.fire() && (state === s_wait_resp)))
+  io.symmemDMemIF.enable := valid && (state === s_idle) && !io.loadAddrMisaligned && !io.storeAddrMisaligned
+  io.symmemDMemIF.address := reqAddr
+  io.symmemDMemIF.writeData := reqWdata
+  io.symmemDMemIF.wrStrobe := reqWmask
+  io.symmemDMemIF.readWrite := isStore
+  // dmem.resp.ready := true.B
+
+  // TODO: 这行太长 但实际上也有dmem
+  // io.out.valid := Mux( dtlbPF && state =/= s_idle || io.loadAddrMisaligned || io.storeAddrMisaligned, true.B, Mux(partialLoad, state === s_partialLoad, dmem.resp.fire() && (state === s_wait_resp)))
+  io.out.valid := Mux( dtlbPF && state =/= s_idle || io.loadAddrMisaligned || io.storeAddrMisaligned, true.B, Mux(partialLoad, state === s_partialLoad, (state === s_wait_resp)))
   io.in.ready := (state === s_idle) || dtlbPF
 
-  Debug(io.out.fire(), "[LSU-EXECUNIT] state %x dresp %x dpf %x lm %x sm %x\n", state, dmem.resp.fire(), dtlbPF, io.loadAddrMisaligned, io.storeAddrMisaligned)
+  // Debug(io.out.fire(), "[LSU-EXECUNIT] state %x dresp %x dpf %x lm %x sm %x\n", state, dmem.resp.fire(), dtlbPF, io.loadAddrMisaligned, io.storeAddrMisaligned)
 
-  val rdata = dmem.resp.bits.rdata
+  // val rdata = dmem.resp.bits.rdata
+  val rdata = io.symmemDMemIF.readData
   val rdataLatch = RegNext(rdata)
   val rdataSel64 = LookupTree(addrLatch(2, 0), List(
     "b000".U -> rdataLatch(63, 0),

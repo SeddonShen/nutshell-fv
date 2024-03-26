@@ -94,16 +94,18 @@ class NutCore(implicit val p: NutCoreConfig) extends NutCoreModule {
     val mmio = new SimpleBusUC
     val frontend = Flipped(new SimpleBusUC())
     val symmemIMemIF = new IMemIF
+    val symmemDMemIF = new DMemIF
   })
 
-  // Frontend
-  val frontend = Module(new Frontend_embedded)
-  
+    // Frontend
+    val frontend = Module(new Frontend_embedded)
+    
     io.symmemIMemIF <> frontend.io.symmemIMemIF
-  // Backend
+    // Backend
   
     val backend = Module(new Backend_inorder)
 
+    io.symmemDMemIF <> backend.io.symmemDMemIF
     PipelineVector2Connect(new DecodeIO, frontend.io.out(0), frontend.io.out(1), backend.io.in(0), backend.io.in(1), frontend.io.flushVec(1), 4)
 
     val mmioXbar = Module(new SimpleBusCrossbarNto1(2))

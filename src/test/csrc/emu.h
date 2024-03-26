@@ -76,7 +76,8 @@ class Emulator {
     // init device
     extern void init_device(void);
     init_device();
-
+    extern void print_ram_data(void);
+    print_ram_data();
     // init core
     reset_ncycles(10);
   }
@@ -133,8 +134,47 @@ class Emulator {
         dut_ptr->io_symmemIMemIF_instructionReady = 1;
         printf("cycles:%d, fetchEnable: %08x %08x\n", cycles, dut_ptr->io_symmemIMemIF_fetchEnable, dut_ptr->io_symmemIMemIF_instructionReady);
       }
+
+      if(dut_ptr->io_symmemDMemIF_enable) {
+        if(dut_ptr->io_symmemDMemIF_readWrite) {
+          extern void write_data(paddr_t wIdx, paddr_t wdata);
+          dut_ptr->io_symmemDMemIF_dataReady = 1;
+          write_data(dut_ptr->io_symmemDMemIF_address, dut_ptr->io_symmemDMemIF_writeData);
+          // printf io_symmemDMemIF_writeData
+          printf("[DMEM_EMU_WRITE] addr: %08x, wdata: %08x, r/w: %d, enable: %d, wrStobe: %08x\n", 
+            dut_ptr->io_symmemDMemIF_address, 
+            dut_ptr->io_symmemDMemIF_writeData, 
+            dut_ptr->io_symmemDMemIF_readWrite, 
+            dut_ptr->io_symmemDMemIF_enable, 
+            dut_ptr->io_symmemDMemIF_wrStrobe
+          );
+        }
+        else {
+          extern paddr_t read_data(paddr_t rIdx);
+          dut_ptr->io_symmemDMemIF_dataReady = 1;
+          dut_ptr->io_symmemDMemIF_readData = read_data(dut_ptr->io_symmemDMemIF_address);
+          // printf io_symmemDMemIF_readData
+          printf("[DMEM_EMU_READ] addr: %08x, rdata: %08x, r/w: %d, enable: %d, wrStobe: %08x\n", 
+            dut_ptr->io_symmemDMemIF_address, 
+            dut_ptr->io_symmemDMemIF_readData, 
+            dut_ptr->io_symmemDMemIF_readWrite, 
+            dut_ptr->io_symmemDMemIF_enable, 
+            dut_ptr->io_symmemDMemIF_wrStrobe
+          );
+        }
+      }
+
+      // printf dut_ptr->io_symmemDMemIF
+      printf("[DMEM] addr: %08x, wdata: %08x, r/w: %d, enable: %d, wrStobe: %08x\n", 
+        dut_ptr->io_symmemDMemIF_address, 
+        dut_ptr->io_symmemDMemIF_writeData, 
+        dut_ptr->io_symmemDMemIF_readWrite, 
+        dut_ptr->io_symmemDMemIF_enable, 
+        dut_ptr->io_symmemDMemIF_wrStrobe
+      );
       single_cycle();
       dut_ptr->io_symmemIMemIF_instructionReady = 0;
+      dut_ptr->io_symmemDMemIF_dataReady = 0;
       // if(dut_ptr->io_symmemIMemIF_fetchEnable) {
       //   dut_ptr->io_symmemIMemIF_instruction = read_instr(dut_ptr->io_symmemIMemIF_address);
       // }
@@ -155,7 +195,7 @@ class Emulator {
       // printf("TestSSDIO: %08x %08x\n", dut_ptr->io_symmemIMemIF_fetchEnable, dut_ptr->io_symmemIMemIF_instructionReady);
       // dut_ptr->io_symmemIMemIF_instructionReady = 0;
       if(dut_ptr->io_difftest_commit) {
-        printf("commit:%d, cycles: %d, PC:%08x, Inst:%08x\n", dut_ptr->io_difftest_commit, cycles, dut_ptr->io_difftest_thisPC, dut_ptr->io_difftest_thisINST);
+        printf("commit:%d, cycles: %d, PC:%08x, Inst:%08x Reg1:%08x\n", dut_ptr->io_difftest_commit, cycles, dut_ptr->io_difftest_thisPC, dut_ptr->io_difftest_thisINST, dut_ptr->io_difftest_r_1);
       }
       // printf("commit:%d, cycles: %d, PC:%08x, Inst:%08x Reg2:%08x\n", dut_ptr->io_difftest_commit, cycles, dut_ptr->io_difftest_thisPC, dut_ptr->io_difftest_thisINST, dut_ptr->io_difftest_r_2);
       if (!hascommit && (uint32_t)dut_ptr->io_difftest_thisPC == 0x80000000) {
@@ -193,6 +233,8 @@ class Emulator {
         lasttime = t;
       }
     }
+    extern void print_ram_data(void);
+    print_ram_data();
   }
 
   void cache_test(uint64_t n) {

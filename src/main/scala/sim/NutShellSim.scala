@@ -59,11 +59,13 @@ class NutShellSimTop extends Module {
     val logCtrl = new LogCtrlIO
     val difftestCtrl = new DiffTestCtrlIO
     val symmemIMemIF = new IMemIF
+    val symmemDMemIF = new DMemIF
   })
   // printf("Inst: %x\n", io.symmemIMemIF.instruction)
   lazy val config = NutCoreConfig(FPGAPlatform = false)
   val soc = Module(new NutShell()(config))
   soc.io.symmemIMemIF <> io.symmemIMemIF
+  soc.io.symmemDMemIF <> io.symmemDMemIF
 
   val mem = Module(new AXI4RAM(memByte = 128 * 1024 * 1024, useBlackBox = true))
   // Be careful with the commit checking of emu.

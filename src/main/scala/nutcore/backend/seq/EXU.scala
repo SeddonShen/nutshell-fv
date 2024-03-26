@@ -32,6 +32,7 @@ class EXU(implicit val p: NutCoreConfig) extends NutCoreModule {
     val dmem = new SimpleBusUC(addrBits = VAddrBits)
     val forward = new ForwardIO
     val memMMU = Flipped(new MemMMUIO)
+    val symmemDMemIF = new DMemIF
   })
 
   val src1 = io.in.bits.data.src1(XLEN-1,0)
@@ -51,6 +52,7 @@ class EXU(implicit val p: NutCoreConfig) extends NutCoreModule {
   def isBru(func: UInt) = func(4)
 
   val lsu = Module(new UnpipelinedLSU)
+  io.symmemDMemIF <> lsu.io.symmemDMemIF
   val lsuTlbPF = WireInit(false.B)
   val lsuOut = lsu.access(valid = fuValids(FuType.lsu), src1 = src1, src2 = io.in.bits.data.imm, func = fuOpType, dtlbPF = lsuTlbPF)
   lsu.io.wdata := src2

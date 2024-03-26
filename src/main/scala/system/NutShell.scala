@@ -49,10 +49,12 @@ class NutShell(implicit val p: NutCoreConfig) extends Module with HasSoCParamete
     val meip = Input(UInt(Settings.getInt("NrExtIntr").W))
     val ila = if (p.FPGAPlatform && EnableILA) Some(Output(new ILABundle)) else None
     val symmemIMemIF = new IMemIF
+    val symmemDMemIF = new DMemIF
   })
 
   val nutcore = Module(new NutCore)
   io.symmemIMemIF <> nutcore.io.symmemIMemIF
+  io.symmemDMemIF <> nutcore.io.symmemDMemIF
   val cohMg = Module(new CoherenceManager)
   val xbar = Module(new SimpleBusCrossbarNto1(2))
   cohMg.io.in <> nutcore.io.imem.mem

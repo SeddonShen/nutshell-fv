@@ -181,7 +181,7 @@ class IMemIF extends NutCoreBundle {
 
 class DMemIF extends NutCoreBundle {
   val address = Output(UInt(XLEN.W))
-  val readData = Input(UInt(XLEN.W))
+  val readData = Input(UInt(64.W))
   val writeData = Output(UInt(XLEN.W))
   val readWrite = Output(Bool()) // false : read, true : write
   val enable = Output(Bool())

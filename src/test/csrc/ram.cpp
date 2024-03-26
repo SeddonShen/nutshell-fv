@@ -7,7 +7,33 @@ static paddr_t ram[RAMSIZE / sizeof(paddr_t)];
 static long img_size = 0;
 void* get_img_start() { return &ram[0]; }
 long get_img_size() { return img_size; }
+paddr_t ram_test[10] = {
+  // 0x00100093,
+  0x00802083,
+  0x00102823,
+  0x00100193,
+  0x00100293,
+  0x00100313,
+  0x00100393,
+  0x00100413,
+  0x00100493,
+  0x00100513,
+  0x00100593
+};
 
+paddr_t ram_data[10] = {
+  // 0x00100093,
+  0x00802083,
+  0x00100113,
+  0x1a010c63,
+  0x00100293,
+  0x023140b3,
+  0x00100313,
+  0x00100393,
+  0x00100413,
+  0x00100493,
+  0x00100513
+};
 void addpageSv39() {
 //three layers
 //addr range: 0x0000000080000000 - 0x0000000088000000 for 128MB from 2GB - 2GB128MB
@@ -99,18 +125,25 @@ extern "C" void ram_helper(
 }
 
 paddr_t read_instr(paddr_t addr) {
-  paddr_t ram_test[10];
-  ram_test[0] = 0x00100093;
-  ram_test[1] = 0x00100113;
-  ram_test[2] = 0x00100193;
-  ram_test[3] = 0x00100293;
-  ram_test[4] = 0x023140b3; //div
-  ram_test[5] = 0x00100313;
-  ram_test[6] = 0x00100393;
-  ram_test[7] = 0x00100413;
-  ram_test[8] = 0x00100493;
-  ram_test[9] = 0x00100513;
-  // return ram_test[addr - 0x80000000];
   printf("[!!!!!!!!!]read_instr: inst= %lx , addr = %lx rIdx= %d\n", ram_test[((addr - 0x80000000) >> 2) % 10] , addr, ((addr - 0x80000000) >> 2) % 10);
   return ram_test[((addr - 0x80000000) >> 2) % 10];
+}
+
+
+paddr_t read_data(paddr_t addr) {
+  printf("[!!!!!!!!!]read_data: data= %lx , addr = %lx rIdx= %d\n", ram_data[((addr) >> 2) % 10] , addr, ((addr) >> 2) % 10);
+  return ram_data[((addr) >> 2) % 10];
+}
+
+
+
+void write_data(paddr_t addr, paddr_t wdata){
+  printf("[!!!!!!!!!]write_data: inst= %lx , addr = %lx wIdx= %d\n", ram_data[((addr) >> 2) % 10] , addr, ((addr) >> 2) % 10);
+  ram_data[((addr) >> 2) % 10] = wdata;
+}
+
+void print_ram_data() {
+  for (int i = 0; i < 10; i++) {
+    printf("ram_data[%d] = %lx\n", i, ram_data[i]);
+  }
 }
