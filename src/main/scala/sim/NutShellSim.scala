@@ -46,6 +46,10 @@ class DiffTestIO extends Bundle {
   val sepc = Output(UInt(64.W))
   val mcause = Output(UInt(64.W))
   val scause = Output(UInt(64.W))
+
+  val rvfi_pc_wdata = Output(UInt(32.W))
+  val rvfi_rd_addr = Output(UInt(32.W))
+  val rvfi_rd_wdata = Output(UInt(32.W))
 }
 
 class LogCtrlIO extends Bundle {
@@ -99,6 +103,10 @@ class NutShellSimTop extends Module {
   BoringUtils.addSink(difftest.sepc, "difftestSepc")
   BoringUtils.addSink(difftest.mcause, "difftestMcause")
   BoringUtils.addSink(difftest.scause, "difftestScause")
+
+  BoringUtils.addSink(difftest.rvfi_pc_wdata, "difftestRvfiPCWdata")
+  BoringUtils.addSink(difftest.rvfi_rd_addr, "difftestRvfiRdAddr")
+  BoringUtils.addSink(difftest.rvfi_rd_wdata, "difftestRvfiRdWdata")
   io.difftest := difftest
 
   val log_begin, log_end, log_level = WireInit(0.U(64.W))

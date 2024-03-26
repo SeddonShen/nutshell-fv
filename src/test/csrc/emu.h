@@ -195,7 +195,9 @@ class Emulator {
       // printf("TestSSDIO: %08x %08x\n", dut_ptr->io_symmemIMemIF_fetchEnable, dut_ptr->io_symmemIMemIF_instructionReady);
       // dut_ptr->io_symmemIMemIF_instructionReady = 0;
       if(dut_ptr->io_difftest_commit) {
-        printf("commit:%d, cycles: %d, PC:%08x, Inst:%08x Reg1:%08x\n", dut_ptr->io_difftest_commit, cycles, dut_ptr->io_difftest_thisPC, dut_ptr->io_difftest_thisINST, dut_ptr->io_difftest_r_1);
+        printf("commit:%d, cycles: %d, PC:%08x, Inst:%08x Rd:%08x RdData:%08x\n", dut_ptr->io_difftest_commit, cycles, dut_ptr->io_difftest_thisPC, dut_ptr->io_difftest_thisINST, dut_ptr->io_difftest_rvfi_rd_addr, dut_ptr->io_difftest_rvfi_rd_wdata);
+
+        // printf("commit:%d, cycles: %d, PC:%08x, Inst:%08x Reg1:%08x\n", dut_ptr->io_difftest_commit, cycles, dut_ptr->io_difftest_thisPC, dut_ptr->io_difftest_thisINST, dut_ptr->io_difftest_r_1);
       }
       // printf("commit:%d, cycles: %d, PC:%08x, Inst:%08x Reg2:%08x\n", dut_ptr->io_difftest_commit, cycles, dut_ptr->io_difftest_thisPC, dut_ptr->io_difftest_thisINST, dut_ptr->io_difftest_r_2);
       if (!hascommit && (uint32_t)dut_ptr->io_difftest_thisPC == 0x80000000) {
