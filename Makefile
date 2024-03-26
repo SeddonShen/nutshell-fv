@@ -105,6 +105,8 @@ LOG_LEVEL ?= ALL
 emu: $(EMU)
 	@$(EMU) -i $(IMAGE) $(SEED) -C 20 -b $(LOG_BEGIN) -e $(LOG_END) -v $(LOG_LEVEL)
 
+emuverilog: $(SIM_TOP_V)
+	@echo "Verilog generated at $(SIM_TOP_V)"
 cache:
 	$(MAKE) emu IMAGE=Makefile
 
