@@ -168,10 +168,10 @@ class AXI4VGA(sim: Boolean = false) extends Module with HasVGAParameter {
   io.vga.rgb := Mux(io.vga.valid, color(23, 0), 0.U)
 
   if (sim) {
-    val fbHelper = Module(new FBHelper)
-    fbHelper.io.clk := clock
-    fbHelper.io.valid := io.vga.valid
-    fbHelper.io.pixel := color
-    fbHelper.io.sync := ctrl.io.extra.get.sync
+    // val fbHelper = Module(new FBHelper)
+    // fbHelper.io.clk := clock
+    // fbHelper.io.valid := io.vga.valid
+    // fbHelper.io.pixel := color
+    // fbHelper.io.sync := ctrl.io.extra.get.sync
   }
 }

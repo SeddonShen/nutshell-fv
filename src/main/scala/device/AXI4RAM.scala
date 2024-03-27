@@ -49,14 +49,15 @@ class AXI4RAM[T <: AXI4Lite](_type: T = new AXI4, memByte: Int,
   val wen = in.w.fire() && inRange(wIdx)
 
   val rdata = if (useBlackBox) {
-    val mem = Module(new RAMHelper(memByte))
-    mem.io.clk := clock
-    mem.io.rIdx := rIdx
-    mem.io.wIdx := wIdx
-    mem.io.wdata := in.w.bits.data
-    mem.io.wmask := fullMask
-    mem.io.wen := wen
-    mem.io.rdata
+    // val mem = Module(new RAMHelper(memByte))
+    // mem.io.clk := clock
+    // mem.io.rIdx := rIdx
+    // mem.io.wIdx := wIdx
+    // mem.io.wdata := in.w.bits.data
+    // mem.io.wmask := fullMask
+    // mem.io.wen := wen
+    // mem.io.rdata
+    0.U
   } else {
     val mem = Mem(memByte / DataBytes, Vec(DataBytes, UInt(8.W)))
 

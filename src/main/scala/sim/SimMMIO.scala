@@ -45,18 +45,20 @@ class SimMMIO extends Module {
   val xbar = Module(new SimpleBusCrossbar1toN(devAddrSpace))
   xbar.io.in <> io.rw
 
-  val uart = Module(new AXI4UART)
+  // val uart = Module(new AXI4UART)
   val vga = Module(new AXI4VGA(sim = true))
   val flash = Module(new AXI4Flash)
-  val sd = Module(new AXI4DummySD)
+  // val sd = Module(new AXI4DummySD)
   val difftestCtrl = Module(new AXI4DiffTestCtrl)
   val meipGen = Module(new AXI4MeipGen)
   val dma = Module(new AXI4DMA)
-  uart.io.in <> xbar.io.out(0).toAXI4Lite()
+  // uart.io.in <> xbar.io.out(0).toAXI4Lite()
+  xbar.io.out(0).toAXI4Lite() := DontCare
   vga.io.in.fb <> xbar.io.out(1).toAXI4Lite()
   vga.io.in.ctrl <> xbar.io.out(2).toAXI4Lite()
   flash.io.in <> xbar.io.out(3).toAXI4Lite()
-  sd.io.in <> xbar.io.out(4).toAXI4Lite()
+  // sd.io.in <> xbar.io.out(4).toAXI4Lite()
+  xbar.io.out(4).toAXI4Lite() := DontCare
   difftestCtrl.io.in <> xbar.io.out(5).toAXI4Lite()
   meipGen.io.in <> xbar.io.out(6).toAXI4Lite()
   dma.io.in <> xbar.io.out(7).toAXI4Lite()
