@@ -36,8 +36,8 @@ object DefaultSettings {
     "MmodeOnly" -> false,
     "IsRV32" -> false,
 
-    "FPGAPlatform" -> false,
-    "EnableILA" -> true,
+    "FPGAPlatform" -> true,
+    "EnableILA" -> false,
     "EnableDebug" -> true,
     "EnableRVC" -> true
   )

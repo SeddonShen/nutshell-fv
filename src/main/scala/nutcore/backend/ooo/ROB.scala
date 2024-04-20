@@ -521,11 +521,11 @@ class ROB(implicit val p: NutCoreConfig) extends NutCoreModule with HasInstrType
       difftest_wb.io.data := RegNext(io.wb(i).rfData)
     }
   } else {
-    BoringUtils.addSource(retireATerm, "ilaWBUvalid")
-    BoringUtils.addSource(SignExt(decode(ringBufferTail)(0).cf.pc, AddrBits), "ilaWBUpc")
-    BoringUtils.addSource(io.wb(0).rfWen, "ilaWBUrfWen")
-    BoringUtils.addSource(io.wb(0).rfDest, "ilaWBUrfDest")
-    BoringUtils.addSource(io.wb(0).rfData, "ilaWBUrfData")
+    // BoringUtils.addSource(retireATerm, "ilaWBUvalid")
+    // BoringUtils.addSource(SignExt(decode(ringBufferTail)(0).cf.pc, AddrBits), "ilaWBUpc")
+    // BoringUtils.addSource(io.wb(0).rfWen, "ilaWBUrfWen")
+    // BoringUtils.addSource(io.wb(0).rfDest, "ilaWBUrfDest")
+    // BoringUtils.addSource(io.wb(0).rfData, "ilaWBUrfData")
   }
 
   Debug(io.empty, "empty\n")
