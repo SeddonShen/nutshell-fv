@@ -103,7 +103,9 @@ class ALU(hasBru: Boolean = false) extends NutCoreModule {
     ALUOpType.srl  -> (shsrc1  >> shamt),
     ALUOpType.or   -> (src1  |  src2),
     ALUOpType.and  -> (src1  &  src2),
-    ALUOpType.sra  -> ((shsrc1.asSInt >> shamt).asUInt)
+    ALUOpType.sra  -> ((shsrc1.asSInt >> shamt).asUInt),
+    // ALUOpType.addi_e -> Cat((src1  +  src2)(31,1), 0.U)
+    ALUOpType.addi_e -> (src1  +  src2)
   ))
   val aluRes = Mux(ALUOpType.isWordOp(func), SignExt(res(31,0), 64), res)
 
@@ -117,7 +119,8 @@ class ALU(hasBru: Boolean = false) extends NutCoreModule {
   val isBru = ALUOpType.isBru(func)
   val taken = LookupTree(ALUOpType.getBranchType(func), branchOpTable) ^ ALUOpType.isBranchInvert(func)
   val target = Mux(isBranch, io.cfIn.pc + io.offset, adderRes)(VAddrBits-1,0)
-  BoringUtils.addSource(io.redirect.target(1,0) === 0.U, "someassumeid")
+  val targetAssume = !(isBranch && taken) || (target(1,0) === 0.U)
+  BoringUtils.addSource(targetAssume, "someassumeid")
   val predictWrong = Mux(!taken && isBranch, io.cfIn.brIdx(0), !io.cfIn.brIdx(0) || (io.redirect.target =/= io.cfIn.pnpc))
   val isRVC = (io.cfIn.instr(1,0) =/= "b11".U)
   assert(io.cfIn.instr(1,0) === "b11".U || isRVC || !valid)

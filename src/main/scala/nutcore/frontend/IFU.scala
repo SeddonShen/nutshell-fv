@@ -293,6 +293,10 @@ class IFU_embedded extends NutCoreModule with HasResetVector {
 
   io.out.bits := DontCare
   io.out.bits.instr := io.imem.resp.bits.rdata
+  BoringUtils.addSource(
+    !io.imem.resp.valid || (io.imem.req.bits.user.getOrElse(0.U) === io.imem.resp.bits.user.getOrElse(0.U)), 
+    "someassumeid3"
+  )
   io.imem.resp.bits.user.map{ case x =>
     io.out.bits.pc := x(2*VAddrBits-1, VAddrBits)
     io.out.bits.pnpc := x(VAddrBits-1, 0)

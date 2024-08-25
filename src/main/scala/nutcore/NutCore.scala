@@ -110,8 +110,12 @@ class NutCore(implicit val p: NutCoreConfig) extends NutCoreModule {
 
   val someAssume = Wire(Bool())
   someAssume := DontCare
+  val someAssume3 = Wire(Bool())
+  someAssume3 := DontCare
   BoringUtils.addSink(someAssume, "someassumeid")
+  BoringUtils.addSink(someAssume3, "someassumeid3")
   assume(someAssume)
+  assume(someAssume3)
 
   // Frontend
   val frontend = (Settings.get("IsRV32"), Settings.get("EnableOutOfOrderExec")) match {
