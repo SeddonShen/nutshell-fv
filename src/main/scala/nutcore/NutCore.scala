@@ -25,6 +25,7 @@ import bus.axi4._
 import utils._
 import top.Settings
 import rvspeccore.core.RVConfig
+import rvspeccore.checker.RVI
 
 trait HasNutCoreParameter {
   // General Parameter for NutShell
@@ -73,7 +74,7 @@ case class NutCoreConfig (
   EnableDebug: Boolean = Settings.get("EnableDebug"),
   EnhancedLog: Boolean = true ,
   FormalConfig: RVConfig = RVConfig(
-    "XLEN" -> 64,
+    "XLEN" -> 32,
     "extensions" -> "MCZicsrZifenceiSU",
     "fakeExtensions" -> "A",
     "functions" -> Seq("Privileged")
@@ -103,9 +104,14 @@ class NutCore(implicit val p: NutCoreConfig) extends NutCoreModule {
     val dmem = new SimpleBusC
     val mmio = new SimpleBusUC
     val frontend = Flipped(new SimpleBusUC())
-    val rvfi = if (p.RVFI) Some(new RVFIIO) else None
   }
   val io = IO(new NutCoreIO)
+  val rvfi = IO(new RVFIIO)
+
+  val someAssume = Wire(Bool())
+  someAssume := DontCare
+  BoringUtils.addSink(someAssume, "someassumeid")
+  assume(someAssume)
 
   // Frontend
   val frontend = (Settings.get("IsRV32"), Settings.get("EnableOutOfOrderExec")) match {
@@ -233,28 +239,35 @@ class NutCore(implicit val p: NutCoreConfig) extends NutCoreModule {
       }
     }
     if (p.RVFI) {
-      io.rvfi.get := DontCare
-      BoringUtils.addSink(io.rvfi.get.valid, "rvfi_valid")
-      BoringUtils.addSink(io.rvfi.get.order, "rvfi_order")
-      BoringUtils.addSink(io.rvfi.get.insn, "rvfi_insn")
-      BoringUtils.addSink(io.rvfi.get.trap, "rvfi_trap")
-      io.rvfi.get.halt := false.B
-      io.rvfi.get.intr := false.B
-      io.rvfi.get.mode := 3.U
-      io.rvfi.get.ixl  := 1.U
-      BoringUtils.addSink(io.rvfi.get.rs1_addr, "rvfi_rs1_addr")
-      BoringUtils.addSink(io.rvfi.get.rs2_addr, "rvfi_rs2_addr")
-      BoringUtils.addSink(io.rvfi.get.rs1_rdata, "rvfi_rs1_rdata")
-      BoringUtils.addSink(io.rvfi.get.rs2_rdata, "rvfi_rs2_rdata")
-      BoringUtils.addSink(io.rvfi.get.rd_addr, "rvfi_rd_addr")
-      BoringUtils.addSink(io.rvfi.get.rd_wdata, "rvfi_rd_wdata")
-      BoringUtils.addSink(io.rvfi.get.pc_rdata, "rvfi_pc_rdata")
-      BoringUtils.addSink(io.rvfi.get.pc_wdata, "rvfi_pc_wdata")
-      BoringUtils.addSink(io.rvfi.get.mem_addr, "rvfi_mem_addr")
-      BoringUtils.addSink(io.rvfi.get.mem_rmask, "rvfi_mem_rmask")
-      BoringUtils.addSink(io.rvfi.get.mem_wmask, "rvfi_mem_wmask")
-      BoringUtils.addSink(io.rvfi.get.mem_rdata, "rvfi_mem_rdata")
-      BoringUtils.addSink(io.rvfi.get.mem_wdata, "rvfi_mem_wdata")
+      rvfi := DontCare
+      BoringUtils.addSink(rvfi.valid, "rvfi_valid")
+      BoringUtils.addSink(rvfi.order, "rvfi_order")
+      BoringUtils.addSink(rvfi.insn, "rvfi_insn")
+      BoringUtils.addSink(rvfi.trap, "rvfi_trap")
+      rvfi.halt := false.B
+      rvfi.intr := false.B
+      rvfi.mode := 3.U
+      rvfi.ixl  := 1.U
+      BoringUtils.addSink(rvfi.rs1_addr, "rvfi_rs1_addr")
+      BoringUtils.addSink(rvfi.rs2_addr, "rvfi_rs2_addr")
+      BoringUtils.addSink(rvfi.rs1_rdata, "rvfi_rs1_rdata")
+      BoringUtils.addSink(rvfi.rs2_rdata, "rvfi_rs2_rdata")
+      BoringUtils.addSink(rvfi.rd_addr, "rvfi_rd_addr")
+      BoringUtils.addSink(rvfi.rd_wdata, "rvfi_rd_wdata")
+      BoringUtils.addSink(rvfi.pc_rdata, "rvfi_pc_rdata")
+      BoringUtils.addSink(rvfi.pc_wdata, "rvfi_pc_wdata")
+      BoringUtils.addSink(rvfi.mem_addr, "rvfi_mem_addr")
+      BoringUtils.addSink(rvfi.mem_rmask, "rvfi_mem_rmask")
+      BoringUtils.addSink(rvfi.mem_wmask, "rvfi_mem_wmask")
+      BoringUtils.addSink(rvfi.mem_rdata, "rvfi_mem_rdata")
+      BoringUtils.addSink(rvfi.mem_wdata, "rvfi_mem_wdata")
+      val tmpAssume = !rvfi.valid || (
+        RVI.regImm(rvfi.insn)(XLEN)
+          || RVI.regReg(rvfi.insn)(XLEN)
+          || RVI.control(rvfi.insn)(XLEN)
+          || RVI.loadStore(rvfi.insn)(XLEN)
+      )
+      assume(tmpAssume)
     }
   }
 

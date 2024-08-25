@@ -63,28 +63,21 @@ class EXU(implicit val p: NutCoreConfig) extends NutCoreModule {
   io.out.bits.mem_rvfi := DontCare
 
   if (p.RVFI) {
-    def sz2wth(size: UInt) = {
-        MuxLookup(size, 0.U, List(
-          0.U -> 8.U,
-          1.U -> 16.U,
-          2.U -> 32.U,
-          3.U -> 64.U
-        ))
-      }
+
     val mem_rvfi_reg = RegInit(0.U.asTypeOf(new RVFIMem))
     when (fuType === FuType.lsu) {
       io.out.bits.mem_rvfi := mem_rvfi_reg
 
       when(io.dmem.req.valid) {
-        io.out.bits.mem_rvfi.addr := io.dmem.req.bits.addr
-        io.out.bits.mem_rvfi.rmask := sz2wth(io.dmem.req.bits.size)
+        io.out.bits.mem_rvfi.addr := (io.dmem.req.bits.addr >> 2) << 2
+        io.out.bits.mem_rvfi.rmask := Mux(io.dmem.req.bits.cmd === 0.U, io.dmem.req.bits.wmask, 0.U)
         io.out.bits.mem_rvfi.wdata := io.dmem.req.bits.wdata
-        io.out.bits.mem_rvfi.wmask := io.dmem.req.bits.wmask
+        io.out.bits.mem_rvfi.wmask := Mux(io.dmem.req.bits.cmd === 1.U, io.dmem.req.bits.wmask, 0.U)
 
-        mem_rvfi_reg.addr := io.dmem.req.bits.addr
-        mem_rvfi_reg.rmask := sz2wth(io.dmem.req.bits.size)
+        mem_rvfi_reg.addr := (io.dmem.req.bits.addr >> 2) << 2
+        mem_rvfi_reg.rmask := Mux(io.dmem.req.bits.cmd === 0.U, io.dmem.req.bits.wmask, 0.U)
         mem_rvfi_reg.wdata := io.dmem.req.bits.wdata
-        mem_rvfi_reg.wmask := io.dmem.req.bits.wmask
+        mem_rvfi_reg.wmask := Mux(io.dmem.req.bits.cmd === 1.U, io.dmem.req.bits.wmask, 0.U)
       }
       when(io.dmem.resp.valid) {
         io.out.bits.mem_rvfi.rdata := io.dmem.resp.bits.rdata
@@ -126,7 +119,11 @@ class EXU(implicit val p: NutCoreConfig) extends NutCoreModule {
     o.rfWen := i.rfWen && (!lsuTlbPF && !lsu.io.loadAddrMisaligned && !lsu.io.storeAddrMisaligned || !fuValids(FuType.lsu)) && !(csr.io.wenFix && fuValids(FuType.csr))
     o.rfDest := i.rfDest
     o.fuType := i.fuType
+    o.rfSrc1 := i.rfSrc1
+    o.rfSrc2 := i.rfSrc2
   }
+  io.out.bits.decode.data.src1 := Mux(io.in.bits.ctrl.rfSrc1 === 0.U, 0.U, src1)
+  io.out.bits.decode.data.src2 := Mux(io.in.bits.ctrl.rfSrc2 === 0.U, 0.U, src2)
   io.out.bits.decode.cf.pc := io.in.bits.cf.pc
   io.out.bits.decode.cf.instr := io.in.bits.cf.instr
   io.out.bits.decode.cf.runahead_checkpoint_id := io.in.bits.cf.runahead_checkpoint_id

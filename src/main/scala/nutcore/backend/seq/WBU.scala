@@ -122,11 +122,11 @@ class WBU(implicit val p: NutCoreConfig) extends NutCoreModule{
       BoringUtils.addSource(io.in.bits.decode.cf.instr, "rvfi_insn")
 
       BoringUtils.addSource(io.in.bits.decode.ctrl.rfSrc1, "rvfi_rs1_addr")
-      BoringUtils.addSource(io.in.bits.decode.ctrl.rfSrc1, "rvfi_rs2_addr")
+      BoringUtils.addSource(io.in.bits.decode.ctrl.rfSrc2, "rvfi_rs2_addr")
       BoringUtils.addSource(io.in.bits.decode.data.src1, "rvfi_rs1_rdata")
       BoringUtils.addSource(io.in.bits.decode.data.src2, "rvfi_rs2_rdata")
       BoringUtils.addSource(io.wb.rfDest, "rvfi_rd_addr")
-      BoringUtils.addSource(io.wb.rfData, "rvfi_rd_wdata")
+      BoringUtils.addSource(Mux(io.wb.rfDest === 0.U, 0.U, io.wb.rfData), "rvfi_rd_wdata")
       BoringUtils.addSource(SignExt(io.in.bits.decode.cf.pc, AddrBits), "rvfi_pc_rdata")
       BoringUtils.addSource(
         Mux(io.redirect.valid, io.redirect.target, SignExt(io.in.bits.decode.cf.pc, AddrBits) + 4.U),

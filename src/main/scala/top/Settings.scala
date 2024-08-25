@@ -29,17 +29,17 @@ object DefaultSettings {
     "HasPrefetch" -> true,
     "EnableMultiIssue" -> false,
     "EnableOutOfOrderExec" -> false,
-    "HasDTLB" -> true,
-    "HasITLB" -> true,
-    "HasDcache" -> true,
-    "HasIcache" -> true,
+    "HasDTLB" -> false,
+    "HasITLB" -> false,
+    "HasDcache" -> false,
+    "HasIcache" -> false,
     "MmodeOnly" -> false,
-    "IsRV32" -> false,
+    "IsRV32" -> true,
 
     "FPGAPlatform" -> false,
     "EnableILA" -> true,
     "EnableDebug" -> true,
-    "EnableRVC" -> true,
+    "EnableRVC" -> false,
 
     "Formal" -> false
   )
@@ -59,8 +59,8 @@ object FormalSettings {
     "HasIcache" -> false,
 
     // "MmodeOnly" -> true,
-    "MmodeOnly" -> false,
-    "EnableRVC" -> true
+    "MmodeOnly" -> true,
+    "EnableRVC" -> false
   )
 }
 
