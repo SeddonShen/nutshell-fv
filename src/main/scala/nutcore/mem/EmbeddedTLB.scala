@@ -24,7 +24,7 @@ import bus.axi4._
 import chisel3.experimental.IO
 import utils._
 import top.Settings
-import rvspeccore.core.tool.TLBSig
+// import rvspeccore.core.tool.TLBSig
 trait HasTLBIO extends HasNutCoreParameter with HasTlbConst with HasCSRConst {
   class TLBIO extends Bundle {
     val in = Flipped(new SimpleBusUC(userBits = userBits, addrBits = VAddrBits))

@@ -272,6 +272,8 @@ class NutCore(implicit val p: NutCoreConfig) extends NutCoreModule {
           || RVI.loadStore(rvfi.insn)(XLEN)
       )
       assume(tmpAssume)
+    } else {
+      rvfi := DontCare
     }
   }
 
