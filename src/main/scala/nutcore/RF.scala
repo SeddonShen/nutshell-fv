@@ -28,7 +28,9 @@ trait HasRegFileParameter {
 }
 
 class RegFile extends HasRegFileParameter with HasNutCoreParameter {
-  val rf = RegInit(VecInit(Seq.fill(NRReg)(0.U(XLEN.W)))) 
+  // val rf = RegInit(VecInit(Seq.fill(NRReg)(0.U(XLEN.W)))) 
+  val rf = Reg(Vec(32, UInt(XLEN.W)))
+  rf(0) := 0.U
   def read(addr: UInt) : UInt = Mux(addr === 0.U, 0.U, rf(addr))
   def write(addr: UInt, data: UInt) = { rf(addr) := data(XLEN-1,0) }
 } 
