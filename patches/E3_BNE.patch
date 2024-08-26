@@ -1,0 +1,13 @@
+diff --git a/src/main/scala/nutcore/isa/RVI.scala b/src/main/scala/nutcore/isa/RVI.scala
+index bdd214b..46bb5cd 100644
+--- a/src/main/scala/nutcore/isa/RVI.scala
++++ b/src/main/scala/nutcore/isa/RVI.scala
+@@ -90,7 +90,7 @@ object RV32I_BRUInstr extends HasInstrType {
+     JALR           -> List(InstrI, FuType.bru, ALUOpType.jalr),
+ 
+     BEQ            -> List(InstrB, FuType.bru, ALUOpType.beq),
+-    BNE            -> List(InstrB, FuType.bru, ALUOpType.bne),
++    BNE            -> List(InstrB, FuType.bru, ALUOpType.beq),
+     BLT            -> List(InstrB, FuType.bru, ALUOpType.blt),
+     BGE            -> List(InstrB, FuType.bru, ALUOpType.bge),
+     BLTU           -> List(InstrB, FuType.bru, ALUOpType.bltu),

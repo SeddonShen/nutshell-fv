@@ -1,0 +1,13 @@
+diff --git a/src/main/scala/nutcore/isa/RVI.scala b/src/main/scala/nutcore/isa/RVI.scala
+index bdd214b..3ff0b82 100644
+--- a/src/main/scala/nutcore/isa/RVI.scala
++++ b/src/main/scala/nutcore/isa/RVI.scala
+@@ -50,7 +50,7 @@ object RV32I_ALUInstr extends HasInstrType with HasNutCoreParameter {
+   val table = Array(
+     ADDI           -> List(InstrI, FuType.alu, ALUOpType.add),
+     SLLI           -> List(InstrI, FuType.alu, ALUOpType.sll),
+-    SLTI           -> List(InstrI, FuType.alu, ALUOpType.slt),
++    SLTI           -> List(InstrI, FuType.alu, ALUOpType.sltu),
+     SLTIU          -> List(InstrI, FuType.alu, ALUOpType.sltu),
+     XORI           -> List(InstrI, FuType.alu, ALUOpType.xor),
+     SRLI           -> List(InstrI, FuType.alu, ALUOpType.srl),

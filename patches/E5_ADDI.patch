@@ -1,0 +1,36 @@
+diff --git a/src/main/scala/nutcore/backend/fu/ALU.scala b/src/main/scala/nutcore/backend/fu/ALU.scala
+index 01c585a..3eae87b 100644
+--- a/src/main/scala/nutcore/backend/fu/ALU.scala
++++ b/src/main/scala/nutcore/backend/fu/ALU.scala
+@@ -41,7 +41,7 @@ object ALUOpType {
+   def sllw = "b0100001".U
+   def srlw = "b0100101".U
+   def sraw = "b0101101".U
+-
++  def addi_e = "b0001011".U
+   def isWordOp(func: UInt) = func(5)
+ 
+   def jal  = "b1011000".U
+@@ -103,7 +103,8 @@ class ALU(hasBru: Boolean = false) extends NutCoreModule {
+     ALUOpType.srl  -> (shsrc1  >> shamt),
+     ALUOpType.or   -> (src1  |  src2),
+     ALUOpType.and  -> (src1  &  src2),
+-    ALUOpType.sra  -> ((shsrc1.asSInt >> shamt).asUInt)
++    ALUOpType.sra  -> ((shsrc1.asSInt >> shamt).asUInt),
++    ALUOpType.addi_e -> Cat((src1  +  src2)(31,1), 0.U(1.W))
+   ))
+   val aluRes = Mux(ALUOpType.isWordOp(func), SignExt(res(31,0), 64), res)
+ 
+diff --git a/src/main/scala/nutcore/isa/RVI.scala b/src/main/scala/nutcore/isa/RVI.scala
+index bdd214b..65fe26e 100644
+--- a/src/main/scala/nutcore/isa/RVI.scala
++++ b/src/main/scala/nutcore/isa/RVI.scala
+@@ -48,7 +48,7 @@ object RV32I_ALUInstr extends HasInstrType with HasNutCoreParameter {
+   def LUI     = BitPat("b????????????????????_?????_0110111")
+ 
+   val table = Array(
+-    ADDI           -> List(InstrI, FuType.alu, ALUOpType.add),
++    ADDI           -> List(InstrI, FuType.alu, ALUOpType.addi_e),
+     SLLI           -> List(InstrI, FuType.alu, ALUOpType.sll),
+     SLTI           -> List(InstrI, FuType.alu, ALUOpType.slt),
+     SLTIU          -> List(InstrI, FuType.alu, ALUOpType.sltu),
