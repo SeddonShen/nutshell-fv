@@ -99,12 +99,20 @@ class WBU(implicit val p: NutCoreConfig) extends NutCoreModule{
       BoringUtils.addSource(io.wb.rfDest, "ilaWBUrfDest")
       BoringUtils.addSource(io.wb.rfData, "ilaWBUrfData")
     }
+    if(p.Formal || p.RVFI){
+      implicit val checker_xlen = XLEN
+      val tmpInst = io.in.bits.decode.cf.instr(31, 0)
+      BoringUtils.addSource(
+        !io.in.valid ||           (  RVI.regImm(tmpInst) || RVI.regReg(tmpInst) || RVI.control(tmpInst)|| RVI.loadStore(tmpInst)  ), 
+        "someassumeid2"
+      )
+    }
     if (p.Formal) {
-      val checker = Module(new CheckerWithResult(checkMem = true)(p.FormalConfig))
+      val checker = Module(new CheckerWithResult(checkMem = true, enableReg = false)(p.FormalConfig))
 
-      checker.io.instCommit.valid := RegNext(io.in.valid, false.B)
-      checker.io.instCommit.inst  := RegNext(io.in.bits.decode.cf.instr)
-      checker.io.instCommit.pc    := RegNext(SignExt(io.in.bits.decode.cf.pc, AddrBits))
+      checker.io.instCommit.valid := io.in.valid
+      checker.io.instCommit.inst  := io.in.bits.decode.cf.instr
+      checker.io.instCommit.pc    := SignExt(io.in.bits.decode.cf.pc, AddrBits)
 
       ConnectCheckerResult.setChecker(checker)(XLEN, p.FormalConfig)
 

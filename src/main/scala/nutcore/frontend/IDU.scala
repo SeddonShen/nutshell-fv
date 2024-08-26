@@ -177,6 +177,10 @@ class Decoder(implicit val p: NutCoreConfig) extends NutCoreModule with HasInstr
   io.out.bits.cf.exceptionVec.map(_ := false.B)
   io.out.bits.cf.exceptionVec(illegalInstr) := (instrType === InstrN && !hasIntr) && io.in.valid
   io.out.bits.cf.exceptionVec(instrPageFault) := io.in.bits.exceptionVec(instrPageFault)
+  if(p.Formal){
+    assume(!((instrType === InstrN && !hasIntr) && io.in.valid))
+    assume(!(io.in.bits.exceptionVec(instrPageFault)))
+  }
   if (VAddrBits > PAddrBits) {
     io.out.bits.cf.exceptionVec(instrAccessFault) := io.in.bits.pc(VAddrBits - 1, PAddrBits).orR && !vmEnable
   } else {

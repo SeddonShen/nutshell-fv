@@ -118,7 +118,14 @@ class ALU(hasBru: Boolean = false) extends NutCoreModule {
   val taken = LookupTree(ALUOpType.getBranchType(func), branchOpTable) ^ ALUOpType.isBranchInvert(func)
   val target = Mux(isBranch, io.cfIn.pc + io.offset, adderRes)(VAddrBits-1,0)
   val targetAssume = !(isBranch && taken) || (target(1,0) === 0.U)
-  BoringUtils.addSource(targetAssume, "someassumeid")
+  val jumpAssume = !(ALUOpType.isJump(func)) || (target(1,0) === 0.U)
+  BoringUtils.addSource(targetAssume && jumpAssume, "someassumeid")
+  // when(isBranch && taken){
+  //   assume((target(1,0) === 0.U))
+  // }
+  // when(ALUOpType.isJump(func)){
+  //   assume((target(1,0) === 0.U))
+  // }
   val predictWrong = Mux(!taken && isBranch, io.cfIn.brIdx(0), !io.cfIn.brIdx(0) || (io.redirect.target =/= io.cfIn.pnpc))
   val isRVC = (io.cfIn.instr(1,0) =/= "b11".U)
   assert(io.cfIn.instr(1,0) === "b11".U || isRVC || !valid)

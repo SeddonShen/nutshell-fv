@@ -293,10 +293,24 @@ class IFU_embedded extends NutCoreModule with HasResetVector {
 
   io.out.bits := DontCare
   io.out.bits.instr := io.imem.resp.bits.rdata
+  val regUserValue = RegInit(0.U(64.W))
+  val reqFire = RegInit(0.U(1.W))
+  when(io.imem.req.fire){
+    reqFire := 1.U
+    regUserValue := io.imem.req.bits.user.getOrElse(0.U)
+  }.otherwise{
+    reqFire := 0.U
+  }
   BoringUtils.addSource(
-    !io.imem.resp.valid || (io.imem.req.bits.user.getOrElse(0.U) === io.imem.resp.bits.user.getOrElse(0.U)), 
+    (!io.imem.resp.fire || (regUserValue === io.imem.resp.bits.user.getOrElse(0.U))) && (!reqFire || io.imem.resp.fire), 
     "someassumeid3"
   )
+  // when(io.imem.resp.fire){
+  //   assume((regUserValue === io.imem.resp.bits.user.getOrElse(0.U)))
+  // }
+  // when(reqFire.asBool){
+  //   assume(io.imem.resp.fire)
+  // }
   io.imem.resp.bits.user.map{ case x =>
     io.out.bits.pc := x(2*VAddrBits-1, VAddrBits)
     io.out.bits.pnpc := x(VAddrBits-1, 0)

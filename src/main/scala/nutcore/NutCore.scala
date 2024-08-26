@@ -111,18 +111,18 @@ class NutCore(implicit val p: NutCoreConfig) extends NutCoreModule {
   val io = IO(new NutCoreIO)
   val rvfi = IO(new RVFIIO)
 
-  // val someAssume = Wire(Bool())
-  // someAssume := DontCare
-  // val someAssume2 = Wire(Bool())
-  // someAssume2 := DontCare
-  // val someAssume3 = Wire(Bool())
-  // someAssume3 := DontCare
-  // BoringUtils.addSink(someAssume, "someassumeid")
-  // BoringUtils.addSink(someAssume2, "someassumeid2")
-  // BoringUtils.addSink(someAssume3, "someassumeid3")
-  // assume(someAssume)
-  // assume(someAssume2)
-  // assume(someAssume3)
+  val someAssume = Wire(Bool())
+  someAssume := DontCare
+  val someAssume2 = Wire(Bool())
+  someAssume2 := DontCare
+  val someAssume3 = Wire(Bool())
+  someAssume3 := DontCare
+  BoringUtils.addSink(someAssume, "someassumeid")
+  BoringUtils.addSink(someAssume2, "someassumeid2")
+  BoringUtils.addSink(someAssume3, "someassumeid3")
+  assume(someAssume)
+  assume(someAssume2)
+  assume(someAssume3)
 
   // Frontend
   val frontend = (Settings.get("IsRV32"), Settings.get("EnableOutOfOrderExec")) match {
@@ -247,7 +247,6 @@ class NutCore(implicit val p: NutCoreConfig) extends NutCoreModule {
       val tmpAssume = !(rvfi.valid && rvfi.order === 0.U) || (
           rvfi.pc_rdata === "h8000_0000".U
       )
-      assume(tmpAssume)
     } else {
       rvfi := DontCare
     }
