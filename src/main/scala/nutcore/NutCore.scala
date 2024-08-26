@@ -75,9 +75,12 @@ case class NutCoreConfig (
   EnhancedLog: Boolean = true ,
   FormalConfig: RVConfig = RVConfig(
     "XLEN" -> 32,
-    "extensions" -> "MCZicsrZifenceiSU",
-    "fakeExtensions" -> "A",
-    "functions" -> Seq("Privileged")
+    "extensions" -> "M",
+    "initValue" -> Map(
+      "pc"    -> "h8000_0000",
+      "mtvec" -> "h0000_0000"
+    ),
+    "formal" -> Seq("ArbitraryRegFile")
   )
 )
 // Enable EnhancedLog will slow down simulation, 
@@ -108,14 +111,18 @@ class NutCore(implicit val p: NutCoreConfig) extends NutCoreModule {
   val io = IO(new NutCoreIO)
   val rvfi = IO(new RVFIIO)
 
-  val someAssume = Wire(Bool())
-  someAssume := DontCare
-  val someAssume3 = Wire(Bool())
-  someAssume3 := DontCare
-  BoringUtils.addSink(someAssume, "someassumeid")
-  BoringUtils.addSink(someAssume3, "someassumeid3")
-  assume(someAssume)
-  assume(someAssume3)
+  // val someAssume = Wire(Bool())
+  // someAssume := DontCare
+  // val someAssume2 = Wire(Bool())
+  // someAssume2 := DontCare
+  // val someAssume3 = Wire(Bool())
+  // someAssume3 := DontCare
+  // BoringUtils.addSink(someAssume, "someassumeid")
+  // BoringUtils.addSink(someAssume2, "someassumeid2")
+  // BoringUtils.addSink(someAssume3, "someassumeid3")
+  // assume(someAssume)
+  // assume(someAssume2)
+  // assume(someAssume3)
 
   // Frontend
   val frontend = (Settings.get("IsRV32"), Settings.get("EnableOutOfOrderExec")) match {
@@ -189,59 +196,6 @@ class NutCore(implicit val p: NutCoreConfig) extends NutCoreModule {
 
     io.mmio <> mmioXbar.io.out
 
-    if (p.FPGAPlatform && p.Formal) {
-      val isRead  = RegInit(false.B)
-      val isWrite = RegInit(false.B)
-      val addr    = RegInit(0.U(39.W))
-      val wdata   = RegInit(0.U)
-      val width   = RegInit(0.U(log2Ceil(64 + 1).W))
-
-      def sz2wth(size: UInt) = {
-        MuxLookup(size, 0.U, List(
-          0.U -> 8.U,
-          1.U -> 16.U,
-          2.U -> 32.U,
-          3.U -> 64.U
-        ))
-      }
-
-      when(backend.io.dmem.isWrite()) {
-        isWrite := true.B
-        isRead  := false.B
-        addr  := backend.io.dmem.req.bits.addr
-        wdata := backend.io.dmem.req.bits.wdata
-        width := sz2wth(backend.io.dmem.req.bits.size)
-      }
-      when(backend.io.dmem.isRead()) {
-        isRead  := true.B
-        isWrite := false.B
-        addr  := backend.io.dmem.req.bits.addr
-        width := sz2wth(backend.io.dmem.req.bits.size)
-      }
-
-      val mem = rvspeccore.checker.ConnectCheckerResult.makeMemSource()(64)
-
-      when(backend.io.dmem.resp.fire) {
-        // load or store complete
-        when(isRead) {
-          isRead       := false.B
-          mem.read.valid := true.B
-          mem.read.addr  := SignExt(addr, 64)
-          mem.read.data  := backend.io.dmem.resp.bits.rdata
-          mem.read.memWidth := width
-        }.elsewhen(isWrite) {
-          isWrite       := false.B
-          mem.write.valid := true.B
-          mem.write.addr  := SignExt(addr, 64)
-          mem.write.data  := wdata
-          mem.write.memWidth := width
-          // pass addr wdata wmask
-        }.otherwise {
-          // assert(false.B)
-          // may receive some acceptable error resp, but microstructure can handle
-        }
-      }
-    }
     if (p.RVFI) {
       rvfi := DontCare
       BoringUtils.addSink(rvfi.valid, "rvfi_valid")
@@ -265,11 +219,33 @@ class NutCore(implicit val p: NutCoreConfig) extends NutCoreModule {
       BoringUtils.addSink(rvfi.mem_wmask, "rvfi_mem_wmask")
       BoringUtils.addSink(rvfi.mem_rdata, "rvfi_mem_rdata")
       BoringUtils.addSink(rvfi.mem_wdata, "rvfi_mem_wdata")
-      val tmpAssume = !rvfi.valid || (
-        RVI.regImm(rvfi.insn)(XLEN)
-          || RVI.regReg(rvfi.insn)(XLEN)
-          || RVI.control(rvfi.insn)(XLEN)
-          || RVI.loadStore(rvfi.insn)(XLEN)
+      if(p.Formal){
+        val mem = rvspeccore.checker.ConnectCheckerResult.makeMemSource()(XLEN)
+        mem.read.valid := (rvfi.valid) && (rvfi.mem_rmask > 0.U)
+        mem.read.addr  := rvfi.mem_addr
+        mem.read.data  := rvfi.mem_rdata
+        mem.read.memWidth := PopCount(rvfi.mem_rmask) << 3
+        mem.write.valid := (rvfi.valid) && (rvfi.mem_wmask > 0.U)
+        mem.write.addr  := rvfi.mem_addr
+        mem.write.data  := rvfi.mem_wdata
+        mem.write.memWidth := PopCount(rvfi.mem_wmask) << 3
+      }
+      // val tmpAssume = !rvfi.valid || (
+      //   RVI.regImm(rvfi.insn)(XLEN)
+      //     || RVI.regReg(rvfi.insn)(XLEN)
+      //     || RVI.control(rvfi.insn)(XLEN)
+      //     || RVI.loadStore(rvfi.insn)(XLEN)
+      // )
+      // assume(tmpAssume)
+      val pcOld = RegInit(0.U(32.W))
+      when(rvfi.valid){
+        pcOld := rvfi.pc_rdata
+      }
+      assume(
+        !rvfi.valid || (pcOld =/= rvfi.pc_rdata)
+      )
+      val tmpAssume = !(rvfi.valid && rvfi.order === 0.U) || (
+          rvfi.pc_rdata === "h8000_0000".U
       )
       assume(tmpAssume)
     } else {

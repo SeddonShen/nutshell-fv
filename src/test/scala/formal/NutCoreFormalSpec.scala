@@ -12,7 +12,7 @@ class NutCoreFormalSpec extends AnyFlatSpec with Formal with ChiselScalatestTest
   behavior of "NutCoreFormal"
   it should "pass" in {
     // config
-    val s = (FormalSettings()) ++ (InOrderSettings()) ++ Map("Formal" -> true, "RVFI" -> false)
+    val s = (FormalSettings()) ++ (InOrderSettings()) ++ Map("Formal" -> true, "RVFI" -> true)
     s.foreach { Settings.settings += _ }
     Settings.settings.toList.sortBy(_._1)(Ordering.String).foreach {
       case (f, v: Long) =>
@@ -21,6 +21,7 @@ class NutCoreFormalSpec extends AnyFlatSpec with Formal with ChiselScalatestTest
         println(f + " = " + v)
     }
 
+    // (new chisel3.stage.ChiselStage).emitSystemVerilog(new NutCore()(NutCoreConfig()), Array("--target-dir", "test_run_dir/Elaborate_SpecCore_Verilog"))
     // verify
     verify(new NutCore()(NutCoreConfig()), Seq(BoundedCheck(12), BtormcEngineAnnotation))
   }

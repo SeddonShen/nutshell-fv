@@ -22,6 +22,7 @@ import chisel3.util.experimental.BoringUtils
 
 import utils._
 import rvspeccore.checker.ConnectCheckerResult
+import rvspeccore.checker.ArbitraryRegFile
 
 trait HasRegFileParameter {
   val NRReg = 32
@@ -29,10 +30,20 @@ trait HasRegFileParameter {
 
 class RegFile extends HasRegFileParameter with HasNutCoreParameter {
   // val rf = RegInit(VecInit(Seq.fill(NRReg)(0.U(XLEN.W)))) 
-  val rf = Reg(Vec(32, UInt(XLEN.W)))
+  // val rf = Reg(Vec(32, UInt(XLEN.W)))
+  val rf = RegInit(ArbitraryRegFile.gen(XLEN))
   rf(0) := 0.U
-  def read(addr: UInt) : UInt = Mux(addr === 0.U, 0.U, rf(addr))
-  def write(addr: UInt, data: UInt) = { rf(addr) := data(XLEN-1,0) }
+  val resultRegWire = Wire(Vec(32, UInt(XLEN.W)))
+  resultRegWire := rf
+  resultRegWire(0) := 0.U
+  ConnectCheckerResult.setRegSource(resultRegWire)
+  def read(addr: UInt) : UInt = {Mux(addr === 0.U, 0.U, rf(addr))}
+  def write(addr: UInt, data: UInt) = { 
+    when(addr =/= 0.U){
+      rf(addr) := data(XLEN-1,0) 
+      resultRegWire(addr) := data(XLEN-1,0) 
+    }
+  }
 } 
 
 class ScoreBoard extends HasRegFileParameter {
