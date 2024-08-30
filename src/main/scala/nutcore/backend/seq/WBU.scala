@@ -65,7 +65,6 @@ class WBU(implicit val p: NutCoreConfig) extends NutCoreModule{
 
       val difftest = DifftestModule(new DiffInstrCommit)
       difftest := RegNext(io)
-      difftest.clock := clock
       difftest.coreid := 0.U
       difftest.index := 0.U
       difftest.fpwen := false.B
@@ -101,7 +100,6 @@ class WBU(implicit val p: NutCoreConfig) extends NutCoreModule{
       val io = IO(Input(new DiffIntWriteback))
       val difftest = DifftestModule(new DiffIntWriteback)
       difftest := RegNext(io)
-      difftest.clock := clock
       difftest.coreid := 0.U
 
       val noProfileMod = this.toNamed

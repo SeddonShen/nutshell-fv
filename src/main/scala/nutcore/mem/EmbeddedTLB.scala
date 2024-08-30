@@ -173,7 +173,7 @@ class EmbeddedTLB(implicit val tlbConfig: TLBConfig) extends TlbModule with HasT
 
   // lsu need dtlb signals
   if(tlbname == "dtlb") {
-    val alreadyOutFinish = RegEnable(true.B, init=false.B, tlbExec.io.out.valid && !tlbExec.io.out.ready)
+    val alreadyOutFinish = RegEnable(true.B, false.B, tlbExec.io.out.valid && !tlbExec.io.out.ready)
     when(alreadyOutFinish && tlbExec.io.out.fire()) { alreadyOutFinish := false.B}
     val scIsSuccess = WireInit(true.B)
     BoringUtils.addSink(scIsSuccess, "scIsSuccess")
@@ -306,7 +306,7 @@ class EmbeddedTLBExec(implicit val tlbConfig: TLBConfig) extends TlbModule{
   val memRdata = io.mem.resp.bits.rdata.asTypeOf(pteBundle)
   val raddr = Reg(UInt(56.W))
   val raddrCancel = !isLegalPTEAddr(raddr)
-  val alreadyOutFire = RegEnable(true.B, init = false.B, io.out.fire)
+  val alreadyOutFire = RegEnable(true.B, false.B, io.out.fire)
 
   //handle flush
   val needFlush = RegInit(false.B)

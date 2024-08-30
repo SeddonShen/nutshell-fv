@@ -333,7 +333,7 @@ class TLB(implicit val tlbConfig: TLBConfig) extends TlbModule{
     io.in.resp.bits.rdata := tlbExec.io.out.bits.addr
     io.in.resp.bits.cmd := DontCare
     io.in.resp.bits.user.map(_ := tlbExec.io.out.bits.user.getOrElse(0.U))
-    val alreadyOutFinish = RegEnable(true.B, init=false.B, tlbExec.io.out.valid && !tlbExec.io.out.ready)
+    val alreadyOutFinish = RegEnable(true.B, false.B, tlbExec.io.out.valid && !tlbExec.io.out.ready)
     // when(alreadyOutFinish && tlbExec.io.out.fire()) { alreadyOutFinish := false.B}
     when(alreadyOutFinish && tlbExec.io.out.valid) { alreadyOutFinish := false.B}//???
     val tlbFinish = (tlbExec.io.out.valid && !alreadyOutFinish) || tlbExec.io.pf.isPF()
@@ -445,7 +445,7 @@ sealed class TLBExec(implicit val tlbConfig: TLBConfig) extends TlbModule{
   val missRefillFlag = WireInit(0.U(8.W))
   val memRdata = io.mem.resp.bits.rdata.asTypeOf(pteBundle)
   val raddr = Reg(UInt(PAddrBits.W))
-  val alreadyOutFire = RegEnable(true.B, init = false.B, if(tlbname == "itlb") io.out.fire else io.out.valid)
+  val alreadyOutFire = RegEnable(true.B, false.B, if(tlbname == "itlb") io.out.fire else io.out.valid)
 
   //handle flush
   val needFlush = RegInit(false.B)

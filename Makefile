@@ -1,7 +1,8 @@
 TOP = TopMain
 FPGATOP = NutShellFPGATop
 BUILD_DIR = $(abspath ./build)
-TOP_V = $(BUILD_DIR)/$(TOP).v
+RTL_DIR=$(BUILD_DIR)/rtl
+TOP_V = $(RTL_DIR)/$(TOP).v
 SCALA_FILE = $(shell find ./src/main/scala -name '*.scala')
 TEST_FILE = $(shell find ./src/test/scala -name '*.scala')           \
 	    $(shell find ./difftest/src/main/scala -name '*.scala')
@@ -54,7 +55,7 @@ build/top.zip: $(TOP_V)
 verilog: $(TOP_V)
 
 SIM_TOP = SimTop
-SIM_TOP_V = $(BUILD_DIR)/$(SIM_TOP).v
+SIM_TOP_V = $(RTL_DIR)/$(SIM_TOP).v
 $(SIM_TOP_V): $(SCALA_FILE) $(TEST_FILE)
 	mkdir -p $(@D)
 	mill -i NutShell.test.runMain $(SIMTOP) $(MILL_ARGS) \
@@ -65,7 +66,7 @@ $(SIM_TOP_V): $(SCALA_FILE) $(TEST_FILE)
 sim-verilog: $(SIM_TOP_V)
 
 emu: sim-verilog
-	@$(MAKE) -C ./difftest emu
+	@$(MAKE) -C ./difftest emu RTL_SUFFIX=v WITH_CHISELDB=0 WITH_CONSTANTIN=0
 
 init:
 	git submodule update --init

@@ -36,9 +36,9 @@ class SimpleBusCrossbar1toN(addressSpace: List[(Long, Long)]) extends Module {
   val outMatchVec = VecInit(addressSpace.map(
     range => (addr >= range._1.U && addr < (range._1 + range._2).U)))
   val outSelVec = VecInit(PriorityEncoderOH(outMatchVec))
-  val outSelRespVec = RegEnable(next=outSelVec,
-                                init=VecInit(Seq.fill(outSelVec.length)(false.B)),
-                                enable=io.in.req.fire() && state === s_idle)
+  val outSelRespVec = RegEnable(outSelVec,
+                                VecInit(Seq.fill(outSelVec.length)(false.B)),
+                                io.in.req.fire() && state === s_idle)
   val reqInvalidAddr = io.in.req.valid && !outSelVec.asUInt.orR
 
   when (reqInvalidAddr) {

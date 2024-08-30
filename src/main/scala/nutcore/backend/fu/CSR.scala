@@ -706,7 +706,7 @@ class CSR(implicit val p: NutCoreConfig) extends NutCoreModule with HasCSRConst 
   csrExceptionVec(loadAccessFault) := hasLoadAccessFault
   csrExceptionVec(storeAccessFault) := hasStoreAccessFault
   val iduExceptionVec = io.cfIn.exceptionVec
-  val raiseExceptionVec = csrExceptionVec.asUInt() | iduExceptionVec.asUInt()
+  val raiseExceptionVec = csrExceptionVec.asUInt | iduExceptionVec.asUInt
   val raiseException = raiseExceptionVec.orR
   val exceptionNO = ExcPriority.foldRight(0.U)((i: Int, sum: UInt) => Mux(raiseExceptionVec(i), i.U, sum))
   io.wenFix := raiseException
@@ -747,7 +747,7 @@ class CSR(implicit val p: NutCoreConfig) extends NutCoreModule with HasCSRConst 
   io.vmEnable := vmEnable
 
 
-  Debug(raiseExceptionIntr, "excin %b excgen %b", csrExceptionVec.asUInt(), iduExceptionVec.asUInt())
+  Debug(raiseExceptionIntr, "excin %b excgen %b", csrExceptionVec.asUInt, iduExceptionVec.asUInt)
   Debug(raiseExceptionIntr, "int/exc: pc %x int (%d):%x exc: (%d):%x\n",io.cfIn.pc, intrNO, io.cfIn.intrVec.asUInt, exceptionNO, raiseExceptionVec.asUInt)
   Debug(raiseExceptionIntr, "[MST] time %d pc %x mstatus %x mideleg %x medeleg %x mode %x\n", GTimer(), io.cfIn.pc, mstatus, mideleg , medeleg, priviledgeMode)
   Debug(io.redirect.valid, "redirect to %x\n", io.redirect.target)
@@ -1046,12 +1046,10 @@ class CSR(implicit val p: NutCoreConfig) extends NutCoreModule with HasCSRConst 
 
       val difftest = DifftestModule(new DiffCSRState)
       difftest := RegNext(io.csrState)
-      difftest.clock := clock
       difftest.coreid := 0.U // TODO
 
       val difftestArchEvent = DifftestModule(new DiffArchEvent)
       difftestArchEvent := RegNext(RegNext(io.archEvent))
-      difftestArchEvent.clock := clock
       difftestArchEvent.coreid := 0.U // TODO
 
       val noProfileMod = this.toNamed
@@ -1065,7 +1063,7 @@ class CSR(implicit val p: NutCoreConfig) extends NutCoreModule with HasCSRConst 
     diffWrapper := DontCare
 
     val difftest = diffWrapper.csrState
-    difftest.priviledgeMode := priviledgeMode
+    difftest.privilegeMode := priviledgeMode
     difftest.mstatus := mstatus
     difftest.sstatus := mstatus & sstatusRmask
     difftest.mepc := mepc

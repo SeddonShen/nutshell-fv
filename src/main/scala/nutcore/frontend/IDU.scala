@@ -148,15 +148,15 @@ class Decoder(implicit val p: NutCoreConfig) extends NutCoreModule with HasInstr
   // instruction coverage
   val enableInstrCoverage = true
   if (enableInstrCoverage) {
-    val c = Module(new CoverInstr(Instructions.DecodeTable.map(_._1)))
-    c.cover(io.out.fire, instr)
+    // val c = Module(new CoverInstr(Instructions.DecodeTable.map(_._1)))
+    // c.cover(io.out.fire, instr)
   }
 
   // instruction-imm coverage
   val enableInstrImmCoverage = true
   if (enableInstrImmCoverage) {
-    val c = Module(new CoverInstrImm(Instructions.DecodeTable))
-    c.cover(io.out.fire, instr)
+    // val c = Module(new CoverInstrImm(Instructions.DecodeTable))
+    // c.cover(io.out.fire, instr)
   }
 }
 

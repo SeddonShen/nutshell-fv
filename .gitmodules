@@ -1,3 +1,6 @@
 [submodule "difftest"]
 	path = difftest
-	url = git@github.com:poemonsense/DiffTest.git
+	url = https://github.com/OpenXiangShan/difftest.git
+[submodule "ccover"]
+	path = ccover
+	url = https://github.com/OpenXiangShan/xfuzz.git

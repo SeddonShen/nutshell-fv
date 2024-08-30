@@ -21,12 +21,11 @@ import scalalib._
 import publish._
 // import coursier.maven.MavenRepository
 import $file.difftest.build
-import $file.difftest.instrumentation.instrumentation.build
 
 object ivys {
   val sv = "2.13.10"
-  val chisel3 = ivy"edu.berkeley.cs::chisel3:3.5.6"
-  val chisel3Plugin = ivy"edu.berkeley.cs:::chisel3-plugin:3.5.6"
+  val chisel3 = ivy"edu.berkeley.cs::chisel3:3.6.1"
+  val chisel3Plugin = ivy"edu.berkeley.cs:::chisel3-plugin:3.6.1"
   val chiseltest = ivy"edu.berkeley.cs::chiseltest:0.5.4"
   val chiselCirct = ivy"com.sifive::chisel-circt:0.4.0"
   val scalatest = ivy"org.scalatest::scalatest:3.2.2"
@@ -60,15 +59,22 @@ trait NSModule extends ScalaModule with PublishModule {
   )
 }
 
-object difftestDep extends difftest.build.CommonDiffTest {
+trait CcoverModule extends NSModule with SbtModule {
 
-  object fuzz extends difftest.instrumentation.instrumentation.build.CommonRFuzz {
-    def sourceRoot = T.sources { T.workspace / "difftest" / "instrumentation" / "instrumentation" / "src" }
+  def sourceRoot = T.sources { T.workspace / "ccover" / "instrumentation" / "src" }
 
-    def allSources = T { sourceRoot().flatMap(p => os.walk(p.path)).map(PathRef(_)) }
-  }
+  private def getSources(p: PathRef) = if (os.exists(p.path)) os.walk(p.path) else Seq()
 
-  override def fuzzModule: PublishModule = fuzz
+  def allSources = T { sourceRoot().flatMap(getSources).map(PathRef(_)) }
+
+  def ivyDeps = super.ivyDeps() ++ Agg(ivy"edu.berkeley.cs::chiseltest:0.6.2")
+
+}
+
+object ccover extends CcoverModule
+
+object difftestDep extends NSModule with SbtModule {
+//  def crossValue = "3.6.1"
 
   override def millSourcePath = os.pwd / "difftest"
 }
@@ -84,10 +90,10 @@ trait CommonNutShell extends NSModule with SbtModule { m =>
   override def ivyDeps = super.ivyDeps() ++ Seq(ivys.chiseltest)
 
   override def moduleDeps = super.moduleDeps ++ Seq(
-    difftestModule
+    difftestModule, ccover
   )
 
-  object test extends Tests with TestModule.ScalaTest {
+  object test extends SbtModuleTests with TestModule.ScalaTest {
 
     override def forkArgs = m.forkArgs
 
