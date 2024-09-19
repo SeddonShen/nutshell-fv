@@ -119,6 +119,7 @@ class ALU(hasBru: Boolean = false) extends NutCoreModule {
   val target = Mux(isBranch, io.cfIn.pc + io.offset, adderRes)(VAddrBits-1,0)
   val targetAssume = !(isBranch && taken) || (target(1,0) === 0.U)
   val jumpAssume = !(ALUOpType.isJump(func)) || (target(1,0) === 0.U)
+  // 由于32位的NutShell关闭了C压缩指令子集 所以此处屏蔽压缩指令缺失造成的异常
   BoringUtils.addSource(targetAssume && jumpAssume, "someassumeid")
   // when(isBranch && taken){
   //   assume((target(1,0) === 0.U))

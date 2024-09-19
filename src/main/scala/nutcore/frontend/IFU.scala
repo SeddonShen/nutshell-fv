@@ -301,6 +301,7 @@ class IFU_embedded extends NutCoreModule with HasResetVector {
   }.otherwise{
     reqFire := 0.U
   }
+  // 此处保证访存正常
   BoringUtils.addSource(
     (!io.imem.resp.fire || (regUserValue === io.imem.resp.bits.user.getOrElse(0.U))) && (!reqFire || io.imem.resp.fire), 
     "someassumeid3"

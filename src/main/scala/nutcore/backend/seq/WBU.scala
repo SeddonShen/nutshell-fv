@@ -102,6 +102,7 @@ class WBU(implicit val p: NutCoreConfig) extends NutCoreModule{
     if(p.Formal || p.RVFI){
       implicit val checker_xlen = XLEN
       val tmpInst = io.in.bits.decode.cf.instr(31, 0)
+      // 此处为指令范围限定 按需修改
       BoringUtils.addSource(
         !io.in.valid ||           (  RVI.regImm(tmpInst) || RVI.regReg(tmpInst) || RVI.control(tmpInst)|| RVI.loadStore(tmpInst)  ), 
         "someassumeid2"
