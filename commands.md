@@ -3,16 +3,23 @@
 ```bash
 ./build/fuzzer -f --corpus-input /home/seddon/Coding/formal_fuzzing/CoverCount/coverTasks/hexbin/cover_4716.bin -c firrtl.toggle -- /home/seddon/Coding/formal_fuzzing/CoverCount/coverTasks/hexbin/cover_4716.bin -e 0 --no-diff > 4716_debug.log
 
-./build/fuzzer -c firrtl.toggle -- /home/seddon/Coding/formal_fuzzing/CoverCount/coverTasks/hexbin/cover_4716.bin -e 0 --no-diff
+# 单独统计某一个种子的覆盖率
+./build/fuzzer -c firrtl.toggle -- /home/seddon/Coding/formal_fuzzing/CoverCount/coverTasks/hexbin/cover_4716.bin -e 0 --no-diff --max-cycles 500
 
 (不-f不会有)
+./build/fuzzer -f --max-runs 1000 --corpus-input $CORPUS -c firrtl.toggle -- --no-diff -I 100 -e 0 --max-cycles 500> ssd1k.log
 ./build/fuzzer -f --max-runs 1000 --corpus-input /home/seddon/Coding/formal_fuzzing/CoverCount/coverTasks/hexbin/ -c firrtl.toggle -- --no-diff -I 100 -e 0 --max-cycles 500> ssd1k_help_only_hexbin.log
+
+./build/fuzzer -f --max-runs 100 --corpus-input $CORPUS -c firrtl.toggle -- --max-cycles 10000 > test.log
 ```
 
 ## 编译命令
 
 ```bash
-make clean && make emu REF=$SPIKE_HOME/difftest/build/riscv64-spike-so XFUZZ=1 FIRRTL_COVER=toggle -j16
+# 编译为EMU
+make clean && make emu REF=$(pwd)/ready-to-run/riscv64-nemu-interpreter-so -j16
+# 编译为Fuzzer
+make clean && make emu REF=$(pwd)/ready-to-run/riscv64-nemu-interpreter-so XFUZZ=1 FIRRTL_COVER=toggle -j16
 ```
 
 ### 直接编译
@@ -23,3 +30,10 @@ make clean && make emu
 ```
 
 ### 简单的跑指令调试
+
+```bash
+# 带difftest
+./build/emu -i ./ready-to-run/microbench.bin
+# 不带difftest
+./build/emu -i ./ready-to-run/microbench.bin --no-diff
+```
