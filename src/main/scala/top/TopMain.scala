@@ -28,6 +28,8 @@ import sic.{FsmCoverage, LineCoverage, ReadyValidCoverage, ToggleCoverage}
 import sim.SimTop
 import system.NutShell
 import xfuzz.{ControlRegisterCoverTransform, CoverPoint, CoverPointTransform, DontTouchClockAndResetTransform, MuxCoverTransform}
+import firrtl.options.Dependency
+import firrtl.transforms.NoCircuitDedupAnnotation
 
 class Top extends Module {
   val io = IO(new Bundle{})
@@ -75,12 +77,14 @@ object TopMain extends App {
       println(f + " = " + v)
   }
 
+  val args_systemverilog = args ++ Array("-X", "sverilog")
   if (board == "sim") {
-    (new ChiselStage).execute(args, Seq(
-      ChiselGeneratorAnnotation(() => new SimTop)
+    (new ChiselStage).execute(args_systemverilog, Seq(
+      NoCircuitDedupAnnotation,
+      ChiselGeneratorAnnotation(() => new SimTop),
     ) ++ CoverPoint.getTransforms(args)._2)
   } else {
-    (new ChiselStage).execute(args, Seq(
+    (new ChiselStage).execute(args_systemverilog, Seq(
       ChiselGeneratorAnnotation(() => new Top)
     ) ++ CoverPoint.getTransforms(args)._2)
   }
