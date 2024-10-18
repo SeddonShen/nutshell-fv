@@ -68,6 +68,9 @@ sim-verilog: $(SIM_TOP_V)
 emu: sim-verilog
 	@$(MAKE) -C ./difftest emu RTL_SUFFIX=sv WITH_CHISELDB=0 WITH_CONSTANTIN=0
 
+xfuzz:
+	@$(MAKE) -C ./ccover build
+
 init:
 	git submodule update --init
 	$(MAKE) -C ./difftest init

@@ -11,6 +11,9 @@
 ./build/fuzzer -f --max-runs 1000 --corpus-input /home/seddon/Coding/formal_fuzzing/CoverCount/coverTasks/hexbin/ -c firrtl.toggle -- --no-diff -I 100 -e 0 --max-cycles 500> ssd1k_help_only_hexbin.log
 
 ./build/fuzzer -f --max-runs 100 --corpus-input $CORPUS -c firrtl.toggle -- --max-cycles 10000 > test.log
+
+# 将XFuzz结果输出到文件中
+./build/fuzzer -f --max-runs 100 --corpus-input $CORPUS_DIR --cover-points-output $FUZZ_COVER_POINTS_OUT -c firrtl.toggle -- --no-diff -I 100 -e 0
 ```
 
 ## 编译命令
