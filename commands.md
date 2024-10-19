@@ -13,7 +13,7 @@
 ./build/fuzzer -f --max-runs 100 --corpus-input $CORPUS -c firrtl.toggle -- --max-cycles 10000 > test.log
 
 # 将XFuzz结果输出到文件中
-./build/fuzzer -f --max-runs 100 --corpus-input $CORPUS_DIR --cover-points-output $FUZZ_COVER_POINTS_OUT -c firrtl.toggle -- --no-diff -I 100 -e 0
+./build/fuzzer -f --formal-cover-rate 500.0 --corpus-input $CORPUS_DIR --cover-points-output $FUZZ_COVER_POINTS_OUT -c firrtl.toggle -- --no-diff -I 100 -e 0
 ```
 
 ## 编译命令
