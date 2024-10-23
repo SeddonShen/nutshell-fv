@@ -13,6 +13,7 @@ export COVER_POINTS_OUT=$(pwd)/ccover/Formal/coverTasks
 
 # Fuzz path
 export FUZZ_PATH=$(pwd)/build/fuzzer
+export FUZZ_LOG=$(pwd)/ccover/Formal/logs/fuzz
 
 # RTL Source and Destination
 # export RTL_SRC_DIR=$(pwd)/build/rtl
