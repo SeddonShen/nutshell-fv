@@ -350,4 +350,7 @@ fpga/.Xil/
 # vscode temp file
 .vscode/
 .bloop
+
+# xfuzz temp file
 crashes/
+errors/
