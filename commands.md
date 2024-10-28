@@ -3,13 +3,13 @@
 ## 如何运行
 
 ```bash
+source env.sh
 # 编译xfuzz
 make xfuzz
 make clean && make emu REF=$(pwd)/ready-to-run/riscv64-nemu-interpreter-so XFUZZ=1 FIRRTL_COVER=toggle -j16
 
-# 运行,暂时没用添加参数，可以手动修改run函数里的参数
+# 运行,暂时没添加参数，可以手动修改run函数里的参数
 python ./ccover/Formal/Scheduler.py
-
 ```
 
 ## xfuzz命令 
@@ -27,7 +27,12 @@ python ./ccover/Formal/Scheduler.py
 ./build/fuzzer -f --max-runs 100 --corpus-input $CORPUS -c firrtl.toggle -- --max-cycles 10000 > test.log
 
 # 将XFuzz结果输出到文件中
-./build/fuzzer -f --formal-cover-rate 500.0 --corpus-input $CORPUS_DIR --cover-points-output $COVER_POINTS_OUT -c firrtl.toggle -- --no-diff -I 100 -e 0
+./build/fuzzer -f --formal-cover-rate 1000.0 --corpus-input $CORPUS_DIR --cover-points-output $COVER_POINTS_OUT -c firrtl.toggle -- --no-diff -I 100 -e 0
+./build/fuzzer -f --formal-cover-rate 1000.0 --corpus-input $CORPUS_DIR --cover-points-output $COVER_POINTS_OUT -c firrtl.toggle -- -I 100 -e 0
+./build/fuzzer -f --formal-cover-rate 0.0659 --corpus-input $CORPUS_DIR --cover-points-output $COVER_POINTS_OUT -c firrtl.toggle -- -I 100 -e 0
+./build/fuzzer -f --formal-cover-rate 0.0659 --corpus-input $CORPUS_DIR --cover-points-output $COVER_POINTS_OUT -c firrtl.toggle -- --no-diff -I 100 -e 0
+./build/fuzzer -f --corpus-input $CORPUS_DIR --cover-points-output $COVER_POINTS_OUT -c firrtl.toggle -- --no-diff -I 100 -e 0
+./build/fuzzer -c firrtl.toggle -- ./test.bin -I 100 -e 0 
 ```
 
 ## 编译命令
@@ -49,6 +54,7 @@ make clean && make emu
 ### 简单的跑指令调试
 
 ```bash
+./build/emu -i test.bin > test.log
 # 带difftest
 ./build/emu -i ./ready-to-run/microbench.bin
 # 不带difftest
