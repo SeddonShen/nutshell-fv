@@ -354,3 +354,4 @@ fpga/.Xil/
 # xfuzz temp file
 crashes/
 errors/
+corpus/

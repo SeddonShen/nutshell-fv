@@ -27,21 +27,23 @@ python ./ccover/Formal/Scheduler.py
 ./build/fuzzer -f --max-runs 100 --corpus-input $CORPUS -c firrtl.toggle -- --max-cycles 10000 > test.log
 
 # 将XFuzz结果输出到文件中
-./build/fuzzer -f --formal-cover-rate 1000.0 --corpus-input $CORPUS_DIR --cover-points-output $COVER_POINTS_OUT -c firrtl.toggle -- --no-diff -I 100 -e 0
-./build/fuzzer -f --formal-cover-rate 1000.0 --corpus-input $CORPUS_DIR --cover-points-output $COVER_POINTS_OUT -c firrtl.toggle -- -I 100 -e 0
 ./build/fuzzer -f --formal-cover-rate 0.0659 --corpus-input $CORPUS_DIR --cover-points-output $COVER_POINTS_OUT -c firrtl.toggle -- -I 100 -e 0
 ./build/fuzzer -f --formal-cover-rate 0.0659 --corpus-input $CORPUS_DIR --cover-points-output $COVER_POINTS_OUT -c firrtl.toggle -- --no-diff -I 100 -e 0
 ./build/fuzzer -f --corpus-input $CORPUS_DIR --cover-points-output $COVER_POINTS_OUT -c firrtl.toggle -- --no-diff -I 100 -e 0
-./build/fuzzer -c firrtl.toggle -- ./test.bin -I 100 -e 0 
+./build/fuzzer -f --max-iters 1 --corpus-input $CORPUS_DIR --cover-points-output $COVER_POINTS_OUT -c firrtl.toggle -- --no-diff -I 100 -e 0
+./build/fuzzer -c firrtl.toggle -- tmp/test.bin -I 100 -e 0 
+./build/fuzzer -f --max-iters 1 --corpus-input $CORPUS_DIR --cover-points-output $COVER_POINTS_OUT -c firrtl.toggle -- -I 100 -b 0 --dump-ref-trace --dump-commit-trace > tmp/fuzz.log 2>&1
+./build/fuzzer -c firrtl.toggle -- tmp/test.bin -I 1000 -b 0 --dump-ref-trace --dump-commit-trace > tmp/fuzz.log 2>&1
+./build/fuzzer -c firrtl.toggle -- tmp/test.bin --no-diff -I 1000 -b 0 --dump-wave-full
 ```
 
 ## 编译命令
 
 ```bash
 # 编译为EMU
-make clean && make emu REF=$(pwd)/ready-to-run/riscv64-nemu-interpreter-so -j16
+make clean && make emu REF=$(pwd)/ready-to-run/riscv64-nemu-interpreter-so EMU_TRACE=1 -j16
 # 编译为Fuzzer
-make clean && make emu REF=$(pwd)/ready-to-run/riscv64-nemu-interpreter-so XFUZZ=1 FIRRTL_COVER=toggle -j16
+make clean && make emu REF=$(pwd)/ready-to-run/riscv64-nemu-interpreter-so XFUZZ=1 FIRRTL_COVER=toggle EMU_TRACE=1 -j16
 ```
 
 ### 直接编译
