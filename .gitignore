@@ -355,3 +355,6 @@ fpga/.Xil/
 crashes/
 errors/
 corpus/
+
+# mill
+.metals/
