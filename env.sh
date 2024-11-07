@@ -15,6 +15,9 @@ export COVER_POINTS_OUT=$(pwd)/ccover/Formal/coverTasks
 export FUZZ_PATH=$(pwd)/build/fuzzer
 export FUZZ_LOG=$(pwd)/ccover/Formal/logs/fuzz
 
+# CSR State Change Wave
+export CSR_WAVE=$(pwd)/ccover/SetInitValues/csr_wave
+
 # RTL Source and Destination
 # export RTL_SRC_DIR=$(pwd)/build/rtl
 export RTL_SRC_DIR=$(pwd)/ccover/Formal/demo/rtl
