@@ -20,6 +20,7 @@ export CSR_WAVE=$(pwd)/ccover/SetInitValues/csr_wave
 
 # RTL Source and Destination
 # export RTL_SRC_DIR=$(pwd)/build/rtl
+export RTL_INIT_DIR=$(pwd)/ccover/SetInitValues
 export RTL_SRC_DIR=$(pwd)/ccover/Formal/demo/rtl
 export RTL_DST_DIR=$(pwd)/ccover/Formal/coverTasks/rtl
 
