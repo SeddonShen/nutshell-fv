@@ -64,7 +64,7 @@ _xmsgs/
 .metadata
 .gradle
 bin/
-tmp/
+tmp/*
 *.tmp
 *.bak
 *.swp
