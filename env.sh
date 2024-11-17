@@ -16,8 +16,9 @@ export FUZZ_PATH=$(pwd)/build/fuzzer
 export FUZZ_LOG=$(pwd)/ccover/Formal/logs/fuzz
 
 # CSR State Change
-export CSR_WAVE=$(pwd)/ccover/SetInitValues/csr_wave
-export CSR_SNAPSHOT=$(pwd)/ccover/SetInitValues/csr_snapshot
+export CSR_TRANSITION_DIR=$(pwd)/ccover/SetInitValues
+# export CSR_WAVE=$(pwd)/ccover/SetInitValues/csr_wave
+# export CSR_SNAPSHOT=$(pwd)/ccover/SetInitValues/csr_snapshot
 
 # riscv corpus
 export RISCV_CORPUS=$(pwd)/corpus/linearized/riscv-dv
