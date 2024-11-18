@@ -31,18 +31,32 @@ python ./ccover/Formal/Scheduler.py
 ./build/fuzzer -f --formal-cover-rate 0.0659 --corpus-input $CORPUS_DIR --cover-points-output $COVER_POINTS_OUT -c firrtl.toggle -- --no-diff -I 100 -e 0
 ./build/fuzzer -f --corpus-input $CORPUS_DIR --cover-points-output $COVER_POINTS_OUT -c firrtl.toggle -- --no-diff -I 100 -e 0
 ./build/fuzzer -f --max-iters 1 --corpus-input $CORPUS_DIR --cover-points-output $COVER_POINTS_OUT -c firrtl.toggle -- --no-diff -I 100 -e 0
-./build/fuzzer -c firrtl.toggle -- tmp/test.bin -I 100 -e 0 
-./build/fuzzer -f --max-iters 1 --corpus-input $CORPUS_DIR --cover-points-output $COVER_POINTS_OUT -c firrtl.toggle -- -I 100 -b 0 --dump-ref-trace --dump-commit-trace > tmp/fuzz.log 2>&1
-./build/fuzzer -c firrtl.toggle -- tmp/test.bin -I 1000 -b 0 --dump-ref-trace --dump-commit-trace > tmp/fuzz.log 2>&1
-./build/fuzzer -c firrtl.toggle -- tmp/test.bin --no-diff -I 1000 -b 0 --dump-wave-full
+./build/fuzzer -c firrtl.toggle -- tmp/bin/test.bin -I 100 -e 0 
+./build/fuzzer -f --max-runs 10 --corpus-input $CORPUS_DIR -c firrtl.toggle -- -I 100 -C 500 -b 0 --dump-ref-trace --dump-commit-trace > tmp/test.log 2>&1
+./build/fuzzer -f --max-runs 10 --corpus-input $CORPUS_DIR -c firrtl.toggle --insert-nop -- -I 100 -C 500 -b 0 --dump-wave-full > tmp/test.log 2>&1
+./build/fuzzer -c firrtl.toggle -- tmp/bin/test.bin -I 1000 -b 0 --dump-ref-trace --dump-commit-trace > tmp/fuzz.log 2>&1
+./build/fuzzer -c firrtl.toggle -- tmp/bin/test.bin --no-diff -I 1000 -b 0 --dump-wave-full
+./build/fuzzer -c firrtl.toggle -- tmp/bin/switch_mode_toU.bin  -I 200 -C 500 -b 0 --dump-wave-full > tmp/test.log
+./build/fuzzer -c firrtl.toggle -- tmp/bin/switch_mode_toU.bin  -I 200 -C 500 -b 0 --snapshot-cycles 56 --snapshot-image tmp/bin/snapshot.bin  > tmp/test.log
+./build/fuzzer -f --max-iters 1200 --corpus-input $RISCV_CORPUS --cover-points-output $COVER_POINTS_OUT -c firrtl.toggle -- --no-diff -I 1000 -C 10000 -e 0 > tmp/test.log
+
+
+./build/fuzzer -c firrtl.toggle -- tmp/bin/test.bin  -I 200 -C 500 -b 0 --snapshot-cycles 62 --snapshot-image tmp/bin/snapshot.bin  > tmp/test.log
+
+./build/fuzzer -f --formal-cover-rate 0.0001 --corpus-input $CORPUS_DIR -c firrtl.toggle --insert-nop --continue-on-errors --run-snapshot --snapshot-file /home/chooaa/HW_formal_verification/nutshell-fv/ccover/SetInitValues/csr_snapshot/3 -- -C 10000 -b 0 --snapshot-cycles 76  > tmp/fuzz.log 2>&1
+
+./build/fuzzer -c firrtl.toggle -- /home/chooaa/HW_formal_verification/nutshell-fv/ccover/SetInitValues/csr_snapshot/3 -C 10000 -b 0 --snapshot-cycles 76 --fuzz-id 0 --dump-csr-change --dump-wave-full --wave-path /home/chooaa/HW_formal_verification/nutshell-fv/tmp/run_wave.vcd --snapshot-image /home/chooaa/HW_formal_verification/nutshell-fv/ccover/Formal/coverTasks/hexbin/cover_4927.bin > fuzz.log 2>&1
+
 ```
 
 ## 编译命令
 
 ```bash
 # 编译为EMU
+make clean && make emu REF=$(pwd)/ready-to-run/riscv64-nemu-interpreter-so -j16
 make clean && make emu REF=$(pwd)/ready-to-run/riscv64-nemu-interpreter-so EMU_TRACE=1 -j16
 # 编译为Fuzzer
+make clean && make emu REF=$(pwd)/ready-to-run/riscv64-nemu-interpreter-so XFUZZ=1 FIRRTL_COVER=toggle -j16
 make clean && make emu REF=$(pwd)/ready-to-run/riscv64-nemu-interpreter-so XFUZZ=1 FIRRTL_COVER=toggle EMU_TRACE=1 -j16
 ```
 
@@ -61,4 +75,28 @@ make clean && make emu
 ./build/emu -i ./ready-to-run/microbench.bin
 # 不带difftest
 ./build/emu -i ./ready-to-run/microbench.bin --no-diff
+
+./build/emu -i tmp/switch_mode_toU.bin -I 100 -C 300
+
+./build/emu -i tmp/switch_mode_toU.bin -I 100 -C 500 -b 0 --dump-wave-full
+
+./build/emu -i tmp/switch_mode_toU.bin -I 200 -C 500 -b 0 --dump-wave-full > tmp/test.log
+```
+
+```bash
+# xfuzz
+./ccover/xfuzz --coverage firrtl.toggle --max-runs 1000000 --fuzzing -o ./tmp/log --steps run --corpus-input ./rocket-riscvdv --elf /path/to/design/build/fuzzer -j8 -- --max-cycles 10000 --seed 2023
+
+```
+
+```vim
+set encoding=utf-8 termencoding=utf-8 fileencoding=utf-8
+```
+
+```bash
+export https_proxy=http://192.168.9.31:7897 http_proxy=http://192.168.9.31:7897 all_proxy=socks5://192.168.9.31:7897
+Panda4
+docker exec -it ca0bdc8120b9 bin/bash
+Panda2
+docker exec -it 350a4a3c1e49 bin/bash
 ```
