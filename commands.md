@@ -45,7 +45,9 @@ python ./ccover/Formal/Scheduler.py
 
 ./build/fuzzer -f --formal-cover-rate 0.0001 --corpus-input $CORPUS_DIR -c firrtl.toggle --insert-nop --continue-on-errors --run-snapshot --snapshot-file /home/chooaa/HW_formal_verification/nutshell-fv/ccover/SetInitValues/csr_snapshot/3 -- -C 10000 -b 0 --snapshot-cycles 76  > tmp/fuzz.log 2>&1
 
-./build/fuzzer -c firrtl.toggle -- /home/chooaa/HW_formal_verification/nutshell-fv/ccover/SetInitValues/csr_snapshot/3 -C 10000 -b 0 --snapshot-cycles 76 --fuzz-id 0 --dump-csr-change --dump-wave-full --wave-path /home/chooaa/HW_formal_verification/nutshell-fv/tmp/run_wave.vcd --snapshot-image /home/chooaa/HW_formal_verification/nutshell-fv/ccover/Formal/coverTasks/hexbin/cover_4927.bin > fuzz.log 2>&1
+./build/fuzzer -c firrtl.toggle -- tmp/bin/test.bin -C 10000 -b 0 --snapshot-cycles 87 --fuzz-id 0 --dump-csr-change --dump-wave-full --wave-path tmp/run_wave.vcd --snapshot-image tmp/bin/snapshot.bin > fuzz.log 2>&1
+
+./build/fuzzer -c firrtl.toggle -- tmp/bin/test.bin -C 10000 -b 0 --fuzz-id 1 --dump-csr-change --dump-wave-full --wave-path tmp/run_wave.vcd > tmp/fuzz.log 2>&1
 
 ```
 
@@ -58,6 +60,14 @@ make clean && make emu REF=$(pwd)/ready-to-run/riscv64-nemu-interpreter-so EMU_T
 # 编译为Fuzzer
 make clean && make emu REF=$(pwd)/ready-to-run/riscv64-nemu-interpreter-so XFUZZ=1 FIRRTL_COVER=toggle -j16
 make clean && make emu REF=$(pwd)/ready-to-run/riscv64-nemu-interpreter-so XFUZZ=1 FIRRTL_COVER=toggle EMU_TRACE=1 -j16
+make clean && make src REF=$(pwd)/ready-to-run/riscv64-nemu-interpreter-so XFUZZ=1 FIRRTL_COVER=toggle EMU_TRACE=1 -j16
+make clean && make emu REF=$(pwd)/ready-to-run/riscv64-spike-so XFUZZ=1 FIRRTL_COVER=toggle EMU_TRACE=1 -j16
+make fuzzer REF=$(pwd)/ready-to-run/riscv64-nemu-interpreter-so XFUZZ=1 FIRRTL_COVER=toggle EMU_TRACE=1 -j16
+
+# spike
+make clean && make emu REF=$(pwd)/ready-to-run/riscv64-spike-so EMU_TRACE=1 -j16
+make clean && make src REF=$(pwd)/ready-to-run/riscv64-spike-so EMU_TRACE=1 -j16
+make fuzzer REF=$(pwd)/ready-to-run/riscv64-spike-so XFUZZ=1 FIRRTL_COVER=toggle EMU_TRACE=1 -j16
 ```
 
 ### 直接编译
@@ -87,6 +97,11 @@ make clean && make emu
 # xfuzz
 ./ccover/xfuzz --coverage firrtl.toggle --max-runs 1000000 --fuzzing -o ./tmp/log --steps run --corpus-input ./rocket-riscvdv --elf /path/to/design/build/fuzzer -j8 -- --max-cycles 10000 --seed 2023
 
+./ccover/xfuzz --coverage firrtl.toggle --max-runs 100000000 --fuzzing -o ./tmp/toggle --steps run --continue-on-errors --corpus-input ./corpus/linearized/riscv-dv --elf ./build/fuzzer -j1 -- --max-cycles 10000 --seed 2023
+./ccover/xfuzz --coverage firrtl.line --max-runs 100000000 --fuzzing -o ./tmp/line --steps run --continue-on-errors --corpus-input ./corpus/linearized/riscv-dv --elf ./build/fuzzer -j1 -- --max-cycles 10000 --seed 2023
+
+./build/fuzzer -f --continue-on-errors --corpus-input ./corpus/footprints/riscv-dv -c firrtl.toggle -- -I 1000 -C 10000 --as-footprint >tmp/toggle/pathfuzz.log 2> tmp/toggle/pathfuzz_stderr.log
+./build/fuzzer -f --continue-on-errors --corpus-input ./corpus/footprints/riscv-dv -c firrtl.line -- -I 1000 -C 10000 --as-footprint >tmp/line/pathfuzz.log 2> tmp/line/pathfuzz_stderr.log
 ```
 
 ```vim

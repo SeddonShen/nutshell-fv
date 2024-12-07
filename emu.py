@@ -49,6 +49,9 @@ def run_emu(args):
     commands += f" -C {args.max_circle}"
     commands += f" --fuzz-id {args.fuzz_id}"
 
+    if args.run_snapshot:
+        commands += " --run-snapshot"
+
     if args.no_diff:
         commands += " --no-diff"
 
@@ -122,6 +125,7 @@ if __name__ == "__main__":
     parser.add_argument("--wave-path", type=str, default=default_wave_path, help="Wave file")
 
     parser.add_argument("--fuzz-id", type=int, default=default_fuzz_id, help="Fuzz id")
+    parser.add_argument("--run-snapshot", "-r", action='store_true', help="Run snapshot")
 
     parser.add_argument("--output-file", "-o", type=str, default=default_output_file, help="Output file")
     parser.add_argument("--err-file", type=str, default=default_err_file, help="Error file")
