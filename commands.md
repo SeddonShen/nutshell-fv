@@ -66,7 +66,9 @@ make fuzzer REF=$(pwd)/ready-to-run/riscv64-nemu-interpreter-so XFUZZ=1 FIRRTL_C
 
 # spike
 make clean && make emu REF=$(pwd)/ready-to-run/riscv64-spike-so EMU_TRACE=1 -j16
-make clean && make src REF=$(pwd)/ready-to-run/riscv64-spike-so EMU_TRACE=1 -j16
+make clean && make emu REF=$(pwd)/ready-to-run/riscv64-spike-so XFUZZ=1 FIRRTL_COVER=toggle EMU_TRACE=1 -j16
+
+make clean && make src REF=$(pwd)/ready-to-run/riscv64-spike-so XFUZZ=1 FIRRTL_COVER=toggle EMU_TRACE=1 -j16
 make fuzzer REF=$(pwd)/ready-to-run/riscv64-spike-so XFUZZ=1 FIRRTL_COVER=toggle EMU_TRACE=1 -j16
 ```
 
@@ -109,6 +111,7 @@ set encoding=utf-8 termencoding=utf-8 fileencoding=utf-8
 ```
 
 ```bash
+ps -ef|grep oss-cad-suite|grep -v grep|cut -c 9-15
 export https_proxy=http://192.168.9.31:7897 http_proxy=http://192.168.9.31:7897 all_proxy=socks5://192.168.9.31:7897
 Panda4
 docker exec -it ca0bdc8120b9 bin/bash

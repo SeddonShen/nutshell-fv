@@ -72,7 +72,7 @@ class BPU_ooo extends NutCoreModule {
   val flush = BoolStopWatch(io.flush, io.in.pc.valid, startHighPriority = true)
 
   // BTB
-  val NRbtb = 512
+  val NRbtb = 8
   val btbAddr = new TableAddr(log2Up(NRbtb >> 2))
   def btbEntry() = new Bundle {
     val tag = UInt(btbAddr.tagBits.W)
@@ -200,7 +200,7 @@ class BPU_embedded extends NutCoreModule {
   val flush = BoolStopWatch(io.flush, io.in.pc.valid, startHighPriority = true)
 
   // BTB
-  val NRbtb = 512
+  val NRbtb = 8
   val btbAddr = new TableAddr(log2Up(NRbtb))
   def btbEntry() = new Bundle {
     val tag = UInt(btbAddr.tagBits.W)
@@ -289,7 +289,7 @@ class BPU_inorder extends NutCoreModule {
   val flush = BoolStopWatch(io.flush, io.in.pc.valid, startHighPriority = true)
 
   // BTB
-  val NRbtb = 512
+  val NRbtb = 8
   val btbAddr = new TableAddr(log2Up(NRbtb))
   def btbEntry() = new Bundle {
     val tag = UInt(btbAddr.tagBits.W)
