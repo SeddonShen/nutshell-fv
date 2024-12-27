@@ -1,7 +1,13 @@
 import os
+import sys
 import shutil
 import subprocess
 import argparse
+
+Formal_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), "ccover", "Formal")
+sys.path.append(Formal_dir)
+
+from ccover.Formal.Scheduler import FuzzArgs
 
 current_dir = os.getenv("NOOP_HOME")
 
@@ -26,21 +32,24 @@ def run_emu(args):
         shutil.rmtree(run_path)
     os.makedirs(run_path, exist_ok=True)
 
+    if args.make_fuzzer:
+        fuzz_args = FuzzArgs()
+        fuzz_args.cover_type = args.cover_type
+        fuzz_args.run_snapshot = args.run_snapshot
+        fuzz_args.make_log_file = os.path.join(current_dir, "tmp", "make_fuzzer.log")
+        fuzz_args.make_fuzzer()
+
     if args.use_asm_test:
-        tmp_test_bin = os.path.join(current_dir, "tmp", "bin", "test.bin")
         asm_test_bin = os.path.join(current_dir, "ccover", "asms", "test.bin")
-        if os.path.exists(tmp_test_bin):
-            os.remove(tmp_test_bin)
-        if not os.path.exists(asm_test_bin):
-            print(f"Error: {asm_test_bin} not exists")
-            return
-        shutil.copy(asm_test_bin, tmp_test_bin)
+        args.image = asm_test_bin
 
     if args.dump_csr:
         csr_trans_path = os.path.join(run_path, "csr_transition")
         csr_wave_path = os.path.join(run_path, "csr_wave")
+        csr_snapshot_path = os.path.join(run_path, "csr_snapshot")
         os.mkdir(csr_trans_path)
         os.mkdir(csr_wave_path)
+        os.mkdir(csr_snapshot_path)
     
     commands = "./build/fuzzer"
     commands += f" -c firrtl.{args.cover_type}"
@@ -51,6 +60,9 @@ def run_emu(args):
 
     if args.run_snapshot:
         commands += " --run-snapshot"
+        if args.snapshot_id != 0:
+            snapshot_file = os.path.join(current_dir, "ccover", "SetInitValues", "csr_snapshot", f"{args.snapshot_id}")
+            commands += f" --load-snapshot {snapshot_file}"
 
     if args.no_diff:
         commands += " --no-diff"
@@ -62,6 +74,7 @@ def run_emu(args):
     if args.dump_trace:
         commands += " --dump-commit-trace"
         commands += " --dump-ref-trace"
+        commands += " -b 0"
     if args.dump_csr:
         commands += " --dump-csr-change"
 
@@ -109,6 +122,7 @@ if __name__ == "__main__":
     parser.add_argument("--footprints-path", "-fp", type=str, default=default_footprints_path, help="Footprints path")
 
     parser.add_argument("--use-asm-test", "-ua", action='store_true', help="Use asm test bin")
+    parser.add_argument("--make-fuzzer", "-mf", action='store_true', help="Make fuzzer")
     
     # fuzz
     parser.add_argument("--fuzz", "-f", action='store_true', help="Run fuzz")
@@ -118,14 +132,15 @@ if __name__ == "__main__":
 
     parser.add_argument("--no-diff", "-n", action='store_true', help="No diff")
 
-    parser.add_argument("--max-circle", type=int, default=default_max_circle, help="Max circle")
-    parser.add_argument("--max-instr", type=int, default=default_max_instr, help="Max instr")   
+    parser.add_argument("--max-circle", "-C", type=int, default=default_max_circle, help="Max circle")
+    parser.add_argument("--max-instr", "-I", type=int, default=default_max_instr, help="Max instr")   
 
     parser.add_argument("--no-dump-wave", action='store_true', help="No dump wave")
     parser.add_argument("--wave-path", type=str, default=default_wave_path, help="Wave file")
 
     parser.add_argument("--fuzz-id", type=int, default=default_fuzz_id, help="Fuzz id")
     parser.add_argument("--run-snapshot", "-r", action='store_true', help="Run snapshot")
+    parser.add_argument("--snapshot-id", "-s", type=int, default=0, help="Snapshot id")
 
     parser.add_argument("--output-file", "-o", type=str, default=default_output_file, help="Output file")
     parser.add_argument("--err-file", type=str, default=default_err_file, help="Error file")
