@@ -23,7 +23,7 @@ import chisel3.util.experimental.BoringUtils
 import utils._
 import difftest._
 
-class Decoder(implicit val p: NutCoreConfig) extends NutCoreModule with HasInstrType {
+class Decoder(assumename : String)(implicit val p: NutCoreConfig) extends NutCoreModule with HasInstrType {
   val io = IO(new Bundle {
     val in = Flipped(Decoupled(new CtrlFlowIO))
     val out = Decoupled(new DecodeIO)
@@ -178,8 +178,13 @@ class Decoder(implicit val p: NutCoreConfig) extends NutCoreModule with HasInstr
   io.out.bits.cf.exceptionVec(illegalInstr) := (instrType === InstrN && !hasIntr) && io.in.valid
   io.out.bits.cf.exceptionVec(instrPageFault) := io.in.bits.exceptionVec(instrPageFault)
   if(p.Formal){
-    assume(!((instrType === InstrN && !hasIntr) && io.in.valid))
-    assume(!(io.in.bits.exceptionVec(instrPageFault)))
+    // 只是有NutCore会产生问题 加了assume进行约束
+    BoringUtils.addSource(
+      (!((instrType === InstrN && !hasIntr) && io.in.valid)) && (!(io.in.bits.exceptionVec(instrPageFault))), 
+      assumename
+    )
+    // assume(!((instrType === InstrN && !hasIntr) && io.in.valid))
+    // assume(!(io.in.bits.exceptionVec(instrPageFault)))
   }
   if (VAddrBits > PAddrBits) {
     io.out.bits.cf.exceptionVec(instrAccessFault) := io.in.bits.pc(VAddrBits - 1, PAddrBits).orR && !vmEnable
@@ -198,8 +203,8 @@ class IDU(implicit val p: NutCoreConfig) extends NutCoreModule with HasInstrType
     val in = Vec(2, Flipped(Decoupled(new CtrlFlowIO)))
     val out = Vec(2, Decoupled(new DecodeIO))
   })
-  val decoder1  = Module(new Decoder)
-  val decoder2  = Module(new Decoder)
+  val decoder1  = Module(new Decoder("assumedecoder1"))
+  val decoder2  = Module(new Decoder("assumedecoder2"))
   io.in(0) <> decoder1.io.in
   io.in(1) <> decoder2.io.in
   io.out(0) <> decoder1.io.out
