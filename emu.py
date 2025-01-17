@@ -9,7 +9,7 @@ sys.path.append(Formal_dir)
 
 from ccover.Formal.Scheduler import FuzzArgs
 
-current_dir = os.getenv("NOOP_HOME")
+NOOP_HOME = os.getenv("NOOP_HOME")
 
 def run_command(command, shell=False):
     try:
@@ -27,7 +27,7 @@ def run_command(command, shell=False):
         return None
 
 def run_emu(args):
-    run_path = os.path.join(current_dir, "tmp", "fuzz_run", f"{args.fuzz_id}")
+    run_path = os.path.join(NOOP_HOME, "tmp", "fuzz_run", f"{args.fuzz_id}")
     if os.path.exists(run_path):
         shutil.rmtree(run_path)
     os.makedirs(run_path, exist_ok=True)
@@ -36,11 +36,11 @@ def run_emu(args):
         fuzz_args = FuzzArgs()
         fuzz_args.cover_type = args.cover_type
         fuzz_args.run_snapshot = args.run_snapshot
-        fuzz_args.make_log_file = os.path.join(current_dir, "tmp", "make_fuzzer.log")
+        fuzz_args.make_log_file = os.path.join(NOOP_HOME, "tmp", "make_fuzzer.log")
         fuzz_args.make_fuzzer()
 
     if args.use_asm_test:
-        asm_test_bin = os.path.join(current_dir, "ccover", "asms", "test.bin")
+        asm_test_bin = os.path.join(NOOP_HOME, "ccover", "asms", "test.bin")
         args.image = asm_test_bin
 
     if args.dump_csr:
@@ -61,7 +61,7 @@ def run_emu(args):
     if args.run_snapshot:
         commands += " --run-snapshot"
         if args.snapshot_id != 0:
-            snapshot_file = os.path.join(current_dir, "ccover", "SetInitValues", "csr_snapshot", f"{args.snapshot_id}")
+            snapshot_file = os.path.join(NOOP_HOME, "ccover", "SetInitValues", "csr_snapshot", f"{args.snapshot_id}")
             commands += f" --load-snapshot {snapshot_file}"
 
     if args.no_diff:
@@ -98,20 +98,20 @@ def run_fuzz(args):
     pass
 
 if __name__ == "__main__":
-    os.chdir(current_dir)
+    os.chdir(NOOP_HOME)
 
     parser = argparse.ArgumentParser()
 
     # default
-    default_max_circle = 500
-    default_max_instr = 100
+    default_max_circle = 3000
+    default_max_instr = 300
     default_fuzz_id = 0
     
-    default_image = os.path.join(current_dir, "tmp", "bin", "test.bin")
-    default_footprints_path = os.path.join(current_dir, "tmp", "fuzz_run", "0", "footprints")
-    default_wave_path = os.path.join(current_dir, "tmp", "run_wave.vcd")
-    default_output_file = os.path.join(current_dir, "tmp", "test.log")
-    default_err_file = os.path.join(current_dir, "tmp", "test_err.log")
+    default_image = os.path.join(NOOP_HOME, "tmp", "bin", "test.bin")
+    default_footprints_path = os.path.join(NOOP_HOME, "tmp", "fuzz_run", "0", "footprints")
+    default_wave_path = os.path.join(NOOP_HOME, "tmp", "run_wave.vcd")
+    default_output_file = os.path.join(NOOP_HOME, "tmp", "test.log")
+    default_err_file = os.path.join(NOOP_HOME, "tmp", "test_err.log")
     
     # emu
     parser.add_argument("--emu", "-e", action='store_true', help="Run emulator")

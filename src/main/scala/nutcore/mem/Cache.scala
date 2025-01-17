@@ -623,7 +623,7 @@ class Cache_fake(implicit val cacheConfig: CacheConfig) extends CacheModule with
   io.mmio.req.valid := (state === s_mmioReq)
   io.mmio.resp.ready := true.B
 
-  io.empty := false.B
+  io.empty := true.B
   io.out.coh := DontCare
 
   Debug(io.in.req.fire(), p"in.req: ${io.in.req.bits}\n")

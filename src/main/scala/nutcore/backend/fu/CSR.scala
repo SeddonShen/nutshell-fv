@@ -479,7 +479,7 @@ class CSR(implicit val p: NutCoreConfig) extends NutCoreModule with HasCSRConst 
     // MaskedRegMap(Mstatus, mstatus, "hffffffffffffffee".U, (x=>{printf("mstatus write: %x time: %d\n", x, GTimer()); x})),
     MaskedRegMap(Mstatus, mstatus, mstatusWMask, mstatusUpdateSideEffect, mstatusMask),
     MaskedRegMap(Misa, misa, 0.U, MaskedRegMap.Unwritable),
-    MaskedRegMap(Medeleg, medeleg, "hb3ff".U(64.W)),
+    MaskedRegMap(Medeleg, medeleg, "hcb3ff".U(64.W)),
     MaskedRegMap(Mideleg, mideleg, "h222".U(64.W)),
     MaskedRegMap(Mie, mie, mieMask),
     MaskedRegMap(Mtvec, mtvec, mtvecMask),
@@ -767,7 +767,13 @@ class CSR(implicit val p: NutCoreConfig) extends NutCoreModule with HasCSRConst 
   retTarget := DontCare
 
   when (io.instrValid) {
-    when (hasLoadAddrMisaligned || hasStoreAddrMisaligned) {
+    when (isEbreak) {
+        when (delegS) {
+            stval := imemExceptionAddr
+        }.otherwise {
+            mtval := imemExceptionAddr
+        }
+    }.elsewhen (hasLoadAddrMisaligned || hasStoreAddrMisaligned) {
       when (delegS) {
         stval := dmemExceptionAddr
       }.otherwise {
@@ -837,7 +843,7 @@ class CSR(implicit val p: NutCoreConfig) extends NutCoreModule with HasCSRConst 
     retTarget := uepc
   }
 
-  val tvalZeroWen = !(isPageFault || isAddrMisAligned || isAccessFault) || raiseIntr
+  val tvalZeroWen = !(isPageFault || isAddrMisAligned || isAccessFault || isEbreak) || raiseIntr
   when (raiseExceptionIntr) {
     val mstatusOld = WireInit(mstatus.asTypeOf(new MstatusStruct))
     val mstatusNew = WireInit(mstatus.asTypeOf(new MstatusStruct))

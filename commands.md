@@ -65,11 +65,12 @@ make clean && make emu REF=$(pwd)/ready-to-run/riscv64-spike-so XFUZZ=1 FIRRTL_C
 make fuzzer REF=$(pwd)/ready-to-run/riscv64-nemu-interpreter-so XFUZZ=1 FIRRTL_COVER=toggle EMU_TRACE=1 -j16
 
 # spike
-make clean && make emu REF=$(pwd)/ready-to-run/riscv64-spike-so EMU_TRACE=1 -j16
-make clean && make emu REF=$(pwd)/ready-to-run/riscv64-spike-so XFUZZ=1 FIRRTL_COVER=toggle EMU_TRACE=1 -j16
+make clean && make emu REF=$(pwd)/ready-to-run/riscv64-spike-so EMU_TRACE=1 EMU_SNAPSHOT=1 -j16
+make clean && make emu REF=$(pwd)/ready-to-run/riscv64-spike-so XFUZZ=1 FIRRTL_COVER=toggle EMU_TRACE=1 EMU_SNAPSHOT=1 -j16
 
-make clean && make src REF=$(pwd)/ready-to-run/riscv64-spike-so XFUZZ=1 FIRRTL_COVER=toggle EMU_TRACE=1 -j16
-make fuzzer REF=$(pwd)/ready-to-run/riscv64-spike-so XFUZZ=1 FIRRTL_COVER=toggle EMU_TRACE=1 -j16
+make clean && make src REF=$(pwd)/ready-to-run/riscv64-spike-so XFUZZ=1 FIRRTL_COVER=toggle EMU_TRACE=1 EMU_SNAPSHOT=1 -j16
+make fuzzer REF=$(pwd)/ready-to-run/riscv64-spike-so XFUZZ=1 FIRRTL_COVER=toggle EMU_TRACE=1 EMU_SNAPSHOT=1 -j16
+
 ```
 
 ### 直接编译
