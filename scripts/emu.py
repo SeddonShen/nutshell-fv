@@ -60,9 +60,8 @@ def run_emu(args):
 
     if args.run_snapshot:
         commands += " --run-snapshot"
-        if args.snapshot_id != 0:
-            snapshot_file = os.path.join(NOOP_HOME, "ccover", "SetInitValues", "csr_snapshot", f"{args.snapshot_id}")
-            commands += f" --load-snapshot {snapshot_file}"
+        snapshot_file = os.path.join(NOOP_HOME, "ccover", "SetInitValues", "csr_snapshot", f"{args.snapshot_id}")
+        commands += f" --load-snapshot {snapshot_file}"
 
     if args.no_diff:
         commands += " --no-diff"
