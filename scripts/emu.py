@@ -4,27 +4,11 @@ import shutil
 import subprocess
 import argparse
 
-Formal_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), "ccover", "Formal")
-sys.path.append(Formal_dir)
-
-from ccover.Formal.Scheduler import FuzzArgs
-
 NOOP_HOME = os.getenv("NOOP_HOME")
 
-def run_command(command, shell=False):
-    try:
-        process = subprocess.Popen(command, shell=shell, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, text=True)
-        return_code = process.wait()
-        return return_code
-    except subprocess.CalledProcessError as e:
-        print(f"Error occurred: {e.stderr}")
-        return None
-    except subprocess.TimeoutExpired as e:
-        print(f"Timeout occurred: {e.stderr}")
-        return None
-    except Exception as e:
-        print(f"Exception occurred: {e}")
-        return None
+from tools import FuzzArgs
+from tools import run_command
+from tools import log_message, clear_logs, log_init
 
 def run_emu(args):
     run_path = os.path.join(NOOP_HOME, "tmp", "fuzz_run", f"{args.fuzz_id}")
@@ -89,15 +73,17 @@ def run_emu(args):
     else:
         commands += f" > {args.output_file} 2>&1"
     
-    print(f"Commands: {commands}")
+    log_message(f"Commands: {commands}")
     ret = run_command(commands, shell=True)
-    print(f"Return code: {ret}")
+    log_message(f"Return code: {ret}")
 
 def run_fuzz(args):
     pass
 
 if __name__ == "__main__":
     os.chdir(NOOP_HOME)
+    clear_logs()
+    log_init()
 
     parser = argparse.ArgumentParser()
 
