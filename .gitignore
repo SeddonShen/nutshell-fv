@@ -358,3 +358,6 @@ corpus/
 
 # mill
 .metals/
+
+# __pycache__ directory
+**/__pycache__/
