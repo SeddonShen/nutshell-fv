@@ -9,6 +9,13 @@ from datetime import datetime
 
 NOOP_HOME = os.getenv("NOOP_HOME")
 
+def reset_terminal():
+    try:
+        subprocess.run(["stty", "sane"], check=True)
+        log_message("reset terminal")
+    except Exception as e:
+        log_message(f"reset terminal error: {e}")
+
 def run_command(command, shell=False):
     try:
         process = subprocess.Popen(command, shell=shell, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, text=True)
@@ -77,6 +84,8 @@ class FuzzArgs:
     wave_path = f"{NOOP_HOME}/tmp/run_wave.vcd"
 
     no_diff = False
+
+    as_footprint = False
 
     snapshot_id = 0
     
@@ -193,6 +202,9 @@ class FuzzArgs:
 
         if self.no_diff:
             fuzz_command += " --no-diff"
+        
+        if self.as_footprint:
+            fuzz_command += " --as-footprint"
 
         if self.output_file != "":
             fuzz_command += f" > {self.output_file}"
