@@ -31,7 +31,7 @@ def run_command(command, shell=False):
         log_message(f"Exception occurred: {e}")
         return None
 
-def log_init(path=None):
+def log_init(path=None, name="script"):
     if path is None:
         current_dir = os.path.dirname(os.path.realpath(__file__))
     else:
@@ -40,8 +40,8 @@ def log_init(path=None):
     if not os.path.exists(os.path.join(current_dir, "logs")):
         os.makedirs(os.path.join(current_dir, "logs"))
     # log_file_name = os.path.join(current_dir, "logs", datetime.now().strftime("%Y-%m-%d_%H-%M") + ".log")
-    log_file_name = os.path.join(current_dir, "logs", "script.log")
-    logging.basicConfig(filename=log_file_name, level=logging.INFO, format='%(asctime)s - %(message)s')
+    log_file_name = os.path.join(current_dir, "logs", f"{name}.log")
+    logging.basicConfig(filename=log_file_name, level=logging.INFO, format='%(asctime)s - %(message)s', force=True, filemode='w')
     log_message(f"Log initialized in {log_file_name}.")
 
 def log_message(message, print_message=True):

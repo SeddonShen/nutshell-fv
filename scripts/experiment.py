@@ -63,6 +63,7 @@ def do_fuzz(args):
         fuzz_name = "xfuzz"
     elif args.do_pathfuzz:
         fuzz_name = "pathfuzz"
+    log_init(name=fuzz_name)
     log_message(f"Running {fuzz_name}")
     log_message("clearing coverage points")
     cover_points_file = os.path.join(NOOP_HOME, "ccover", "Formal", "coverTasks", "cover_points.csv")
@@ -97,7 +98,7 @@ def do_fuzz(args):
 
 if __name__ == "__main__":
     os.chdir(NOOP_HOME)
-    clear_logs()
+    # clear_logs()
     log_init()
     
     parser = argparse.ArgumentParser()
