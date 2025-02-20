@@ -4,6 +4,7 @@ import shutil
 import subprocess
 import argparse
 import logging
+import psutil
 
 from datetime import datetime
 
@@ -21,15 +22,33 @@ def run_command(command, shell=False):
         process = subprocess.Popen(command, shell=shell, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, text=True)
         return_code = process.wait()
         return return_code
-    except subprocess.CalledProcessError as e:
-        log_message(f"Error occurred: {e.stderr}")
-        return None
-    except subprocess.TimeoutExpired as e:
-        log_message(f"Timeout occurred: {e.stderr}")
-        return None
+    except KeyboardInterrupt:
+        log_message("Process interrupted, terminating")
+        kill_process_and_children(process.pid)
+        return -1
     except Exception as e:
-        log_message(f"Exception occurred: {e}")
-        return None
+        log_message(f"Error: {e}")
+        kill_process_and_children(process.pid)
+        return -1
+    finally:
+        log_message("Closing process")
+        reset_terminal()
+
+def kill_process_and_children(pid):
+    try:
+        parent = psutil.Process(pid)
+        children = parent.children(recursive=True)  # 获取所有子进程
+        for child in children:
+            child.terminate()  # 尝试优雅终止子进程
+        parent.terminate()  # 终止主进程
+
+        gone, still_alive = psutil.wait_procs([parent] + children, timeout=5)
+        for p in still_alive:
+            p.kill()  # 强制杀死仍然存活的进程
+        log_message("All processes killed")
+    except psutil.NoSuchProcess:
+        log_message("No such process")
+    
 
 def log_init(path=None, name="script"):
     if path is None:

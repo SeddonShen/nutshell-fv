@@ -8,6 +8,7 @@ import time
 
 from tools import log_init, clear_logs, log_message, reset_terminal
 from tools import FuzzArgs, NOOP_HOME
+from tools import kill_process_and_children
 
 def run_and_capture_output(cmd, timeout):
     start_time = time.time()
@@ -34,16 +35,16 @@ def run_and_capture_output(cmd, timeout):
             
             if elapsed_time > timeout:
                 log_message("Process timeout, terminating")
-                process.terminate()
+                process.kill()
                 break
         
         process.wait()
     except KeyboardInterrupt:
         log_message("Process interrupted, terminating")
-        process.terminate()
+        kill_process_and_children(process.pid)
     except Exception as e:
         log_message(f"Error: {e}")
-        process.terminate()
+        kill_process_and_children(process.pid)
     finally:
         log_message("Closing process")
         process.stdout.close()
