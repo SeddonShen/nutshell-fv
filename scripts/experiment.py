@@ -12,7 +12,7 @@ from tools import FuzzArgs, NOOP_HOME
 def run_and_capture_output(cmd, timeout):
     start_time = time.time()
     pre_time = 0
-    time_interval = 3
+    time_interval = 20
     log_message(cmd)
     process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, bufsize=1, shell=True)
 
@@ -79,6 +79,7 @@ def do_fuzz(args):
         fuzzer.corpus_input = os.path.join(NOOP_HOME, "corpus", "footprints", "riscv-dv")
 
     fuzzer.continue_on_errors = True
+    fuzzer.only_fuzz = True
     
     fuzzer.max_instr = 10000
     fuzzer.max_cycle = 10000
@@ -102,8 +103,8 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
 
     default_cover_type = "toggle"
-    # default_timeout = 24 * 60 * 60
-    default_timeout = 60
+    default_timeout = 30 * 60 * 60
+    # default_timeout = 60
 
     parser.add_argument("--cover-type", "-c", type=str, default=default_cover_type, help="Coverage type")
     parser.add_argument("--timeout", "-t", type=int, default=default_timeout, help="Timeout")

@@ -70,6 +70,7 @@ class FuzzArgs:
     insert_nop = False
     save_errors = False
     run_snapshot = False
+    only_fuzz = False
 
     formal_cover_rate = -1.0
 
@@ -179,6 +180,8 @@ class FuzzArgs:
             fuzz_command += " --insert-nop"
         if self.save_errors:
             fuzz_command += " --save-errors"
+        if self.only_fuzz:
+            fuzz_command += " --only-fuzz"
         
         if self.formal_cover_rate > 0:
             fuzz_command += f" --formal-cover-rate {self.formal_cover_rate}"
