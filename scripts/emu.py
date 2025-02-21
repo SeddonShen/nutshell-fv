@@ -6,9 +6,9 @@ import argparse
 
 NOOP_HOME = os.getenv("NOOP_HOME")
 
-from tools import FuzzArgs
-from tools import run_command
-from tools import log_message, clear_logs, log_init, reset_terminal
+from runtools import FuzzArgs
+from runtools import run_command
+from runtools import log_message, clear_logs, log_init, reset_terminal
 
 def run_emu(args):
     run_path = os.path.join(NOOP_HOME, "tmp", "fuzz_run", f"{args.fuzz_id}")

@@ -4,8 +4,8 @@ import shutil
 import subprocess
 import argparse
 
-from tools import run_command
-from tools import log_init, log_message
+from runtools import run_command
+from runtools import log_init, log_message
 
 NOOP_HOME = os.getenv("NOOP_HOME")
 
