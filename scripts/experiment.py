@@ -34,7 +34,7 @@ def run_and_capture_output(cmd, timeout):
             
             if elapsed_time > timeout:
                 log_message("Process timeout, terminating")
-                process.kill()
+                kill_process_and_children(process.pid)
                 break
         
         process.wait()
@@ -122,6 +122,7 @@ if __name__ == "__main__":
 
     default_cover_type = "toggle"
     default_timeout = 30 * 60 * 60
+    # default_timeout = 72 * 60 * 60
     # default_timeout = 60
 
     parser.add_argument("--cover-type", "-c", type=str, default=default_cover_type, help="Coverage type")
