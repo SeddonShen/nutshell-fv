@@ -4,7 +4,8 @@ import shutil
 import subprocess
 import argparse
 
-from tools import run_command, log_message
+from tools import run_command
+from tools import log_init, log_message
 
 NOOP_HOME = os.getenv("NOOP_HOME")
 
@@ -17,11 +18,11 @@ def generate_rtl_src(args):
     init_dir = os.path.join(NOOP_HOME, "ccover", "SetInitValues", "rtl_src")
 
     # 生成build目录
-    command = f"cd {NOOP_HOME} && source env.sh && unset VERILATOR_ROOT && make clean"
-    command += f" && make emu REF=$(pwd)/ready-to-run/riscv64-spike-so XFUZZ=1 FIRRTL_COVER={args.cover_type} EMU_TRACE=1 EMU_SNAPSHOT=1 -j16 > tmp/make_fuzzer.log 2>&1"
-    command = "bash -c '" + command + "'"
-    log_message("command:", command)
-    ret = run_command(command, shell=True)
+    build_command = f"cd {NOOP_HOME} && source env.sh && unset VERILATOR_ROOT && make clean"
+    build_command += f" && make emu REF=$(pwd)/ready-to-run/riscv64-spike-so XFUZZ=1 FIRRTL_COVER={args.cover_type} EMU_TRACE=1 EMU_SNAPSHOT=1 -j16 > tmp/make_fuzzer.log 2>&1"
+    build_command = "bash -c '" + build_command + "'"
+    log_message("command:"+build_command)
+    ret = run_command(build_command, shell=True)
     if ret:
         log_message("generate build directory failed, ret:", ret)
         return
@@ -50,14 +51,8 @@ def generate_rtl_src(args):
     src_lines.extend(array_lines)
     log_message("change ram [7:0] to ram [0:7] and copy array_0_ext.v to SimTop.sv")
 
-    # 替换Formal目录下的rtl文件
-    formal_rtl_dst = os.path.join(formal_dir, "SimTop.sv")
-    if os.path.exists(formal_rtl_dst):
-        os.remove(formal_rtl_dst)
-    with open(formal_rtl_dst, "w") as f:
-        f.writelines(src_lines)
-    log_message("replace SimTop.sv in Formal")
-    
+    formal_lines = src_lines.copy()
+
     # 修改enToggle和enToggle_past的值
     for i, line in enumerate(src_lines):
         elements = line.split()
@@ -68,6 +63,7 @@ def generate_rtl_src(args):
     
     # 插入assume语句限制reset
     assume_line = "assume property(reset == 1'b0);\n"
+    formal_assume_line = "initial assume(reset);\n"
     start_module = False
     for i, line in enumerate(src_lines):
         elements = line.split()
@@ -76,9 +72,18 @@ def generate_rtl_src(args):
         if start_module:
             if len(elements) != 0 and elements[0].startswith(");"):
                 src_lines.insert(i+1, assume_line)
+                formal_lines.insert(i+1, formal_assume_line)
                 break
-    log_message("insert assume property(reset == 1'b0);")
+    log_message("insert assume line")
     
+    # 替换Formal目录下的rtl文件
+    formal_rtl_dst = os.path.join(formal_dir, "SimTop.sv")
+    if os.path.exists(formal_rtl_dst):
+        os.remove(formal_rtl_dst)
+    with open(formal_rtl_dst, "w") as f:
+        f.writelines(formal_lines)
+    log_message("replace SimTop.sv in Formal")
+
     # 替换SetInitValues目录下的rtl文件
     init_rtl_dst = os.path.join(init_dir, "SimTop_"+args.cover_type+".sv")
     if os.path.exists(init_rtl_dst):
@@ -89,6 +94,7 @@ def generate_rtl_src(args):
 
 if __name__ == "__main__":
     os.chdir(NOOP_HOME)
+    log_init()
     
     parser = argparse.ArgumentParser()
 

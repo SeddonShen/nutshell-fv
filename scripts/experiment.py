@@ -2,13 +2,12 @@ import os
 import re
 import sys
 import argparse
-import signal
 import subprocess
 import time
 
-from tools import log_init, clear_logs, log_message, reset_terminal
-from tools import FuzzArgs, NOOP_HOME
-from tools import kill_process_and_children
+from runtools import log_init, clear_logs, log_message, reset_terminal
+from runtools import FuzzArgs, NOOP_HOME
+from runtools import kill_process_and_children
 
 def run_and_capture_output(cmd, timeout):
     start_time = time.time()
@@ -96,6 +95,23 @@ def do_fuzz(args):
     with open(output_file, "w") as f:
         f.write("\n".join(coverage_lines))
 
+def do_bmc(args):
+    fuzz_cmd = f"cd {NOOP_HOME} && source env.sh"
+    if args.do_hypfuzz:
+        fuzz_name = "hypfuzz"
+        fuzz_cmd += f" && python3 {NOOP_HOME}/ccover/Formal/Scheduler.py -c {args.cover_type}"
+    elif args.do_bmcfuzz:
+        fuzz_name = "bmcfuzz"
+        fuzz_cmd += f" && python3 {NOOP_HOME}/ccover/BMCFuzz.py -f -d -c {args.cover_type}"
+    fuzz_cmd = f"bash -c \'{fuzz_cmd}\'"
+    log_init(name=fuzz_name)
+    log_message(f"Running {fuzz_name}")
+
+    coverage_lines = run_and_capture_output(fuzz_cmd, args.timeout)
+
+    output_file = os.path.join(NOOP_HOME, "tmp", "exp", f"{fuzz_name}.log")
+    with open(output_file, "w") as f:
+        f.write("\n".join(coverage_lines))
 
 if __name__ == "__main__":
     os.chdir(NOOP_HOME)
@@ -115,6 +131,9 @@ if __name__ == "__main__":
     parser.add_argument("--do-xfuzz", "-dx", action='store_true', help="Do xfuzz")
     parser.add_argument("--do-pathfuzz", "-dp", action='store_true', help="Do pathfuzz")
 
+    parser.add_argument("--do-hypfuzz", "-dh", action='store_true', help="Do hypfuzz")
+    parser.add_argument("--do-bmcfuzz", "-db", action='store_true', help="Do bmcfuzz")
+
     args = parser.parse_args()
 
     if args.init:
@@ -122,4 +141,7 @@ if __name__ == "__main__":
     
     if args.do_xfuzz or args.do_pathfuzz:
         do_fuzz(args)
+
+    if args.do_hypfuzz or args.do_bmcfuzz:
+        do_bmc(args)
     
