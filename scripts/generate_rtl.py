@@ -4,7 +4,7 @@ import shutil
 import subprocess
 import argparse
 
-from tools import run_command
+from tools import run_command, log_message
 
 NOOP_HOME = os.getenv("NOOP_HOME")
 
@@ -20,12 +20,12 @@ def generate_rtl_src(args):
     command = f"cd {NOOP_HOME} && source env.sh && unset VERILATOR_ROOT && make clean"
     command += f" && make emu REF=$(pwd)/ready-to-run/riscv64-spike-so XFUZZ=1 FIRRTL_COVER={args.cover_type} EMU_TRACE=1 EMU_SNAPSHOT=1 -j16 > tmp/make_fuzzer.log 2>&1"
     command = "bash -c '" + command + "'"
-    print("command:", command)
+    log_message("command:", command)
     ret = run_command(command, shell=True)
     if ret:
-        print("generate build directory failed, ret:", ret)
+        log_message("generate build directory failed, ret:", ret)
         return
-    print("generate build directory")
+    log_message("generate build directory")
 
     if args.only_build:
         return
@@ -35,7 +35,7 @@ def generate_rtl_src(args):
     if os.path.exists(formal_cover_dst):
         os.remove(formal_cover_dst)
     shutil.copy(cover_src, formal_cover_dst)
-    print("replace firrtl-cover.cpp")
+    log_message("replace firrtl-cover.cpp")
 
     # 修改array中的ram [7:0]为ram [0:7]，并复制array_0_ext.v到SimTop.sv最后
     array_0_ext_src = os.path.join(build_dir, "rtl", "array_0_ext.v")
@@ -48,7 +48,7 @@ def generate_rtl_src(args):
         if "ram [7:0]" in line:
             array_lines[i] = line.replace("ram [7:0]", "ram [0:7]")
     src_lines.extend(array_lines)
-    print("change ram [7:0] to ram [0:7] and copy array_0_ext.v to SimTop.sv")
+    log_message("change ram [7:0] to ram [0:7] and copy array_0_ext.v to SimTop.sv")
 
     # 替换Formal目录下的rtl文件
     formal_rtl_dst = os.path.join(formal_dir, "SimTop.sv")
@@ -56,7 +56,7 @@ def generate_rtl_src(args):
         os.remove(formal_rtl_dst)
     with open(formal_rtl_dst, "w") as f:
         f.writelines(src_lines)
-    print("replace SimTop.sv in Formal")
+    log_message("replace SimTop.sv in Formal")
     
     # 修改enToggle和enToggle_past的值
     for i, line in enumerate(src_lines):
@@ -64,7 +64,7 @@ def generate_rtl_src(args):
         if len(elements) != 0 and elements[0] == "reg":
             if elements[1] == "enToggle" or elements[1] == "enToggle_past":
                 src_lines[i] = src_lines[i].replace("1\'h0", "1'h1")
-    print("change enToggle and enToggle_past value")
+    log_message("change enToggle and enToggle_past value")
     
     # 插入assume语句限制reset
     assume_line = "assume property(reset == 1'b0);\n"
@@ -77,7 +77,7 @@ def generate_rtl_src(args):
             if len(elements) != 0 and elements[0].startswith(");"):
                 src_lines.insert(i+1, assume_line)
                 break
-    print("insert assume property(reset == 1'b0);")
+    log_message("insert assume property(reset == 1'b0);")
     
     # 替换SetInitValues目录下的rtl文件
     init_rtl_dst = os.path.join(init_dir, "SimTop_"+args.cover_type+".sv")
@@ -85,7 +85,7 @@ def generate_rtl_src(args):
         os.remove(init_rtl_dst)
     with open(init_rtl_dst, "w") as f:
         f.writelines(src_lines)
-    print("replace SimTop.sv in SetInitValues")
+    log_message("replace SimTop.sv in SetInitValues")
 
 if __name__ == "__main__":
     os.chdir(NOOP_HOME)

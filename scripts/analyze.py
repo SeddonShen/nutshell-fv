@@ -1,4 +1,5 @@
 import os
+import re
 import argparse
 
 NOOP_HOME = os.getenv("NOOP_HOME")
@@ -127,11 +128,123 @@ def snapshot_parser(snapshot_id):
     # snapshot.output_fp_regs()
     snapshot.output_csr_regs()
 
+def cover_point_parser(cover_type):
+    rtl_file = os.path.join(NOOP_HOME, "build", "rtl", "SimTop.sv")
+    fir_file = os.path.join(NOOP_HOME, "build", "generated-src", "firrtl-cover.cpp")
+    
+    sva_covers = []
+    fir_covers = []
+
+    with open(rtl_file, 'r') as f:
+        lines = f.readlines()
+        for index, line in enumerate(lines):
+            # cover_pattern = re.compile(r"cover\((.*)\);")
+            # match = cover_pattern.search(line)
+            # if match:
+            #     # sva_covers.append(lines[index-1])
+            #     if "1'h0" in lines[index]:
+            #         continue
+            #     sva_covers.append(lines[index])
+            
+            if r"cover(1'h1);" in line: # line cover
+                if r"1'h1" in lines[index-1]:
+                    continue
+                pattern = re.compile(r"if \((.*)\) begin")
+                match = pattern.search(lines[index-1])
+                if match:
+                    sva_covers.append(match.group(1)+"\n")
+    
+    # with open(fir_file, 'r') as f:
+    #     lines = f.readlines()
+    #     cover_begin = False
+    #     for index, line in enumerate(lines):
+    #         if cover_begin:
+    #             if r"};" in line:
+    #                 cover_begin = False
+    #                 break
+    #             pattern = re.compile(r"\"(.*)\.(.*)\",")
+    #             match = pattern.search(line)
+    #             if match:
+    #                 fir_covers.append(match.group(2)+"\n")
+    #             # fir_covers.append(line)
+    #         if f"{cover_type}_NAMES[]" in line:
+    #             cover_begin = True
+    with open(rtl_file, 'r') as f:
+        lines = f.readlines()
+        for index, line in enumerate(lines):
+            fir_pattern = re.compile(r"line_(.*)_valid_reg <= (.*);")
+            match = fir_pattern.search(line)
+            if match:
+                fir_covers.append(match.group(2)+"\n")
+    
+    sva_output = os.path.join(NOOP_HOME, "tmp", "sva_cover.log")
+    fir_output = os.path.join(NOOP_HOME, "tmp", "fir_cover.log")
+    
+    with open(sva_output, 'w') as f:
+        f.writelines(sva_covers)
+    
+    with open(fir_output, 'w') as f:
+        f.writelines(fir_covers)
+    
+    i, j = 0, 0
+    diff = []
+    for _ in range(len(sva_covers)):
+        # if (i > 725 or j > 725) and (i < 737 or j < 737):
+        #     print(i, ' ', j)
+        if sva_covers[i] != fir_covers[j]:
+            if fir_covers[j].startswith("eq") or fir_covers[j].startswith("not") or "==" in fir_covers[j]:
+                i = i + 1
+                j = j + 1
+                continue
+            if sva_covers[i] == fir_covers[j-1] and sva_covers[i-1] == sva_covers[i]:
+                # print("======duplicate======")
+                # print(f"sva[{i-1}]: {sva_covers[i-1]}")
+                # print(f"sva[{i}]: {sva_covers}")
+                # print(f"fir[{j-1}]: {fir_covers[j-1]}")
+                # print(f"fir[{j}]: {fir_covers}")
+                # print("===========================================")
+                # diff.append("======duplicate======\n")
+                # diff.append(f"sva[{i-1}]: {sva_covers[i-1]}\n")
+                # diff.append(f"sva[{i}]: {sva_covers[i]}\n")
+                # diff.append(f"fir[{j-1}]: {fir_covers[j-1]}\n")
+                # diff.append(f"fir[{j}]: {fir_covers[j]}\n")
+                # diff.append("===========================================\n")
+                # print(i, ' ', j)
+                diff.append(f"sva[{i}]: {sva_covers[i]}\n")
+                i = i + 1
+                continue
+            else:
+                # print(list(fir_covers[j]))
+                if not sva_covers[i].endswith(fir_covers[j]):
+                    # print(sva_covers[i].split(' '), '\n', fir_covers[j])
+                    if fir_covers[j] == fir_covers:
+                        print(i, ' ', j)
+                        print(f"sva[{i}]: {sva_covers[i]}")
+                        print(f"fir[{j}]: {fir_covers[j]}")
+                        break
+            #     diff.append("======diff======\n")
+            #     diff.append(f"sva[{i}]: {sva_covers[i]}\n")
+            #     diff.append(f"fir[{j}]: {fir_covers[j]}\n")
+            #     diff.append("===========================================\n")
+        i = i + 1
+        j = j + 1
+        # print(f"i: {i}, j: {j}")
+    
+    with open(os.path.join(NOOP_HOME, "tmp", "diff.log"), 'w') as f:
+        f.writelines(diff)
+    
+    print("SVA cover points:", len(sva_covers))
+    print("FIR cover points:", len(fir_covers))
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     
     parser.add_argument("--snapshot", "-s", type=int, help="Snapshot id")
 
+    parser.add_argument("--cover", "-c", type=str, help="Cover type", default="toggle")
+
     args = parser.parse_args()
     
-    snapshot_parser(args.snapshot)
+    # snapshot_parser(args.snapshot)
+
+    cover_point_parser(args.cover)
