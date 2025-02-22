@@ -96,7 +96,7 @@ def run_fuzz(args):
     fuzz_args.only_fuzz = True
 
     fuzz_args.max_instr = default_fuzz_instr
-    fuzz_args.max_circle =  default_fuzz_cycles
+    fuzz_args.max_cycle =  default_fuzz_cycles
     
     # fuzz_args.dump_csr = args.dump_csr
     
