@@ -90,7 +90,9 @@ def do_fuzz(args):
     fuzz_cmd = fuzzer.generate_fuzz_command()
 
     coverage_lines = run_and_capture_output(fuzz_cmd, args.timeout)
+    log_message("Fuzzing done")
 
+    log_message("Output coverage")
     output_file = os.path.join(NOOP_HOME, "tmp", "exp", f"{fuzz_name}.log")
     with open(output_file, "w") as f:
         f.write("\n".join(coverage_lines))
@@ -108,7 +110,9 @@ def do_bmc(args):
     log_message(f"Running {fuzz_name}")
 
     coverage_lines = run_and_capture_output(fuzz_cmd, args.timeout)
+    log_message("Fuzzing done")
 
+    log_message("Output coverage")
     output_file = os.path.join(NOOP_HOME, "tmp", "exp", f"{fuzz_name}.log")
     with open(output_file, "w") as f:
         f.write("\n".join(coverage_lines))
