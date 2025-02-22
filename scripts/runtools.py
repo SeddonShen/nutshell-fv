@@ -13,9 +13,9 @@ NOOP_HOME = os.getenv("NOOP_HOME")
 def reset_terminal():
     try:
         subprocess.run(["stty", "sane"], check=True)
-        log_message("reset terminal")
+        log_message("reset terminal", print_message=False)
     except Exception as e:
-        log_message(f"reset terminal error: {e}")
+        log_message(f"reset terminal error: {e}", print_message=False)
 
 def run_command(command, shell=False):
     try:
@@ -25,14 +25,15 @@ def run_command(command, shell=False):
     except KeyboardInterrupt:
         log_message("Process interrupted, terminating")
         kill_process_and_children(process.pid)
+        reset_terminal()
         return -1
     except Exception as e:
         log_message(f"Error: {e}")
         kill_process_and_children(process.pid)
+        reset_terminal()
         return -1
     finally:
-        log_message("Closing process")
-        reset_terminal()
+        log_message("Closing process: " + command)
 
 def kill_process_and_children(pid):
     try:

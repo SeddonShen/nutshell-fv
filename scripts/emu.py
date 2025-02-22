@@ -78,7 +78,45 @@ def run_emu(args):
     log_message(f"Return code: {ret}")
 
 def run_fuzz(args):
-    pass
+    default_runs = 1000
+    default_fuzz_instr = 5000
+    default_fuzz_cycles = 10000
+
+    default_corpus = os.path.join(NOOP_HOME, "corpus", "linearized", "riscv-tests")
+    # default_corpus = os.path.join(NOOP_HOME, "corpus", "linearized", "riscv-dv")
+    
+    fuzz_args = FuzzArgs()
+
+    fuzz_args.cover_type = args.cover_type
+    fuzz_args.max_runs = default_runs
+    fuzz_args.corpus_input = default_corpus
+
+    fuzz_args.continue_on_errors = True
+    # fuzz_args.run_snapshot = args.run_snapshot
+    fuzz_args.only_fuzz = True
+
+    fuzz_args.max_instr = default_fuzz_instr
+    fuzz_args.max_circle =  default_fuzz_cycles
+    
+    # fuzz_args.dump_csr = args.dump_csr
+    
+    # fuzz_args.dump_wave = not args.no_dump_wave
+    # fuzz_args.wave_path = args.wave_path
+
+    fuzz_args.no_diff = args.no_diff
+    
+    fuzz_args.snapshot_id = args.snapshot_id
+
+    fuzz_args.make_log_file = os.path.join(NOOP_HOME, "tmp", "make_fuzzer.log")
+    fuzz_args.output_file = args.output_file
+
+    if args.make_fuzzer:
+        fuzz_args.make_fuzzer()
+
+    fuzz_cmd = fuzz_args.generate_fuzz_command()
+    log_message(f"Fuzz command: {fuzz_cmd}")
+    ret = run_command(fuzz_cmd, shell=True)
+    log_message(f"Return code: {ret}")
 
 if __name__ == "__main__":
     os.chdir(NOOP_HOME)
