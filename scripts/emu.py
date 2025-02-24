@@ -114,7 +114,6 @@ def run_fuzz(args):
         fuzz_args.make_fuzzer()
 
     fuzz_cmd = fuzz_args.generate_fuzz_command()
-    log_message(f"Fuzz command: {fuzz_cmd}")
     ret = run_command(fuzz_cmd, shell=True)
     log_message(f"Return code: {ret}")
 
