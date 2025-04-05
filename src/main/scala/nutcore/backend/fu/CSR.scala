@@ -767,7 +767,8 @@ class CSR(implicit val p: NutCoreConfig) extends NutCoreModule with HasCSRConst 
   retTarget := DontCare
 
   when (io.instrValid) {
-    when (isEbreak) {
+    // when (isEbreak) {
+    when (io.in.valid && isEbreak) {
         when (delegS) {
             stval := imemExceptionAddr
         }.otherwise {
@@ -1094,6 +1095,11 @@ class CSR(implicit val p: NutCoreConfig) extends NutCoreModule with HasCSRConst 
     difftestArchEvent.exception     := Mux(raiseException && io.instrValid, exceptionNO, 0.U)
     difftestArchEvent.exceptionPC   := exceptionPC
     difftestArchEvent.exceptionInst := io.cfIn.instr
+
+    val difftestSnapshot = DifftestModule(new DiffSnapshotCSRState)
+    difftestSnapshot.coreid := 0.U
+    difftestSnapshot.minstret := 0.U
+    difftestSnapshot.mcycle := 0.U
 
   } else {
     BoringUtils.addSource(readWithScala(perfCntList("Minstret")._1), "ilaInstrCnt")
