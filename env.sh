@@ -1,7 +1,8 @@
-# XFUZZ Environment Variables
 export NOOP_HOME=$(pwd)
-export XFUZZ_HOME=$(pwd)/ccover
 export BMCFUZZ_HOME=$(pwd)/ccover
+
+# source $BMCFUZZ_HOME/env.sh
+
 # OSS CAD Suite
 export OSS_CAD_SUITE_HOME=$(pwd)/../oss-cad-suite/environment
 
@@ -21,12 +22,14 @@ export CSR_TRANSITION_DIR=$(pwd)/ccover/SetInitValues
 # export CSR_SNAPSHOT=$(pwd)/ccover/SetInitValues/csr_snapshot
 
 # riscv corpus
-export RISCV_CORPUS=$(pwd)/corpus/linearized/riscv-tests
+export LINEARIZED_CORPUS=$(pwd)/corpus/linearized/riscv-all
+export FOOTPRINTS_CORPUS=$(pwd)/corpus/footprints/riscv-all
+# export RISCV_CORPUS=$(pwd)/corpus/linearized/riscv-tests
 
 # RTL Source and Destination
 # export RTL_SRC_DIR=$(pwd)/build/rtl
 export RTL_INIT_DIR=$(pwd)/ccover/SetInitValues
-export RTL_SRC_DIR=$(pwd)/ccover/Formal/demo/rtl
+export RTL_SRC_DIR=$(pwd)/ccover/Formal/demo/nutshell
 export RTL_DST_DIR=$(pwd)/ccover/Formal/coverTasks/rtl
 
 # sby template

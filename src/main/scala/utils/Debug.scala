@@ -38,9 +38,9 @@ object LogLevel extends Enumeration {
 object LogUtil {
 
   def displayLog: Bool = {
-    val enableDisplay = WireInit(false.B)
+    val enableDisplay = WireInit(true.B)
     // BoringUtils.addSink(enableDisplay, "DISPLAY_ENABLE")
-    enableDisplay
+    true.B
   }
 
   // def LogLevel: UInt = {
@@ -52,7 +52,7 @@ object LogUtil {
   def apply(debugLevel: LogLevel)
            (prefix: Boolean, cond: Bool, pable: Printable)
            (implicit name: String): Any = {
-    if (false) {
+    if (NutCoreConfig().EnableDebug) {
       when (cond && displayLog) {
         if (prefix) {
           val commonInfo = p"[${GTimer()}] $name: "

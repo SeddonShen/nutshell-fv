@@ -31,14 +31,15 @@ object DefaultSettings {
     "EnableOutOfOrderExec" -> false,
     "HasDTLB" -> true,
     "HasITLB" -> true,
-    "HasDcache" -> false,
-    "HasIcache" -> false,
+    "HasDcache" -> true,
+    "HasIcache" -> true,
     "MmodeOnly" -> false,
     "IsRV32" -> false,
     // Warning: Seddon Changed the values of [ResetVector, HasL2cache, HasD/Icache]!
     "FPGAPlatform" -> false,
     "EnableILA" -> true,
     "EnableDebug" -> false,
+    // "EnableDebug" -> true,
     "EnableRVC" -> true
   )
 }
