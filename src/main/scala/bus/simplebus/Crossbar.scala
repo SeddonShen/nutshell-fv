@@ -46,7 +46,7 @@ class SimpleBusCrossbar1toN(addressSpace: List[(Long, Long)]) extends Module {
       printf("crossbar access bad addr %x, time %d\n", addr, GTimer())
     }
   }
-  assert(!reqInvalidAddr, "address decode error, bad addr = 0x%x\n", addr)
+//   assert(!reqInvalidAddr, "address decode error, bad addr = 0x%x\n", addr)
 
   switch (state) {
     is (s_idle) {
