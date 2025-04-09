@@ -57,10 +57,10 @@ trait HasNutCoreParameter {
     (0x38000000L, 0x38000000L + 0x00010000L), // CLINT
     (0x3c000000L, 0x3c000000L + 0x04000000L), // PLIC
     (0x40600000L, 0x40600000L + 0x10L), // uart
-    (0x50000000L, 0x50000000L + 0x400000L), // vmem
-    (0x40001000L, 0x40001000L + 0x8L),  // vga ctrl
+    // (0x50000000L, 0x50000000L + 0x400000L), // vmem
+    // (0x40001000L, 0x40001000L + 0x8L),  // vga ctrl
     (0x40000000L, 0x40000000L + 0x1000L),  // flash
-    (0x40002000L, 0x40002000L + 0x1000L), // dummy sdcard
+    // (0x40002000L, 0x40002000L + 0x1000L), // dummy sdcard
     // (0x40004000L, 0x40004000L + 0x1000L), // meipGen
     // (0x40003000L, 0x40003000L + 0x1000L),  // dma
     memoryAddressSet
