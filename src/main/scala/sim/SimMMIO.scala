@@ -34,10 +34,10 @@ class SimMMIO extends Module {
 
   val devAddrSpace = List(
     (0x40600000L, 0x10L), // uart
-    (0x50000000L, 0x400000L), // vmem
-    (0x40001000L, 0x8L),  // vga ctrl
+    // (0x50000000L, 0x400000L), // vmem
+    // (0x40001000L, 0x8L),  // vga ctrl
     (0x40000000L, 0x1000L),  // flash
-    (0x40002000L, 0x1000L), // dummy sdcard
+    // (0x40002000L, 0x1000L), // dummy sdcard
     // (0x40004000L, 0x1000L), // meipGen
     // (0x40003000L, 0x1000L)  // dma
   )
@@ -46,16 +46,16 @@ class SimMMIO extends Module {
   xbar.io.in <> io.rw
 
   val uart = Module(new AXI4UART)
-  val vga = Module(new AXI4VGA(sim = true))
+//   val vga = Module(new AXI4VGA(sim = true))
   val flash = Module(new AXI4Flash)
-  val sd = Module(new AXI4DummySD)
+//   val sd = Module(new AXI4DummySD)
   // val meipGen = Module(new AXI4MeipGen)
   // val dma = Module(new AXI4DMA)
   uart.io.in <> xbar.io.out(0).toAXI4Lite()
-  vga.io.in.fb <> xbar.io.out(1).toAXI4Lite()
-  vga.io.in.ctrl <> xbar.io.out(2).toAXI4Lite()
-  flash.io.in <> xbar.io.out(3).toAXI4Lite()
-  sd.io.in <> xbar.io.out(4).toAXI4Lite()
+//   vga.io.in.fb <> xbar.io.out(1).toAXI4Lite()
+//   vga.io.in.ctrl <> xbar.io.out(2).toAXI4Lite()
+  flash.io.in <> xbar.io.out(1).toAXI4Lite()
+//   sd.io.in <> xbar.io.out(4).toAXI4Lite()
   // meipGen.io.in <> xbar.io.out(5).toAXI4Lite()
   // dma.io.in <> xbar.io.out(6).toAXI4Lite()
   // io.dma <> dma.io.extra.get.dma
@@ -63,5 +63,5 @@ class SimMMIO extends Module {
   io.meip := DontCare
   // io.meip := meipGen.io.extra.get.meip
   uart.io.extra.get <> io.uart
-  vga.io.vga := DontCare
+//   vga.io.vga := DontCare
 }
