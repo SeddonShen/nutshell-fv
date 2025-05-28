@@ -352,3 +352,4 @@ fpga/.Xil/
 .bloop
 .metals
 metals.sbt
+verification_files/
