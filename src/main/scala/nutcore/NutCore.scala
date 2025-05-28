@@ -26,6 +26,7 @@ import utils._
 import top.Settings
 import rvspeccore.core.RVConfig
 import rvspeccore.checker.RVI
+import rvspeccore.checker.ArbitraryRegFile.init
 
 trait HasNutCoreParameter {
   // General Parameter for NutShell
@@ -74,13 +75,15 @@ case class NutCoreConfig (
   EnableDebug: Boolean = Settings.get("EnableDebug"),
   EnhancedLog: Boolean = true ,
   FormalConfig: RVConfig = RVConfig(
-    "XLEN" -> 32,
-    "extensions" -> "M",
-    "initValue" -> Map(
+    XLEN = 64,
+    extensions = Seq("M", "C"),
+    fakeExtensions = Seq("A"),
+    initValue = Map(
       "pc"    -> "h8000_0000",
       "mtvec" -> "h0000_0000"
     ),
-    "formal" -> Seq("ArbitraryRegFile")
+    functions = Seq("Privileged", "TLB"),
+    formal = Seq("ArbitraryRegFile") 
   )
 )
 // Enable EnhancedLog will slow down simulation, 

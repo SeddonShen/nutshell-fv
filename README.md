@@ -23,7 +23,7 @@ git submodule update --init --recursive
 Run verification:
 
 ```shell
-mill "chiselModule[3.6.0]".test.testOnly formal.NutCoreFormalSpec
+mill chiselModule.test.testOnly formal.NutCoreFormalSpec
 ```
 
 This will run the test case `formal.NutCoreFormalSpec`, which transforms NutCore
@@ -33,3 +33,8 @@ transaction system and then passes it to the formal verification backend.
 ## Modifications On NutShell
 
 Search `Formal` in source code to see the main modifications.
+
+## JSA25
+这里是JSA25投稿重新进行chirvformal和riscv-formal效率对比实验的仓库，主要修改：
+- 修改工具链生成迁移系统的方式
+- 修改到最新版的参考模型
