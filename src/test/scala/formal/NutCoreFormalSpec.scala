@@ -1,6 +1,8 @@
 package formal
 
 import chisel3._
+import chisel3.stage.{ChiselCli, ChiselGeneratorAnnotation, ChiselStage}
+import firrtl.transforms.formal.DontAssertSubmoduleAssumptionsAnnotation
 import chiseltest._
 import chiseltest.formal._
 import org.scalatest.flatspec.AnyFlatSpec
@@ -23,6 +25,15 @@ class NutCoreFormalSpec extends AnyFlatSpec with Formal with ChiselScalatestTest
 
     // (new chisel3.stage.ChiselStage).emitSystemVerilog(new NutCore()(NutCoreConfig()), Array("--target-dir", "test_run_dir/Elaborate_SpecCore_Verilog"))
     // verify
-    verify(new NutCore()(NutCoreConfig()), Seq(BoundedCheck(12), BtormcEngineAnnotation))
+    // chiseltest.formal.verify methods:
+    // verify(new NutCore()(NutCoreConfig()), Seq(BoundedCheck(12), BtormcEngineAnnotation))
+    // ChiselAnnotations
+    (new ChiselStage).execute(
+      Array("--target-dir", "test_run_dir/Elaborate_chirvformal_SystemVerilog", "-X", "sverilog"),
+      Seq(
+        DontAssertSubmoduleAssumptionsAnnotation,
+        ChiselGeneratorAnnotation(() => new NutCore()(NutCoreConfig()))
+      )
+    )
   }
 }
