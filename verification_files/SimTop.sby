@@ -3,7 +3,7 @@ mode bmc
 depth 30
 
 [engines]
-smtbmc bitwuzla
+smtbmc boolector
 
 [script]
 read_verilog -sv Core.sv
