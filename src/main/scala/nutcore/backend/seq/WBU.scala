@@ -141,7 +141,7 @@ class WBU(implicit val p: NutCoreConfig) extends NutCoreModule{
         Mux(io.redirect.valid, io.redirect.target, SignExt(io.in.bits.decode.cf.pc, AddrBits) + 4.U),
         "rvfi_pc_wdata"
       )
-      BoringUtils.addSource(io.in.bits.mem_rvfi.addr, "rvfi_mem_addr")
+      BoringUtils.addSource(io.in.bits.mem_rvfi.addr_real, "rvfi_mem_addr_real")
       BoringUtils.addSource(io.in.bits.mem_rvfi.rmask, "rvfi_mem_rmask")
       BoringUtils.addSource(io.in.bits.mem_rvfi.wmask, "rvfi_mem_wmask")
       BoringUtils.addSource(io.in.bits.mem_rvfi.rdata, "rvfi_mem_rdata")

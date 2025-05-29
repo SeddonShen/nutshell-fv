@@ -933,42 +933,42 @@ class CSR(implicit val p: NutCoreConfig) extends NutCoreModule with HasCSRConst{
       resultEventWire.exceptionPC := RegNext(SignExt(io.cfIn.pc, XLEN), 0.U)
       resultEventWire.exceptionInst := RegNext(io.cfIn.instr, 0.U)
       
-      resultCSRWire.misa      := RegNext(misa)
-      resultCSRWire.mvendorid := RegNext(mvendorid)
-      resultCSRWire.marchid   := RegNext(marchid)
-      resultCSRWire.mimpid    := RegNext(mimpid)
-      resultCSRWire.mhartid   := RegNext(mhartid)
-      resultCSRWire.mstatus   := RegNext(mstatus)
+      resultCSRWire.misa      := misa
+      resultCSRWire.mvendorid := mvendorid
+      resultCSRWire.marchid   := marchid
+      resultCSRWire.mimpid    := mimpid
+      resultCSRWire.mhartid   := mhartid
+      resultCSRWire.mstatus   := mstatus
       resultCSRWire.mstatush  := 0.U //FIXME: how to deal with unimplemented CSRs
-      resultCSRWire.mscratch  := RegNext(mscratch)
-      resultCSRWire.mtvec     := RegNext(mtvec)
-      resultCSRWire.mcounteren:= RegNext(mcounteren)
-      resultCSRWire.medeleg   := RegNext(medeleg)
-      resultCSRWire.mideleg   := RegNext(mideleg)
-      resultCSRWire.mip       := RegNext(mipReg)
-      resultCSRWire.mie       := RegNext(mie)
-      resultCSRWire.mepc      := RegNext(mepc)
-      resultCSRWire.mcause    := RegNext(mcause)
-      resultCSRWire.mtval     := RegNext(mtval)
-      resultCSRWire.scounteren:= RegNext(scounteren)
-      resultCSRWire.scause    := RegNext(scause)
-      resultCSRWire.stvec     := RegNext(stvec)
-      resultCSRWire.sepc      := RegNext(sepc)
-      resultCSRWire.stval     := RegNext(stval)
+      resultCSRWire.mscratch  := mscratch
+      resultCSRWire.mtvec     := mtvec
+      resultCSRWire.mcounteren:= mcounteren
+      resultCSRWire.medeleg   := medeleg
+      resultCSRWire.mideleg   := mideleg
+      resultCSRWire.mip       := mipReg
+      resultCSRWire.mie       := mie
+      resultCSRWire.mepc      := mepc
+      resultCSRWire.mcause    := mcause
+      resultCSRWire.mtval     := mtval
+      resultCSRWire.scounteren:= scounteren
+      resultCSRWire.scause    := scause
+      resultCSRWire.stvec     := stvec
+      resultCSRWire.sepc      := sepc
+      resultCSRWire.stval     := stval
       // not need to compare, because compare signal means mstatus equals to sstatus
       // resultCSRWire.sstatus   
       // resultCSRWire.sie
       // resultCSRWire.sip
-      resultCSRWire.sscratch  := RegNext(sscratch)
-      resultCSRWire.satp      := RegNext(satp)
-      resultCSRWire.pmpcfg0   := RegNext(pmpcfg0)
-      resultCSRWire.pmpcfg1   := RegNext(pmpcfg1)
-      resultCSRWire.pmpcfg2   := RegNext(pmpcfg2)
-      resultCSRWire.pmpcfg3   := RegNext(pmpcfg3)
-      resultCSRWire.pmpaddr0  := RegNext(pmpaddr0)
-      resultCSRWire.pmpaddr1  := RegNext(pmpaddr1)
-      resultCSRWire.pmpaddr2  := RegNext(pmpaddr2)
-      resultCSRWire.pmpaddr3  := RegNext(pmpaddr3)
+      resultCSRWire.sscratch  := sscratch
+      resultCSRWire.satp      := satp
+      resultCSRWire.pmpcfg0   := pmpcfg0
+      resultCSRWire.pmpcfg1   := pmpcfg1
+      resultCSRWire.pmpcfg2   := pmpcfg2
+      resultCSRWire.pmpcfg3   := pmpcfg3
+      resultCSRWire.pmpaddr0  := pmpaddr0
+      resultCSRWire.pmpaddr1  := pmpaddr1
+      resultCSRWire.pmpaddr2  := pmpaddr2
+      resultCSRWire.pmpaddr3  := pmpaddr3
       resultCSRWire.cycle     := 0.U //FIXME: how to deal with unimplemented CSRs
     }
     if (p.RVFI) {

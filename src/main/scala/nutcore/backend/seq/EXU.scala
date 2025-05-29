@@ -69,12 +69,12 @@ class EXU(implicit val p: NutCoreConfig) extends NutCoreModule {
       io.out.bits.mem_rvfi := mem_rvfi_reg
 
       when(io.dmem.req.valid) {
-        io.out.bits.mem_rvfi.addr := (io.dmem.req.bits.addr >> 2) << 2
+        io.out.bits.mem_rvfi.addr_real := io.dmem.req.bits.addr
         io.out.bits.mem_rvfi.rmask := Mux(io.dmem.req.bits.cmd === 0.U, io.dmem.req.bits.wmask, 0.U)
         io.out.bits.mem_rvfi.wdata := io.dmem.req.bits.wdata
         io.out.bits.mem_rvfi.wmask := Mux(io.dmem.req.bits.cmd === 1.U, io.dmem.req.bits.wmask, 0.U)
 
-        mem_rvfi_reg.addr := (io.dmem.req.bits.addr >> 2) << 2
+        mem_rvfi_reg.addr_real := io.dmem.req.bits.addr
         mem_rvfi_reg.rmask := Mux(io.dmem.req.bits.cmd === 0.U, io.dmem.req.bits.wmask, 0.U)
         mem_rvfi_reg.wdata := io.dmem.req.bits.wdata
         mem_rvfi_reg.wmask := Mux(io.dmem.req.bits.cmd === 1.U, io.dmem.req.bits.wmask, 0.U)

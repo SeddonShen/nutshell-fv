@@ -82,7 +82,7 @@ case class NutCoreConfig (
       "pc"    -> "h8000_0000",
       "mtvec" -> "h0000_0000"
     ),
-    functions = Seq("Privileged", "TLB"),
+    functions = Seq("Privileged"),
     formal = Seq("ArbitraryRegFile") 
   )
 )
@@ -209,6 +209,8 @@ class NutCore(implicit val p: NutCoreConfig) extends NutCoreModule {
 
     if (p.RVFI) {
       rvfi := DontCare
+      val mem_addr_real = Wire(UInt(64.W))
+      mem_addr_real := DontCare
       BoringUtils.addSink(rvfi.valid, "rvfi_valid")
       BoringUtils.addSink(rvfi.order, "rvfi_order")
       BoringUtils.addSink(rvfi.insn, "rvfi_insn")
@@ -225,19 +227,21 @@ class NutCore(implicit val p: NutCoreConfig) extends NutCoreModule {
       BoringUtils.addSink(rvfi.rd_wdata, "rvfi_rd_wdata")
       BoringUtils.addSink(rvfi.pc_rdata, "rvfi_pc_rdata")
       BoringUtils.addSink(rvfi.pc_wdata, "rvfi_pc_wdata")
-      BoringUtils.addSink(rvfi.mem_addr, "rvfi_mem_addr")
+      BoringUtils.addSink(mem_addr_real, "rvfi_mem_addr_real")
+      rvfi.mem_addr := SignExt((mem_addr_real(38,0) >> 2) << 2, AddrBits)
       BoringUtils.addSink(rvfi.mem_rmask, "rvfi_mem_rmask")
       BoringUtils.addSink(rvfi.mem_wmask, "rvfi_mem_wmask")
       BoringUtils.addSink(rvfi.mem_rdata, "rvfi_mem_rdata")
       BoringUtils.addSink(rvfi.mem_wdata, "rvfi_mem_wdata")
+      val mem_addr_sign = SignExt(mem_addr_real(38,0), AddrBits)
       if(p.Formal){
         val mem = rvspeccore.checker.ConnectCheckerResult.makeMemSource()(XLEN)
         mem.read.valid := (rvfi.valid) && (rvfi.mem_rmask > 0.U)
-        mem.read.addr  := rvfi.mem_addr
+        mem.read.addr  := mem_addr_sign
         mem.read.data  := rvfi.mem_rdata
         mem.read.memWidth := PopCount(rvfi.mem_rmask) << 3
         mem.write.valid := (rvfi.valid) && (rvfi.mem_wmask > 0.U)
-        mem.write.addr  := rvfi.mem_addr
+        mem.write.addr  := mem_addr_sign
         mem.write.data  := rvfi.mem_wdata
         mem.write.memWidth := PopCount(rvfi.mem_wmask) << 3
       }
