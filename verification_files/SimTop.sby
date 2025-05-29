@@ -1,0 +1,17 @@
+[options]
+mode bmc
+depth 30
+
+[engines]
+smtbmc bitwuzla
+
+[script]
+read_verilog -sv Core.sv
+read -sv define.sv
+read_verilog -sv NutCore.sv
+prep -top VerifyTop
+
+[files]
+NutCore.sv
+define.sv
+Core.sv

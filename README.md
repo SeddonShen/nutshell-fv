@@ -38,3 +38,14 @@ Search `Formal` in source code to see the main modifications.
 这里是JSA25投稿重新进行chirvformal和riscv-formal效率对比实验的仓库，主要修改：
 - 修改工具链生成迁移系统的方式
 - 修改到最新版的参考模型
+
+### 使用方法
+生成SystemVerilog文件：
+```bash
+mill chiselModule.test.testOnly formal.NutCoreFormalSpec
+# 会在test_run_dir/Elaborate_chirvformal_SystemVerilog/  生成NutCore.sv文件
+# 将生成的sv文件复制到verification_files/NutCore.sv
+cd ./verification_files
+sby SimTop.sby -f
+```
+```

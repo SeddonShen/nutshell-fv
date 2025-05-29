@@ -352,4 +352,6 @@ fpga/.Xil/
 .bloop
 .metals
 metals.sbt
-verification_files/
+verification_files/out/
+verification_files/SimTop/
+verification_files/NutCore.sv
