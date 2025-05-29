@@ -34,7 +34,7 @@ object DefaultSettings {
     "HasDcache" -> false,
     "HasIcache" -> false,
     "MmodeOnly" -> false,
-    "IsRV32" -> true,
+    "IsRV32" -> false,
 
     "FPGAPlatform" -> false,
     "EnableILA" -> true,

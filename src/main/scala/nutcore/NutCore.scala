@@ -76,7 +76,7 @@ case class NutCoreConfig (
   EnhancedLog: Boolean = true ,
   FormalConfig: RVConfig = RVConfig(
     XLEN = 64,
-    extensions = Seq("M", "C"),
+    extensions = Seq("M", "S", "U"),
     fakeExtensions = Seq("A"),
     initValue = Map(
       "pc"    -> "h8000_0000",
@@ -126,12 +126,12 @@ class NutCore(implicit val p: NutCoreConfig) extends NutCoreModule {
   someAssumedecoder2 := DontCare
   BoringUtils.addSink(someAssume, "someassumeid")
   BoringUtils.addSink(someAssume2, "someassumeid2")
-  BoringUtils.addSink(someAssume3, "someassumeid3")
+  // BoringUtils.addSink(someAssume3, "someassumeid3")
   BoringUtils.addSink(someAssumedecoder1, "assumedecoder1")
   BoringUtils.addSink(someAssumedecoder2, "assumedecoder2")
   assume(someAssume)
   assume(someAssume2)
-  assume(someAssume3)
+  // assume(someAssume3)
   assume(someAssumedecoder1)
   assume(someAssumedecoder2)
 
