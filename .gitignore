@@ -355,3 +355,5 @@ metals.sbt
 verification_files/out/
 verification_files/SimTop/
 verification_files/NutCore.sv
+verification_files/NutCore_assert_renamed.sv
+verification_files/results/

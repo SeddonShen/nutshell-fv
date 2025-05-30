@@ -1,0 +1,18 @@
+[options]
+mode bmc
+depth 30
+
+[engines]
+smtbmc boolector
+
+[script]
+read_verilog -sv Core.sv
+read -sv define.sv
+read_verilog -sv NutCore_assert_renamed.sv
+prep -top VerifyTop
+chformal -remove -assert c:{assert_label} %n
+
+[files]
+../NutCore_assert_renamed.sv
+../define.sv
+../Core.sv
