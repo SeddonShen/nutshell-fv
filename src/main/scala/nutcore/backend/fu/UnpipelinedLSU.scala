@@ -328,7 +328,7 @@ class LSExecUnit extends NutCoreModule {
       "b10".U -> data
     ))
   }
-  assume(addr(XLEN - 1, VAddrBits - 1) === 0.U)
+  assume(addr(XLEN-1, VAddrBits-1) === 0.U)
   val dmem = io.dmem
   val addrLatch = RegNext(addr)
   val isStore = valid && LSUOpType.isStore(func)

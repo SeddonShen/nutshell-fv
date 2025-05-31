@@ -1,0 +1,10 @@
+# running in SimTop_E1/src/
+read_verilog -sv Core.sv
+read -sv define.sv
+read_verilog -sv NutCore_E1.sv
+prep -top VerifyTop
+
+hierarchy -smtcheck
+rename -witness
+write_jny -no-connections ../model/design.json
+write_rtlil ../model/design.il

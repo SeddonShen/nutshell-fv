@@ -1,0 +1,5 @@
+Elapsed clock time [H:MM:SS (secs)]: 0:00:57 (57)
+Elapsed process time [H:MM:SS (secs)]: 0:00:59 (59)
+engine_0 (smtbmc boolector) returned FAIL
+counterexample trace: engine_0/trace.vcd
+  failed assertion VerifyTop.uut.backend.wbu.checker_._witness_.check_assert_NutCore_E1_sv_29016_13872 at NutCore_E1.sv:29016.7-29016.56 in step 10

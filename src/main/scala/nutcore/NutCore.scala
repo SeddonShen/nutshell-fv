@@ -110,9 +110,12 @@ class NutCore(implicit val p: NutCoreConfig) extends NutCoreModule {
     val dmem = new SimpleBusC
     val mmio = new SimpleBusUC
     val frontend = Flipped(new SimpleBusUC())
+    val rf = Input(Vec(2, UInt(XLEN.W)))
   }
   val io = IO(new NutCoreIO)
   val rvfi = IO(new RVFIIO)
+
+  BoringUtils.addSource(io.rf, "RandReg")
 
   val someAssume = Wire(Bool())
   someAssume := DontCare
@@ -130,10 +133,10 @@ class NutCore(implicit val p: NutCoreConfig) extends NutCoreModule {
   BoringUtils.addSink(someAssumedecoder1, "assumedecoder1")
   BoringUtils.addSink(someAssumedecoder2, "assumedecoder2")
   assume(someAssume)
-  // assume(someAssume2)
-  // // assume(someAssume3)
-  // assume(someAssumedecoder1)
-  // assume(someAssumedecoder2)
+  //assume(someAssume2)
+  // assume(someAssume3)
+  //assume(someAssumedecoder1)
+  //assume(someAssumedecoder2)
 
   // Frontend
   val frontend = (Settings.get("IsRV32"), Settings.get("EnableOutOfOrderExec")) match {

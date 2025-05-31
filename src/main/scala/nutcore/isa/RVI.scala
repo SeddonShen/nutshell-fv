@@ -50,7 +50,7 @@ object RV32I_ALUInstr extends HasInstrType with HasNutCoreParameter {
   val table = Array(
     ADDI           -> List(InstrI, FuType.alu, ALUOpType.add),
     SLLI           -> List(InstrI, FuType.alu, ALUOpType.sll),
-    SLTI           -> List(InstrI, FuType.alu, ALUOpType.slt),
+    SLTI           -> List(InstrI, FuType.alu, ALUOpType.sltu),
     SLTIU          -> List(InstrI, FuType.alu, ALUOpType.sltu),
     XORI           -> List(InstrI, FuType.alu, ALUOpType.xor),
     SRLI           -> List(InstrI, FuType.alu, ALUOpType.srl),
