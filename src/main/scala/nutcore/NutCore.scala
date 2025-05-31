@@ -110,12 +110,12 @@ class NutCore(implicit val p: NutCoreConfig) extends NutCoreModule {
     val dmem = new SimpleBusC
     val mmio = new SimpleBusUC
     val frontend = Flipped(new SimpleBusUC())
-    val rf = Input(Vec(2, UInt(XLEN.W)))
+    //val rf = Input(Vec(2, UInt(XLEN.W)))
   }
   val io = IO(new NutCoreIO)
   val rvfi = IO(new RVFIIO)
 
-  BoringUtils.addSource(io.rf, "RandReg")
+  //BoringUtils.addSource(io.rf, "RandReg")
 
   val someAssume = Wire(Bool())
   someAssume := DontCare
