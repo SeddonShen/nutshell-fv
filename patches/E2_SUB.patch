@@ -17,7 +17,7 @@ index 01c585a..9b69d4e 100644
      ALUOpType.and  -> (src1  &  src2),
 -    ALUOpType.sra  -> ((shsrc1.asSInt >> shamt).asUInt)
 +    ALUOpType.sra  -> ((shsrc1.asSInt >> shamt).asUInt),
-+    ALUOpType.sub_e -> Cat(0.U(1.W), (src1  -  src2)(30,0))
++    ALUOpType.sub_e -> Cat(0.U(1.W), (src1  -  src2)(62,0))
    ))
    val aluRes = Mux(ALUOpType.isWordOp(func), SignExt(res(31,0), 64), res)
  
