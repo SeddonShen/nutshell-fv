@@ -130,10 +130,10 @@ class NutCore(implicit val p: NutCoreConfig) extends NutCoreModule {
   BoringUtils.addSink(someAssumedecoder1, "assumedecoder1")
   BoringUtils.addSink(someAssumedecoder2, "assumedecoder2")
   assume(someAssume)
-  assume(someAssume2)
-  // assume(someAssume3)
-  assume(someAssumedecoder1)
-  assume(someAssumedecoder2)
+  // assume(someAssume2)
+  // // assume(someAssume3)
+  // assume(someAssumedecoder1)
+  // assume(someAssumedecoder2)
 
   // Frontend
   val frontend = (Settings.get("IsRV32"), Settings.get("EnableOutOfOrderExec")) match {
@@ -228,7 +228,7 @@ class NutCore(implicit val p: NutCoreConfig) extends NutCoreModule {
       BoringUtils.addSink(rvfi.pc_rdata, "rvfi_pc_rdata")
       BoringUtils.addSink(rvfi.pc_wdata, "rvfi_pc_wdata")
       BoringUtils.addSink(mem_addr_real, "rvfi_mem_addr_real")
-      rvfi.mem_addr := SignExt((mem_addr_real(38,0) >> 2) << 2, AddrBits)
+      rvfi.mem_addr := SignExt((mem_addr_real(38,0) >> 3) << 3, AddrBits)
       BoringUtils.addSink(rvfi.mem_rmask, "rvfi_mem_rmask")
       BoringUtils.addSink(rvfi.mem_wmask, "rvfi_mem_wmask")
       BoringUtils.addSink(rvfi.mem_rdata, "rvfi_mem_rdata")

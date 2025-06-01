@@ -132,12 +132,16 @@ class Frontend_inorder(implicit val p: NutCoreConfig) extends NutCoreModule with
       // assume(RVI.regImm(tmpInst) || RVI.loadStore(tmpInst))
       // assume(RVI.loadStore(tmpInst))
       // assume(RVI.loadStore(tmpInst))
+      // assume(
+      //   (hasCSR(tmpInst(31,20)) && (RVZicsr.reg(tmpInst) || RVZicsr.imm(tmpInst))) 
+      //   || 
+      //   (  RVI.regImm(tmpInst) || RVI.loadStore(tmpInst)  || RVI.other(tmpInst))
+      //   ||
+      //   (RVPrivileged.trap_return(tmpInst))
+      // )
+      // FOR RV64I
       assume(
-        (hasCSR(tmpInst(31,20)) && (RVZicsr.reg(tmpInst) || RVZicsr.imm(tmpInst))) 
-        || 
-        (  RVI.regImm(tmpInst) || RVI.loadStore(tmpInst)  || RVI.other(tmpInst))
-        ||
-        (RVPrivileged.trap_return(tmpInst))
+        RVI.regImm(tmpInst) || RVI.regReg(tmpInst) || RVI.control(tmpInst)  || RVI.loadStore(tmpInst)
       )
     }
   }
