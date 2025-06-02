@@ -925,13 +925,16 @@ class CSR(implicit val p: NutCoreConfig) extends NutCoreModule with HasCSRConst{
 
   } else {
     if (p.Formal) {
-      val resultCSRWire = rvspeccore.checker.ConnectCheckerResult.makeCSRSource()(XLEN, p.FormalConfig)
-      val resultEventWire = rvspeccore.checker.ConnectCheckerResult.makeEventSource()(XLEN, p.FormalConfig)
-      resultEventWire.valid := RegNext((raiseIntr && io.instrValid) || (raiseException && io.instrValid), 0.U)
-      resultEventWire.intrNO := RegNext(Mux(raiseIntr && io.instrValid && valid, intrNO, 0.U))
-      resultEventWire.cause := RegNext(Mux(raiseException && io.instrValid, exceptionNO, 0.U))
-      resultEventWire.exceptionPC := RegNext(SignExt(io.cfIn.pc, XLEN), 0.U)
-      resultEventWire.exceptionInst := RegNext(io.cfIn.instr, 0.U)
+      // val resultCSRWire = rvspeccore.checker.ConnectCheckerResult.makeCSRSource()(XLEN, p.FormalConfig)
+      // val resultEventWire = rvspeccore.checker.ConnectCheckerResult.makeEventSource()(XLEN, p.FormalConfig)
+      val resultCSRWire = rvspeccore.checker.ConnectCheckerWb.makeCSRSource()(XLEN, p.FormalConfig)
+      // val resultEventWire = rvspeccore.checker.ConnectCheckerWb.makeEventSource()(XLEN, p.FormalConfig)
+      
+      // resultEventWire.valid := RegNext((raiseIntr && io.instrValid) || (raiseException && io.instrValid), 0.U)
+      // resultEventWire.intrNO := RegNext(Mux(raiseIntr && io.instrValid && valid, intrNO, 0.U))
+      // resultEventWire.cause := RegNext(Mux(raiseException && io.instrValid, exceptionNO, 0.U))
+      // resultEventWire.exceptionPC := RegNext(SignExt(io.cfIn.pc, XLEN), 0.U)
+      // resultEventWire.exceptionInst := RegNext(io.cfIn.instr, 0.U)
       
       resultCSRWire.misa      := misa
       resultCSRWire.mvendorid := mvendorid

@@ -235,7 +235,8 @@ class NutCore(implicit val p: NutCoreConfig) extends NutCoreModule {
       BoringUtils.addSink(rvfi.mem_wdata, "rvfi_mem_wdata")
       val mem_addr_sign = SignExt(mem_addr_real(38,0), AddrBits)
       if(p.Formal){
-        val mem = rvspeccore.checker.ConnectCheckerResult.makeMemSource()(XLEN)
+        // val mem = rvspeccore.checker.ConnectCheckerResult.makeMemSource()(XLEN)
+        val mem = rvspeccore.checker.ConnectCheckerWb.makeMemSource()(XLEN)
         mem.read.valid := (rvfi.valid) && (rvfi.mem_rmask > 0.U)
         mem.read.addr  := mem_addr_sign
         mem.read.data  := rvfi.mem_rdata

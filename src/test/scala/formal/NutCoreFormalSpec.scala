@@ -29,7 +29,7 @@ class NutCoreFormalSpec extends AnyFlatSpec with Formal with ChiselScalatestTest
     // verify(new NutCore()(NutCoreConfig()), Seq(BoundedCheck(12), BtormcEngineAnnotation))
     // ChiselAnnotations
     (new ChiselStage).execute(
-      Array("--target-dir", "test_run_dir/Elaborate_chirvformal_SystemVerilog", "-X", "sverilog"),
+      Array("--target-dir", "test_run_dir/Elaborate_chirvformal_SystemVerilog_ActionCheck", "-X", "sverilog"),
       Seq(
         DontAssertSubmoduleAssumptionsAnnotation,
         ChiselGeneratorAnnotation(() => new NutCore()(NutCoreConfig()))

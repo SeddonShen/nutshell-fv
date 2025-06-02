@@ -109,13 +109,28 @@ class WBU(implicit val p: NutCoreConfig) extends NutCoreModule{
       )
     }
     if (p.Formal) {
-      val checker = Module(new CheckerWithResult(checkMem = true, enableReg = false)(p.FormalConfig))
+      // val checker = Module(new CheckerWithResult(checkMem = true, enableReg = false)(p.FormalConfig))
+      val checker = Module(new CheckerWithWB(checkMem = true, enableReg = false)(p.FormalConfig))
 
       checker.io.instCommit.valid := io.in.valid
       checker.io.instCommit.inst  := io.in.bits.decode.cf.instr
       checker.io.instCommit.pc    := SignExt(io.in.bits.decode.cf.pc, AddrBits)
-      checker.io.instCommit.npc   := 0.U
-      ConnectCheckerResult.setChecker(checker)(XLEN, p.FormalConfig)
+      checker.io.instCommit.npc   := Mux(io.wb.rfDest === 0.U, 0.U, io.wb.rfData)
+
+      checker.io.wb.r1Addr        := io.in.bits.decode.ctrl.rfSrc1
+      checker.io.wb.r2Addr        := io.in.bits.decode.ctrl.rfSrc2
+      checker.io.wb.r1Data        := io.in.bits.decode.data.src1
+      checker.io.wb.r2Data        := io.in.bits.decode.data.src2
+
+      checker.io.wb.valid         := io.wb.rfWen && io.wb.rfDest =/= 0.U
+      checker.io.wb.dest          := io.wb.rfDest
+      checker.io.wb.data          := Mux(io.wb.rfDest === 0.U, 0.U, io.wb.rfData)
+
+      checker.io.wb.csrWr         := false.B
+      checker.io.wb.csrAddr       := 0.U
+      checker.io.wb.csrNdata      := 0.U
+      // ConnectCheckerResult.setChecker(checker)(XLEN, p.FormalConfig)
+      ConnectCheckerWb.setChecker(checker)(XLEN, p.FormalConfig)
 
       // when (RegNext(io.in.valid && rvspeccore.checker.RVI.loadStore(io.in.bits.decode.cf.instr)(64), false.B)) {
       //   assert(false.B)
