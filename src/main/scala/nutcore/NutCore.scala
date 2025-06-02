@@ -110,12 +110,12 @@ class NutCore(implicit val p: NutCoreConfig) extends NutCoreModule {
     val dmem = new SimpleBusC
     val mmio = new SimpleBusUC
     val frontend = Flipped(new SimpleBusUC())
-    //val rf = Input(Vec(2, UInt(XLEN.W)))
+    val rf = Input(Vec(2, UInt(XLEN.W)))
   }
   val io = IO(new NutCoreIO)
   val rvfi = IO(new RVFIIO)
 
-  //BoringUtils.addSource(io.rf, "RandReg")
+  BoringUtils.addSource(io.rf, "RandReg")
 
   val someAssume = Wire(Bool())
   someAssume := DontCare
@@ -239,11 +239,11 @@ class NutCore(implicit val p: NutCoreConfig) extends NutCoreModule {
       val mem_addr_sign = SignExt(mem_addr_real(38,0), AddrBits)
       if(p.Formal){
         val mem = rvspeccore.checker.ConnectCheckerResult.makeMemSource()(XLEN)
-        mem.read.valid := (rvfi.valid) && (rvfi.mem_rmask > 0.U)
+        mem.read.valid := (rvfi.valid) && (rvfi.mem_rmask > 0.U) && (~rvfi.trap)
         mem.read.addr  := mem_addr_sign
         mem.read.data  := rvfi.mem_rdata
         mem.read.memWidth := PopCount(rvfi.mem_rmask) << 3
-        mem.write.valid := (rvfi.valid) && (rvfi.mem_wmask > 0.U)
+        mem.write.valid := (rvfi.valid) && (rvfi.mem_wmask > 0.U) && (~rvfi.trap)
         mem.write.addr  := mem_addr_sign
         mem.write.data  := rvfi.mem_wdata
         mem.write.memWidth := PopCount(rvfi.mem_wmask) << 3

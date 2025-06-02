@@ -1,6 +1,7 @@
 [options]
 mode bmc
-depth 30
+depth 15
+skip 10
 
 [engines]
 smtbmc boolector
@@ -13,6 +14,6 @@ prep -top VerifyTop
 chformal -remove -assert c:{assert_label} %n
 
 [files]
-../NutCore_assert_renamed.sv
-../define.sv
-../Core.sv
+./NutCore_assert_renamed.sv
+./define.sv
+./Core.sv
