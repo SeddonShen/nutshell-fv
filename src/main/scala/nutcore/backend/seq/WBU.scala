@@ -115,14 +115,14 @@ class WBU(implicit val p: NutCoreConfig) extends NutCoreModule{
       checker.io.instCommit.valid := io.in.valid
       checker.io.instCommit.inst  := io.in.bits.decode.cf.instr
       checker.io.instCommit.pc    := SignExt(io.in.bits.decode.cf.pc, AddrBits)
-      checker.io.instCommit.npc   := Mux(io.wb.rfDest === 0.U, 0.U, io.wb.rfData)
+      checker.io.instCommit.npc   := Mux(io.redirect.valid, io.redirect.target, SignExt(io.in.bits.decode.cf.pc + 4.U,AddrBits))
 
       checker.io.wb.r1Addr        := io.in.bits.decode.ctrl.rfSrc1
       checker.io.wb.r2Addr        := io.in.bits.decode.ctrl.rfSrc2
       checker.io.wb.r1Data        := io.in.bits.decode.data.src1
       checker.io.wb.r2Data        := io.in.bits.decode.data.src2
 
-      checker.io.wb.valid         := io.wb.rfWen && io.wb.rfDest =/= 0.U
+      checker.io.wb.valid         := io.wb.rfWen
       checker.io.wb.dest          := io.wb.rfDest
       checker.io.wb.data          := Mux(io.wb.rfDest === 0.U, 0.U, io.wb.rfData)
 
