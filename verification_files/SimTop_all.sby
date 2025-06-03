@@ -1,7 +1,7 @@
 [options]
 mode bmc
 depth 15
-skip 10
+skip 13
 
 [engines]
 smtbmc boolector
