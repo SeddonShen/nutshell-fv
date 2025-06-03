@@ -239,13 +239,19 @@ class NutCore(implicit val p: NutCoreConfig) extends NutCoreModule {
       val mem_addr_sign = SignExt(mem_addr_real(38,0), AddrBits)
       if(p.Formal){
         val mem = rvspeccore.checker.ConnectCheckerResult.makeMemSource()(XLEN)
+        val extracted_wdata = MuxLookup(PopCount(rvfi.mem_wmask), 0.U, Seq(
+          1.U -> rvfi.mem_wdata(7, 0),
+          2.U -> rvfi.mem_wdata(15, 0),
+          4.U -> rvfi.mem_wdata(31, 0),
+          8.U -> rvfi.mem_wdata
+        ))
         mem.read.valid := (rvfi.valid) && (rvfi.mem_rmask > 0.U) && (~rvfi.trap)
         mem.read.addr  := mem_addr_sign
         mem.read.data  := rvfi.mem_rdata
         mem.read.memWidth := PopCount(rvfi.mem_rmask) << 3
         mem.write.valid := (rvfi.valid) && (rvfi.mem_wmask > 0.U) && (~rvfi.trap)
         mem.write.addr  := mem_addr_sign
-        mem.write.data  := rvfi.mem_wdata
+        mem.write.data  := extracted_wdata
         mem.write.memWidth := PopCount(rvfi.mem_wmask) << 3
       }
       // val tmpAssume = !rvfi.valid || (
