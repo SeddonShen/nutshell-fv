@@ -110,7 +110,7 @@ class WBU(implicit val p: NutCoreConfig) extends NutCoreModule{
     }
     if (p.Formal) {
       // val checker = Module(new CheckerWithResult(checkMem = true, enableReg = false)(p.FormalConfig))
-      val checker = Module(new CheckerWithWB(checkMem = true, enableReg = false)(p.FormalConfig))
+      val checker = Module(new CheckerWithWB(checkMem = true, enableReg = false, checkNPC = true)(p.FormalConfig))
 
       checker.io.instCommit.valid := io.in.valid
       checker.io.instCommit.inst  := io.in.bits.decode.cf.instr
