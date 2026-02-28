@@ -1,5 +1,6 @@
 export NOOP_HOME=$(pwd)
-export BMCFUZZ_HOME=$(pwd)/ccover
+# export BMCFUZZ_HOME=$(pwd)/ccover
+export XFUZZ_HOME=$(pwd)/ccover
 
 # source $BMCFUZZ_HOME/env.sh
 
