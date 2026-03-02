@@ -92,4 +92,43 @@ idea:
 sds:
 	$(MAKE) emu EMU_TRACE=1 -j16 EMU_THREADS=4
 
-.PHONY: verilog emu clean help
+# --- Standalone Cache module generation for BMCFuzz ---
+CACHE_COVER ?= mux,control
+CACHE_DIR    = $(BUILD_DIR)/modules/cache
+
+gen-cache:
+	mkdir -p $(CACHE_DIR)
+	NOOP_HOME=$(abspath .) mill -i NutShell.runMain top.CacheGenMain \
+		-td $(CACHE_DIR) \
+		COVER=$(CACHE_COVER)
+
+# --- Verilator EMU for standalone Cache (BMCFuzz) ---
+CACHE_EMU_DIR = $(BUILD_DIR)/emu-cache
+CACHE_EMU_BIN = $(CACHE_EMU_DIR)/emu-cache
+CACHE_TB_CPP  = $(abspath bmctest/emu/cache_tb.cpp)
+
+VLTR_FLAGS  = --cc --exe --build -j
+VLTR_FLAGS += -DSYNTHESIS
+VLTR_FLAGS += --top-module StandaloneCache
+VLTR_FLAGS += --Mdir $(CACHE_EMU_DIR)/obj
+VLTR_FLAGS += -o $(abspath $(CACHE_EMU_BIN))
+VLTR_FLAGS += --savable --trace
+VLTR_FLAGS += -Wno-fatal -Wno-WIDTHTRUNC -Wno-WIDTHEXPAND
+
+ifdef CACHE_COV
+VLTR_FLAGS += --coverage
+VLTR_CFLAGS = -O2 -DVM_TRACE=1 -DVM_COVERAGE=1
+else
+VLTR_CFLAGS = -O2 -DVM_TRACE=1
+endif
+VLTR_FLAGS += -CFLAGS "$(VLTR_CFLAGS)"
+
+emu-cache: gen-cache
+	mkdir -p $(CACHE_EMU_DIR)
+	verilator $(VLTR_FLAGS) \
+		$(CACHE_DIR)/StandaloneCache.sv \
+		$(wildcard $(CACHE_DIR)/*.v) \
+		$(CACHE_TB_CPP)
+	@echo "[emu-cache] Binary: $(CACHE_EMU_BIN)"
+
+.PHONY: verilog emu clean help gen-cache emu-cache
