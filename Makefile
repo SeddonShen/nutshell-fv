@@ -112,14 +112,17 @@ VLTR_FLAGS += -DSYNTHESIS
 VLTR_FLAGS += --top-module StandaloneCache
 VLTR_FLAGS += --Mdir $(CACHE_EMU_DIR)/obj
 VLTR_FLAGS += -o $(abspath $(CACHE_EMU_BIN))
-VLTR_FLAGS += --savable --trace
+VLTR_FLAGS += --trace
 VLTR_FLAGS += -Wno-fatal -Wno-WIDTHTRUNC -Wno-WIDTHEXPAND
 
 ifdef CACHE_COV
 VLTR_FLAGS += --coverage
-VLTR_CFLAGS = -O2 -DVM_TRACE=1 -DVM_COVERAGE=1
+# Use -O0 for coverage builds: -O2 on 4MB+ instrumented Slow.cpp is extremely slow (~200s).
+# Coverage collection does not need aggressive optimization.
+VLTR_CFLAGS = -O0 -DVM_TRACE=1 -DVM_COVERAGE=1 -DVM_SAVABLE=0
 else
-VLTR_CFLAGS = -O2 -DVM_TRACE=1
+VLTR_FLAGS += --savable
+VLTR_CFLAGS = -O2 -DVM_TRACE=1 -DVM_SAVABLE=1
 endif
 VLTR_FLAGS += -CFLAGS "$(VLTR_CFLAGS)"
 

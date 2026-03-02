@@ -30,13 +30,15 @@
 
 #include "VStandaloneCache.h"
 #include "verilated.h"
+#if VM_SAVABLE
 #include "verilated_save.h"
+#endif
 
 #ifdef VM_TRACE
 #include "verilated_vcd_c.h"
 #endif
 
-#ifdef VM_COVERAGE
+#if VM_COVERAGE
 #include "verilated_cov.h"
 #endif
 
@@ -256,6 +258,7 @@ int main(int argc, char **argv) {
 #endif
 
     /* ── Snapshot restore ───────────────────────────────────────── */
+#if VM_SAVABLE
     if (!opts.snap_load.empty()) {
         VerilatedRestore rs;
         rs.open(opts.snap_load.c_str());
@@ -266,6 +269,12 @@ int main(int argc, char **argv) {
         fprintf(stderr, "[snap] restored from %s (cycle %lu)\n",
                 opts.snap_load.c_str(), static_cast<unsigned long>(cycle));
     }
+#else
+    if (!opts.snap_load.empty()) {
+        fprintf(stderr, "ERROR: --snap-load not supported (build without CACHE_COV for savable)\n");
+        std::exit(1);
+    }
+#endif
 
     /* ── Reset phase ────────────────────────────────────────────── */
     if (opts.snap_load.empty()) {
@@ -284,6 +293,7 @@ int main(int argc, char **argv) {
     }
 
     /* ── Snapshot save ──────────────────────────────────────────── */
+#if VM_SAVABLE
     if (!opts.snap_save.empty()) {
         VerilatedSave os;
         os.open(opts.snap_save.c_str());
@@ -293,13 +303,19 @@ int main(int argc, char **argv) {
         fprintf(stderr, "[snap] saved to %s (cycle %lu)\n",
                 opts.snap_save.c_str(), static_cast<unsigned long>(cycle));
     }
+#else
+    if (!opts.snap_save.empty()) {
+        fprintf(stderr, "ERROR: --snap-save not supported (build without CACHE_COV for savable)\n");
+        std::exit(1);
+    }
+#endif
 
     /* ── Cleanup & coverage ─────────────────────────────────────── */
 #ifdef VM_TRACE
     if (g_tfp) { g_tfp->close(); delete g_tfp; g_tfp = nullptr; }
 #endif
 
-#ifdef VM_COVERAGE
+#if VM_COVERAGE
     VerilatedCov::write(opts.cov_out.c_str());
     fprintf(stderr, "[cov] written to %s\n", opts.cov_out.c_str());
 #endif
