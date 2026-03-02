@@ -26,7 +26,7 @@ import firrtl.transforms.NoCircuitDedupAnnotation
 /**
  * Standalone wrapper for NutShell dcache, used for independent BMCFuzz testing.
  *
- * Configuration: CacheConfig(ro=false, name="dcache", userBits=16)
+ * Configuration: CacheConfig(ro=false, name="dcache", userBits=16, totalSize=8192, ways=4, lineSize=256)
  * Parameters from DefaultSettings: XLEN=64, PAddrBits=32, EnableOutOfOrderExec=false
  *
  * IO ports (CacheIO):
@@ -39,7 +39,8 @@ import firrtl.transforms.NoCircuitDedupAnnotation
 class StandaloneCache extends Module
     with HasNutCoreParameter with HasNutCoreConst {
   implicit val cacheConfig: CacheConfig = CacheConfig(
-    ro = false, name = "dcache", userBits = DCacheUserBundleWidth
+    ro = false, name = "dcache", userBits = DCacheUserBundleWidth,
+    totalSize = 8192, ways = 4, lineSize = 256
   )
   val io = IO(new CacheIO)
   val cache = Module(new Cache)

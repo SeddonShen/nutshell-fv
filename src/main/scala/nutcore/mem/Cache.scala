@@ -33,7 +33,8 @@ case class CacheConfig (
   cacheLevel: Int = 1,
 
   totalSize: Int = 256, // Kbytes
-  ways: Int = 2
+  ways: Int = 2,
+  lineSize: Int = 0 // cache line size in bytes; 0 means use XLEN
 )
 
 sealed trait HasCacheConst {
@@ -54,8 +55,8 @@ sealed trait HasCacheConst {
   val cacheLevel = cacheConfig.cacheLevel
   val TotalSize = cacheConfig.totalSize
   val Ways = cacheConfig.ways
-  val LineSize = XLEN // byte
-  val LineBeats = LineSize / 8 //DATA WIDTH 64
+  val LineSize = if (cacheConfig.lineSize > 0) cacheConfig.lineSize else XLEN
+  val LineBeats = LineSize / 8
   val Sets = TotalSize / LineSize / Ways
   val OffsetBits = log2Up(LineSize)
   val IndexBits = log2Up(Sets)

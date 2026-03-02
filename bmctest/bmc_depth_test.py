@@ -215,10 +215,11 @@ def process_rtl(
     with open(rtl_out / sv_filename, "w") as f:
         f.writelines(final)
 
-    # ── 6. Copy static FormalTop.sv wrapper ───────────────────────────
-    formal_top_src = SCRIPT_DIR / "formal_top" / module_key / "FormalTop.sv"
-    if formal_top_src.exists():
-        shutil.copy2(formal_top_src, rtl_out)
+    # ── 6. Copy formal_top wrapper and models ──────────────────────────
+    formal_top_dir = SCRIPT_DIR / "formal_top" / module_key
+    if formal_top_dir.exists():
+        for svf in formal_top_dir.glob("*.sv"):
+            shutil.copy2(svf, rtl_out)
 
     cover_indices.sort()
     print(
