@@ -10,17 +10,14 @@
  *   block (struct SeedCycle) is memory-mapped to the DUT input signals.
  *   When the seed is shorter than (cycles * 46), it wraps around.
  *
- * Build:  make emu-cache           (plain)
+ * Build:  make emu-cache              (plain)
  *         make emu-cache CACHE_COV=1  (with Verilator toggle/line coverage)
- *         make emu-cache-fuzz       (libFuzzer harness for coverage-guided fuzz)
+ *         make xfuzz-cache            (XFuzz/ccover harness with LibAFL)
  *
  * Run:
  *   ./build/emu-cache/emu-cache --seed seed.bin --cycles 5000
  *   ./build/emu-cache/emu-cache --seed seed.bin --snap-save snap.bin
  *   ./build/emu-cache/emu-cache --seed seed.bin --snap-load snap.bin --vcd wave.vcd
- *
- * Fuzz (libFuzzer, seed.bin as corpus):
- *   ./build/emu-cache-fuzz/emu-cache-fuzz seed.bin
  **************************************************************************************/
 
 #include <cstdint>
@@ -266,32 +263,75 @@ static uint64_t run_simulation(
 }
 
 /* ═══════════════════════════════════════════════════════════════════════
- * libFuzzer harness — CACHE_FUZZ build only
+ * XFuzz (ccover/LibAFL) harness — CACHE_XFUZZ build only.
+ *
+ * Implements the 6 extern "C" functions expected by ccover/src/harness.rs:
+ *   sim_main, get_cover_number, update_stats,
+ *   set_cover_feedback, enable_sim_verbose, disable_sim_verbose.
+ * The main() entry point is provided by the Rust libfuzzer.a library.
  * ═══════════════════════════════════════════════════════════════════════ */
-#ifdef CACHE_FUZZ
-extern "C" int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size) {
-    static VerilatedContext ctx;
-    static VStandaloneCache *dut = nullptr;
+#ifdef CACHE_XFUZZ
+#include "firrtl-cover.h"
 
-    if (!dut) {
-        ctx.commandArgs(0, static_cast<char**>(nullptr));
-        dut = new VStandaloneCache(&ctx);
+static VStandaloneCache *g_dut = nullptr;
+static VerilatedContext  *g_ctx = nullptr;
+static const int N_FIRRTL_COV = sizeof(firrtl_cover) / sizeof(FIRRTLCoverPointParam);
+
+extern "C" int sim_main(int argc, const char **argv) {
+    if (!g_dut) {
+        g_ctx = new VerilatedContext;
+        g_dut = new VStandaloneCache(g_ctx);
     }
 
-    /* Fuzz run: fixed 2000 cycles per input for speed. Seed wraps if short. */
-    constexpr uint64_t FUZZ_CYCLES = 2000;
-    constexpr uint64_t RESET_CYCLES = 10;
+    const uint8_t *seed_data = nullptr;
+    size_t seed_len = 0;
+    uint64_t max_cycles = 2000;
 
-    run_simulation(dut, &ctx, Data, Size, FUZZ_CYCLES, RESET_CYCLES, 0, nullptr);
+    for (int i = 1; i < argc; i++) {
+        if (!strcmp(argv[i], "-i") && i + 1 < argc) {
+            /* ccover sim_run_from_memory passes "wim@<ptr>+0x<size>" */
+            uintptr_t ptr_val = 0;
+            unsigned long long size_val = 0;
+            if (sscanf(argv[++i] + 4, "0x%lx+0x%llx", &ptr_val, &size_val) == 2 ||
+                sscanf(argv[i], "wim@%p+0x%llx", (void **)&ptr_val, &size_val) == 2) {
+                seed_data = reinterpret_cast<const uint8_t *>(ptr_val);
+                seed_len = static_cast<size_t>(size_val);
+            }
+        } else if (!strcmp(argv[i], "--max-cycles") && i + 1 < argc) {
+            max_cycles = strtoull(argv[++i], nullptr, 10);
+        }
+    }
+
+    for (int i = 0; i < N_FIRRTL_COV; i++)
+        memset(firrtl_cover[i].cover.points, 0, firrtl_cover[i].cover.total);
+
+    run_simulation(g_dut, g_ctx, seed_data, seed_len, max_cycles, 10, 0, nullptr);
     return 0;
 }
 
-extern "C" int LLVMFuzzerInitialize(int *argc, char ***argv) {
-    (void)argc;
-    (void)argv;
-    Verilated::randReset(42);  /* UR-03: reproducible seed */
+extern "C" uint32_t get_cover_number() {
+    for (int i = 0; i < N_FIRRTL_COV; i++)
+        if (firrtl_cover[i].is_feedback)
+            return firrtl_cover[i].cover.total;
     return 0;
 }
+
+extern "C" void update_stats(uint8_t *bitmap) {
+    for (int i = 0; i < N_FIRRTL_COV; i++)
+        if (firrtl_cover[i].is_feedback) {
+            memcpy(bitmap, firrtl_cover[i].cover.points, firrtl_cover[i].cover.total);
+            return;
+        }
+}
+
+extern "C" void set_cover_feedback(const char *name) {
+    for (int i = 0; i < N_FIRRTL_COV; i++)
+        firrtl_cover[i].is_feedback = (strstr(name, firrtl_cover[i].cover.name) != nullptr);
+}
+
+extern "C" void enable_sim_verbose()  {}
+extern "C" void disable_sim_verbose() {}
+
 #else
 
 /* ═══════════════════════════════════════════════════════════════════════
@@ -385,4 +425,4 @@ int main(int argc, char **argv) {
     dut->final();
     return 0;
 }
-#endif /* CACHE_FUZZ */
+#endif /* CACHE_XFUZZ */

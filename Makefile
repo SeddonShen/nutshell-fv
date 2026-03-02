@@ -134,26 +134,28 @@ emu-cache: gen-cache
 		$(CACHE_TB_CPP)
 	@echo "[emu-cache] Binary: $(CACHE_EMU_BIN)"
 
-# --- libFuzzer harness for coverage-guided fuzz (seed as corpus) ---
-CACHE_FUZZ_DIR  = $(BUILD_DIR)/emu-cache-fuzz
-CACHE_FUZZ_BIN  = $(CACHE_FUZZ_DIR)/emu-cache-fuzz
+# --- XFuzz (ccover/LibAFL) harness for Cache ---
+CACHE_XFUZZ_DIR = $(BUILD_DIR)/cache-xfuzz
+CACHE_XFUZZ_BIN = $(CACHE_XFUZZ_DIR)/cache-xfuzz
+GEN_CSRC_DIR    = $(BUILD_DIR)/generated-src
+LIBFUZZER_A     = $(abspath ccover/target/release/libfuzzer.a)
 
-VLTR_FUZZ_FLAGS  = --cc --exe --build -j
-VLTR_FUZZ_FLAGS += -DSYNTHESIS
-VLTR_FUZZ_FLAGS += --top-module StandaloneCache
-VLTR_FUZZ_FLAGS += --Mdir $(CACHE_FUZZ_DIR)/obj
-VLTR_FUZZ_FLAGS += -o $(abspath $(CACHE_FUZZ_BIN))
-VLTR_FUZZ_FLAGS += -Wno-fatal -Wno-WIDTHTRUNC -Wno-WIDTHEXPAND
-VLTR_FUZZ_FLAGS += -CFLAGS "-DCACHE_FUZZ=1 -fsanitize=fuzzer -g -O2"
-VLTR_FUZZ_FLAGS += -LDFLAGS "-fsanitize=fuzzer"
+VLTR_XFUZZ_FLAGS  = --cc --exe --build -j
+VLTR_XFUZZ_FLAGS += +define+DIFFTEST
+VLTR_XFUZZ_FLAGS += --top-module StandaloneCache
+VLTR_XFUZZ_FLAGS += --Mdir $(CACHE_XFUZZ_DIR)/obj
+VLTR_XFUZZ_FLAGS += -o $(abspath $(CACHE_XFUZZ_BIN))
+VLTR_XFUZZ_FLAGS += -Wno-fatal -Wno-WIDTHTRUNC -Wno-WIDTHEXPAND
+VLTR_XFUZZ_FLAGS += -CFLAGS "-DCACHE_XFUZZ=1 -DFIRRTL_COVER -I$(GEN_CSRC_DIR) -O2"
+VLTR_XFUZZ_FLAGS += -LDFLAGS "$(LIBFUZZER_A) -lrt -lpthread -ldl"
 
-emu-cache-fuzz: gen-cache
-	mkdir -p $(CACHE_FUZZ_DIR)
-	verilator $(VLTR_FUZZ_FLAGS) \
+xfuzz-cache: gen-cache xfuzz
+	mkdir -p $(CACHE_XFUZZ_DIR)
+	verilator $(VLTR_XFUZZ_FLAGS) \
 		$(CACHE_DIR)/StandaloneCache.sv \
 		$(wildcard $(CACHE_DIR)/*.v) \
-		$(CACHE_TB_CPP)
-	@echo "[emu-cache-fuzz] Binary: $(CACHE_FUZZ_BIN)"
-	@echo "  Run: $(CACHE_FUZZ_BIN) seed.bin"
+		$(CACHE_TB_CPP) \
+		$(GEN_CSRC_DIR)/firrtl-cover.cpp
+	@echo "[xfuzz-cache] Binary: $(CACHE_XFUZZ_BIN)"
 
-.PHONY: verilog emu clean help gen-cache emu-cache emu-cache-fuzz
+.PHONY: verilog emu clean help gen-cache emu-cache xfuzz-cache
