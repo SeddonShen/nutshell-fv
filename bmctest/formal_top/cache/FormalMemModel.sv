@@ -30,6 +30,8 @@ module FormalMemModel #(
   output [63:0] resp_bits_rdata
 );
 
+  localparam [ADDR_BITS-1:0] BEAT_MASK = LINE_BEATS - 1;  // for cache-line wrap-around
+
   localparam [3:0] CMD_READ        = 4'b0000;
   localparam [3:0] CMD_WRITE       = 4'b0001;
   localparam [3:0] CMD_READ_BURST  = 4'b0010;
@@ -69,8 +71,10 @@ module FormalMemModel #(
   assign resp_bits_rdata = resp_rdata;
 
   wire idle = !in_read_burst && !in_write_burst && !sending_read_resp && !sending_write_resp;
-  wire can_accept = idle || (in_write_burst && !sending_write_resp);
-  assign req_ready = can_accept && !reset;
+  // During write burst, only accept the next write-burst beat (not reads).
+  // This prevents in_read_burst and in_write_burst from being set simultaneously.
+  wire req_cmd_is_write_burst_beat = (req_bits_cmd == CMD_WRITE_BURST || req_bits_cmd == CMD_WRITE_LAST);
+  assign req_ready = (idle || (in_write_burst && !sending_write_resp && req_cmd_is_write_burst_beat)) && !reset;
   assign resp_valid = sending_read_resp || sending_write_resp;
 
   always @(posedge clock) begin
@@ -93,7 +97,11 @@ module FormalMemModel #(
           in_read_burst <= 0;
         end else begin
           read_beat_cnt <= read_beat_cnt + 1;
-          resp_rdata <= mem[read_base_addr[ADDR_BITS+2:3] + read_beat_cnt + 1];
+          // Wrap within the cache line: advance word index modulo LINE_BEATS,
+          // keeping the line-base address unchanged.
+          resp_rdata <= mem[(read_base_addr[ADDR_BITS+2:3] & ~BEAT_MASK) |
+                            ((read_base_addr[ADDR_BITS+2:3] +
+                              {{(ADDR_BITS-6){1'b0}}, read_beat_cnt} + 1'b1) & BEAT_MASK)];
           resp_cmd <= (read_beat_cnt + 1 == LINE_BEATS - 1) ? CMD_READ_LAST : 0;
         end
       end
