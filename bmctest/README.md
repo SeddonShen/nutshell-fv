@@ -4,7 +4,7 @@
 
 从 NutShell 处理器中提取 **dcache** 模块，封装为独立的 `StandaloneCache`，在 BMCFuzz 框架下进行形式验证和混合模糊测试。
 
-与 `bmctest/` 目录中已有的 15 个 rocket-chip 模块共享同一测试基础设施（`bmc_depth_test.py`、FormalTop 包装、sby 任务生成），同时新增 Verilator EMU 驱动以支持 BMCFuzz 的快照机制。
+使用 `bmc_depth_test.py` 测试基础设施（FormalTop 包装、sby 任务生成），同时新增 Verilator EMU 驱动以支持 BMCFuzz 的快照机制。
 
 ---
 
@@ -101,11 +101,11 @@ make gen-cache CACHE_COVER=toggle
 ```bash
 # SMT 模式（cover + smtbmc/bitwuzla）
 python3 bmctest/bmc_depth_test.py \
-    --module cache --depth 50 --timeout 3600 --mode smt
+    --depth 50 --timeout 3600 --mode smt
 
 # SAT 模式（bmc + aiger/rIC3）
 python3 bmctest/bmc_depth_test.py \
-    --module cache --depth 50 --timeout 3600 --mode sat \
+    --depth 50 --timeout 3600 --mode sat \
     --ric3 ccover/Formal/bin/rIC3
 ```
 
@@ -223,22 +223,6 @@ make emu-cache CACHE_COV=1
 
 ---
 
-## 与 rocket-chip 模块的对比
-
-| 特性 | NutShell Cache | rocket-chip 模块 |
-|------|---------------|-----------------|
-| 总线协议 | SimpleBus | TileLink |
-| 拓扑 | 独立 Module | Diplomacy LazyModule（含 TLFuzzer + TLRAM） |
-| SV 规模 | ~5K–10K 行（预计） | 67 行 (ecc) ~ 112K 行 (toaxi4) |
-| 状态复杂度 | 中等（3 级流水 + SRAM） | 小到大不等 |
-| BMC 瓶颈 | 预计有（SRAM 状态空间大） | 部分模块有瓶颈 |
-| FormalTop | `bmctest/formal_top/cache/` | `bmctest/formal_top/<name>/` |
-| 覆盖率插桩 | `xfuzz.CoverPoint` (Chisel 3.6.1) | 同左 |
-
-NutShell Cache 因其 SRAM 阵列（默认 256KB, 2-way）导致状态空间较大，是 BMCFuzz 的理想 benchmark：纯 BMC 难以在浅深度覆盖所有点，但快照机制能有效缩短搜索路径。
-
----
-
 ## 关键文件路径
 
 ```
@@ -253,7 +237,7 @@ nutshell-fv/
 │   ├── emu-cache                     # Verilator 仿真二进制
 │   └── obj/                          # Verilator 编译中间文件
 ├── bmctest/
-│   ├── README_cache.md               # 本文件
+│   ├── README.md                      # 本文件
 │   ├── bmc_depth_test.py             # BMC 深度测试脚本
 │   ├── emu/
 │   │   └── cache_tb.cpp              # Verilator C++ 测试驱动

@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """
-BMC depth test script for standalone rocket-chip modules.
+BMC depth test script for NutShell Cache module.
 
 Tests how deep BMC must unroll to cover each cover point,
-identifying modules where BMC hits a depth bottleneck.
+identifying whether the cache module hits a depth bottleneck.
 
-对 rocket-chip 独立抽取的硬件模块做 BMC（有界模型检查）深度测试。
+对 NutShell Cache 模块做 BMC（有界模型检查）深度测试。
 四步流水线：
   1) process_rtl     — RTL 插桩：统一时钟、解析 GEN 覆盖实例、插入属性、约束寄存器初始值
   2) generate_sby     — 为每个 cover point 生成独立 .sby 任务文件
@@ -36,33 +36,11 @@ except ImportError:
         return iterable
 
 # ── Module configuration ─────────────────────────────────────────────
-# 模块 key → (SV 源文件名, 顶层模块名) 的映射表。
-# 来源：ModuleGenTop.scala 中为每个硬件模块单独生成的 Standalone 包装器。
-# key 用于 CLI --module 参数及目录命名，value 中的文件名/顶层名在 RTL 读取和 sby prep 中使用。
+# NutShell Cache 模块：(SV 源文件名, 顶层模块名)。
+# 来源：CacheGenTop.scala 中生成的 StandaloneCache 包装器。
 MODULE_CONFIG: Dict[str, Tuple[str, str]] = {
-    "broadcast":   ("StandaloneBroadcast.sv",  "StandaloneBroadcast"),
-    "xbar":        ("StandaloneXbar.sv",       "StandaloneXbar"),
-    "plic":        ("StandalonePLIC.sv",       "StandalonePLIC"),
-    "sram_ecc":    ("StandaloneSRAMECC.sv",    "StandaloneSRAMECC"),
-    "toaxi4":      ("StandaloneToAXI4.sv",     "StandaloneToAXI4"),
-    "fragmenter":  ("StandaloneFragmenter.sv", "StandaloneFragmenter"),
-    "atomic":      ("StandaloneAtomic.sv",     "StandaloneAtomic"),
-    "timer":       ("Timer.sv",                "Timer"),
-    "idpool":      ("IDPool.sv",               "IDPool"),
-    "jtag_fsm":    ("JtagStateMachine.sv",     "JtagStateMachine"),
-    "arbiter":     ("HellaCountingArbiter.sv", "HellaCountingArbiter"),
-    "reorder_q":   ("ReorderQueue.sv",         "ReorderQueue"),
-    "ecc":         ("ECCModule.sv",            "ECCModule"),
-    "async_queue": ("AsyncQueue.sv",           "AsyncQueue"),
-    "replacement": ("ReplacementModule.sv",    "ReplacementModule"),
-    "cache":       ("StandaloneCache.sv",      "StandaloneCache"),  # NutShell Cache
+    "cache": ("StandaloneCache.sv", "StandaloneCache"),
 }
-
-# axi4xbar 依赖的 MemRWHelper.v 在 `define SYNTHESIS 下静态分配 2 GB 内存，
-# 形式验证工具在展开时会 OOM，因此排除该模块。
-# async_queue 是双时钟域模块（io_enq_clock / io_deq_clock），
-# 不适用统一单时钟方案，因此排除。
-EXCLUDED_MODULES = {"axi4xbar", "async_queue"}
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 PROJECT_ROOT = SCRIPT_DIR.parent
@@ -88,7 +66,7 @@ def process_rtl(
     5. Insert ``initial assume(!reg)`` for uninitialized single and array regs
 
     Args:
-        module_key: Key in MODULE_CONFIG (e.g. "timer").
+        module_key: Key in MODULE_CONFIG (i.e. "cache").
         build_dir:  Path to ``build/modules/<module_key>/``.
         work_dir:   Path to ``bmctest/work/<module_key>/``.
         cover_type: Coverage instrumentation type (default "toggle").
@@ -628,99 +606,12 @@ def analyze_results(
     return summary
 
 
-def _print_cross_module_summary(
-    summaries: List[dict],
-    reports_dir: Path,
-) -> None:
-    """Print and persist a cross-module comparison table."""
-    # 跨模块对比表各列含义:
-    #   Total  — cover point 总数
-    #   Cover  — 已覆盖数 (PASS)
-    #   Fail   — 不可覆盖数 (FAIL，给定深度内未找到路径)
-    #   TmOut  — 超时数
-    #   Rate   — 覆盖率 = Cover / Total
-    #   AvgD   — 已覆盖点的平均深度
-    #   MaxD   — 已覆盖点的最大深度
-    #   BN?    — 是否为瓶颈模块 (uncoverable > 30%)
-    reports_dir.mkdir(parents=True, exist_ok=True)
-
-    # 按 uncoverable_rate 降序排列，瓶颈模块排在最前面
-    ranked = sorted(
-        summaries, key=lambda s: s["uncoverable_rate"], reverse=True
-    )
-    bottlenecks = [s["module"] for s in ranked if s["is_bottleneck"]]
-
-    W = 70
-    hdr = (
-        f"  {'Module':<15s} {'Total':>6s} {'Cover':>6s} {'Fail':>6s} "
-        f"{'TmOut':>6s} {'Rate':>7s} {'AvgD':>6s} {'MaxD':>6s} {'BN?'}"
-    )
-    sep = f"  {'-' * 15} {'-' * 6} {'-' * 6} {'-' * 6} {'-' * 6} {'-' * 7} {'-' * 6} {'-' * 6} {'-' * 4}"
-
-    lines: List[str] = []
-    lines.append(f"\n{'=' * W}")
-    lines.append("  Cross-Module Summary")
-    lines.append(f"{'=' * W}")
-    lines.append(hdr)
-    lines.append(sep)
-    for s in ranked:
-        tag = "YES" if s["is_bottleneck"] else ""
-        lines.append(
-            f"  {s['module']:<15s} {s['total_cover_points']:>6d} "
-            f"{s['covered']:>6d} {s['uncovered']:>6d} {s['timeout']:>6d} "
-            f"{s['cover_rate'] * 100:>6.1f}% {s['avg_depth']:>6.1f} "
-            f"{s['max_depth']:>6d} {tag}"
-        )
-    lines.append(f"\n  Bottleneck modules (>30% uncoverable): "
-                 f"{', '.join(bottlenecks) if bottlenecks else 'none'}")
-    lines.append(f"{'=' * W}")
-
-    for ln in lines:
-        print(ln)
-
-    # ── Save summary.json (without per-cover details) ────────────────
-    stripped = [
-        {k: v for k, v in s.items() if k != "details"} for s in ranked
-    ]
-    with open(reports_dir / "summary.json", "w") as f:
-        json.dump(stripped, f, indent=2)
-
-    # ── Save summary.txt ─────────────────────────────────────────────
-    with open(reports_dir / "summary.txt", "w") as f:
-        f.write("BMC Depth Test — Cross-Module Summary\n")
-        f.write(f"{'=' * W}\n")
-        for s in ranked:
-            tag = " [BOTTLENECK]" if s["is_bottleneck"] else ""
-            f.write(
-                f"{s['module']}: {s['covered']}/{s['total_cover_points']} covered, "
-                f"avg depth {s['avg_depth']:.1f}, max depth {s['max_depth']}{tag}\n"
-            )
-        f.write(
-            f"\nBottleneck modules: "
-            f"{', '.join(bottlenecks) if bottlenecks else 'none'}\n"
-        )
-
-    print(f"  Reports saved to: {reports_dir}")
-
-
 # ── CLI ──────────────────────────────────────────────────────────────
-# --module 和 --all 互斥：前者测试单个模块，后者遍历 MODULE_CONFIG 中
-# 除 EXCLUDED_MODULES 以外的所有模块
 
 def build_arg_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(
-        description="BMC depth test for standalone rocket-chip modules",
+        description="BMC depth test for NutShell Cache module",
     )
-    grp = p.add_mutually_exclusive_group(required=True)
-    grp.add_argument(
-        "--module", choices=sorted(MODULE_CONFIG.keys()),
-        help="Test a single module",
-    )
-    grp.add_argument(
-        "--all", action="store_true",
-        help="Test all 15 modules (excluding axi4xbar)",
-    )
-
     # --depth: BMC 展开深度，即最多模拟多少个时钟周期
     # --timeout: 单个 cover point 的求解超时（秒）
     # --mode: smt=cover+smtbmc, sat=bmc+aiger（需配合 --ric3）
@@ -758,71 +649,54 @@ def main():
             print(f"ERROR: rIC3 not found at {args.ric3}", file=sys.stderr)
             sys.exit(1)
 
-    modules = (
-        sorted(k for k in MODULE_CONFIG if k not in EXCLUDED_MODULES)
-        if args.all
-        else [args.module]
+    mod = "cache"
+    print(f"\n{'#' * 60}")
+    print(f"# Module: {mod}")
+    print(f"{'#' * 60}")
+
+    build_path = args.build_dir / mod
+    work_path = args.work_dir / mod
+
+    if not build_path.exists():
+        print(f"  ERROR: build directory not found — {build_path}")
+        sys.exit(1)
+
+    if work_path.exists():
+        shutil.rmtree(work_path)
+    work_path.mkdir(parents=True, exist_ok=True)
+
+    # Step 1 — RTL 插桩：统一时钟、插入 cover/assert、初始化假设
+    cover_indices = process_rtl(
+        mod, build_path, work_path, args.cover_type, args.mode,
+    )
+    if not cover_indices:
+        print("  ERROR: no cover points found, aborting")
+        sys.exit(1)
+
+    print(
+        f"  Cover points: {len(cover_indices)}  "
+        f"[{cover_indices[0]} .. {cover_indices[-1]}]"
     )
 
-    all_summaries: List[dict] = []
+    # Step 2 — 为每个 cover point 生成隔离的 .sby 配置
+    generate_sby_files(
+        mod, cover_indices, work_path,
+        mode=args.mode,
+        depth=args.depth,
+        timeout=args.timeout,
+    )
 
-    for mod in modules:
-        print(f"\n{'#' * 60}")
-        print(f"# Module: {mod}")
-        print(f"{'#' * 60}")
+    # Step 3 — 多线程并行执行 sby，解析日志得到每个点的深度和状态
+    results = run_bmc(
+        mod, work_path, cover_indices,
+        mode=args.mode,
+        workers=min(args.workers, os.cpu_count() or 1),
+        ric3_path=args.ric3,
+    )
 
-        build_path = args.build_dir / mod
-        work_path = args.work_dir / mod
-
-        if not build_path.exists():
-            print(f"  SKIP: build directory not found — {build_path}")
-            continue
-
-        if work_path.exists():
-            shutil.rmtree(work_path)
-        work_path.mkdir(parents=True, exist_ok=True)
-
-        # Step 1 — RTL 插桩：统一时钟、插入 cover/assert、初始化假设
-        cover_indices = process_rtl(
-            mod, build_path, work_path, args.cover_type, args.mode,
-        )
-        if not cover_indices:
-            print(f"  WARNING: no cover points for {mod}, skipping")
-            continue
-
-        print(
-            f"  Cover points: {len(cover_indices)}  "
-            f"[{cover_indices[0]} .. {cover_indices[-1]}]"
-        )
-
-        # Step 2 — 为每个 cover point 生成隔离的 .sby 配置
-        generate_sby_files(
-            mod, cover_indices, work_path,
-            mode=args.mode,
-            depth=args.depth,
-            timeout=args.timeout,
-        )
-
-        # Step 3 — 多线程并行执行 sby，解析日志得到每个点的深度和状态
-        results = run_bmc(
-            mod, work_path, cover_indices,
-            mode=args.mode,
-            workers=min(args.workers, os.cpu_count() or 1),
-            ric3_path=args.ric3,
-        )
-
-        # Step 4 — 汇总统计、判定瓶颈、输出报告
-        summary = analyze_results(mod, results, work_path)
-        all_summaries.append(summary)
-
-    # --all 模式下多模块时输出跨模块对比表，按 uncoverable_rate 排序
-    if len(all_summaries) > 1:
-        reports_dir = SCRIPT_DIR / "reports"
-        _print_cross_module_summary(all_summaries, reports_dir)
-    elif len(all_summaries) == 1:
-        print("\nDone. Single-module results written above.")
-    else:
-        print("\nNo modules were processed.")
+    # Step 4 — 汇总统计、判定瓶颈、输出报告
+    analyze_results(mod, results, work_path)
+    print("\nDone.")
 
 
 if __name__ == "__main__":
