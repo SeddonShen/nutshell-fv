@@ -139,6 +139,17 @@ make emu-cache CACHE_COV=1
 ./build/emu-cache/emu-cache --seed seed2.bin --snap-load snap.bin --cycles 3000
 ```
 
+### Step 5：libFuzzer 覆盖引导模糊测试
+
+```bash
+# 编译 fuzz harness
+make emu-cache-fuzz
+
+# 用 seed.bin 作为 corpus 跑 fuzz（推荐：corpus 目录）
+mkdir -p corpus && cp seed.bin corpus/
+./build/emu-cache-fuzz/emu-cache-fuzz corpus/ -max_total_time=60
+```
+
 ### EMU 命令行参数
 
 | 参数 | 默认值 | 说明 |

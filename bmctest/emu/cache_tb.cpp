@@ -12,11 +12,15 @@
  *
  * Build:  make emu-cache           (plain)
  *         make emu-cache CACHE_COV=1  (with Verilator toggle/line coverage)
+ *         make emu-cache-fuzz       (libFuzzer harness for coverage-guided fuzz)
  *
  * Run:
  *   ./build/emu-cache/emu-cache --seed seed.bin --cycles 5000
  *   ./build/emu-cache/emu-cache --seed seed.bin --snap-save snap.bin
  *   ./build/emu-cache/emu-cache --seed seed.bin --snap-load snap.bin --vcd wave.vcd
+ *
+ * Fuzz (libFuzzer, seed.bin as corpus):
+ *   ./build/emu-cache-fuzz/emu-cache-fuzz seed.bin
  **************************************************************************************/
 
 #include <cstdint>
@@ -34,7 +38,7 @@
 #include "verilated_save.h"
 #endif
 
-#ifdef VM_TRACE
+#if VM_TRACE
 #include "verilated_vcd_c.h"
 #endif
 
@@ -205,7 +209,7 @@ static void drive(VStandaloneCache *d, const SeedCycle &s) {
 }
 
 /* VCD trace pointer (global to avoid #ifdef clutter in tick). */
-#ifdef VM_TRACE
+#if VM_TRACE
 static VerilatedVcdC *g_tfp = nullptr;
 #endif
 
@@ -213,21 +217,85 @@ static VerilatedVcdC *g_tfp = nullptr;
 static void tick(VStandaloneCache *d, uint64_t &t) {
     d->clock = 0;
     d->eval();
-#ifdef VM_TRACE
+#if VM_TRACE
     if (g_tfp) g_tfp->dump(t);
 #endif
     ++t;
 
     d->clock = 1;
     d->eval();
-#ifdef VM_TRACE
+#if VM_TRACE
     if (g_tfp) g_tfp->dump(t);
 #endif
     ++t;
 }
 
 /* ═══════════════════════════════════════════════════════════════════════
- * Main simulation loop
+ * Core simulation: reset + seed-driven run.
+ * start_cycle: when > 0, skip reset and continue from this cycle (snapshot restore).
+ * Returns (cycle, half_ticks) via out params; returns cycle count.
+ * ═══════════════════════════════════════════════════════════════════════ */
+static uint64_t run_simulation(
+    VStandaloneCache *dut,
+    VerilatedContext *ctx,
+    const uint8_t *seed_data,
+    size_t seed_len,
+    uint64_t max_cycles,
+    uint64_t reset_cycles,
+    uint64_t start_cycle,
+    uint64_t *out_half_ticks)
+{
+    uint64_t half_ticks = start_cycle * 2;  /* 2 ticks per cycle */
+    uint64_t cycle      = start_cycle;
+
+    if (start_cycle == 0) {
+        dut->reset = 1;
+        for (uint64_t i = 0; i < reset_cycles; ++i)
+            tick(dut, half_ticks);
+        dut->reset = 0;
+    }
+
+    uint64_t seed_idx = start_cycle;
+    for (; cycle < max_cycles && !ctx->gotFinish(); ++cycle) {
+        SeedCycle sc = decode_cycle(seed_data, seed_len, seed_idx++);
+        drive(dut, sc);
+        tick(dut, half_ticks);
+    }
+    if (out_half_ticks) *out_half_ticks = half_ticks;
+    return cycle;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+ * libFuzzer harness — CACHE_FUZZ build only
+ * ═══════════════════════════════════════════════════════════════════════ */
+#ifdef CACHE_FUZZ
+extern "C" int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size) {
+    static VerilatedContext ctx;
+    static VStandaloneCache *dut = nullptr;
+
+    if (!dut) {
+        ctx.commandArgs(0, static_cast<char**>(nullptr));
+        dut = new VStandaloneCache(&ctx);
+    }
+
+    /* Fuzz run: fixed 2000 cycles per input for speed. Seed wraps if short. */
+    constexpr uint64_t FUZZ_CYCLES = 2000;
+    constexpr uint64_t RESET_CYCLES = 10;
+
+    run_simulation(dut, &ctx, Data, Size, FUZZ_CYCLES, RESET_CYCLES, 0, nullptr);
+    return 0;
+}
+
+extern "C" int LLVMFuzzerInitialize(int *argc, char ***argv) {
+    (void)argc;
+    (void)argv;
+    Verilated::randReset(42);  /* UR-03: reproducible seed */
+    return 0;
+}
+#else
+
+/* ═══════════════════════════════════════════════════════════════════════
+ * Main simulation loop (non-fuzz)
  *
  *   1. (optional) restore snapshot → skip reset
  *   2. reset phase: hold reset for N cycles
@@ -248,7 +316,7 @@ int main(int argc, char **argv) {
     uint64_t cycle      = 0;
 
     /* ── VCD setup ──────────────────────────────────────────────── */
-#ifdef VM_TRACE
+#if VM_TRACE
     if (!opts.vcd_file.empty()) {
         ctx->traceEverOn(true);
         g_tfp = new VerilatedVcdC;
@@ -276,21 +344,13 @@ int main(int argc, char **argv) {
     }
 #endif
 
-    /* ── Reset phase ────────────────────────────────────────────── */
-    if (opts.snap_load.empty()) {
-        dut->reset = 1;
-        for (uint64_t i = 0; i < opts.reset_cycles; ++i)
-            tick(dut.get(), half_ticks);
-        dut->reset = 0;
-    }
-
     /* ── Seed-driven simulation ─────────────────────────────────── */
-    uint64_t seed_idx = 0;
-    for (; cycle < opts.max_cycles && !ctx->gotFinish(); ++cycle) {
-        SeedCycle sc = decode_cycle(seed.data(), seed.size(), seed_idx++);
-        drive(dut.get(), sc);
-        tick(dut.get(), half_ticks);
-    }
+    cycle = run_simulation(
+        dut.get(), ctx.get(),
+        seed.data(), seed.size(),
+        opts.max_cycles, opts.reset_cycles,
+        cycle,  /* start_cycle: 0 or restored */
+        &half_ticks);
 
     /* ── Snapshot save ──────────────────────────────────────────── */
 #if VM_SAVABLE
@@ -311,7 +371,7 @@ int main(int argc, char **argv) {
 #endif
 
     /* ── Cleanup & coverage ─────────────────────────────────────── */
-#ifdef VM_TRACE
+#if VM_TRACE
     if (g_tfp) { g_tfp->close(); delete g_tfp; g_tfp = nullptr; }
 #endif
 
@@ -325,3 +385,4 @@ int main(int argc, char **argv) {
     dut->final();
     return 0;
 }
+#endif /* CACHE_FUZZ */

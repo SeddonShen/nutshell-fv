@@ -134,4 +134,26 @@ emu-cache: gen-cache
 		$(CACHE_TB_CPP)
 	@echo "[emu-cache] Binary: $(CACHE_EMU_BIN)"
 
-.PHONY: verilog emu clean help gen-cache emu-cache
+# --- libFuzzer harness for coverage-guided fuzz (seed as corpus) ---
+CACHE_FUZZ_DIR  = $(BUILD_DIR)/emu-cache-fuzz
+CACHE_FUZZ_BIN  = $(CACHE_FUZZ_DIR)/emu-cache-fuzz
+
+VLTR_FUZZ_FLAGS  = --cc --exe --build -j
+VLTR_FUZZ_FLAGS += -DSYNTHESIS
+VLTR_FUZZ_FLAGS += --top-module StandaloneCache
+VLTR_FUZZ_FLAGS += --Mdir $(CACHE_FUZZ_DIR)/obj
+VLTR_FUZZ_FLAGS += -o $(abspath $(CACHE_FUZZ_BIN))
+VLTR_FUZZ_FLAGS += -Wno-fatal -Wno-WIDTHTRUNC -Wno-WIDTHEXPAND
+VLTR_FUZZ_FLAGS += -CFLAGS "-DCACHE_FUZZ=1 -fsanitize=fuzzer -g -O2"
+VLTR_FUZZ_FLAGS += -LDFLAGS "-fsanitize=fuzzer"
+
+emu-cache-fuzz: gen-cache
+	mkdir -p $(CACHE_FUZZ_DIR)
+	verilator $(VLTR_FUZZ_FLAGS) \
+		$(CACHE_DIR)/StandaloneCache.sv \
+		$(wildcard $(CACHE_DIR)/*.v) \
+		$(CACHE_TB_CPP)
+	@echo "[emu-cache-fuzz] Binary: $(CACHE_FUZZ_BIN)"
+	@echo "  Run: $(CACHE_FUZZ_BIN) seed.bin"
+
+.PHONY: verilog emu clean help gen-cache emu-cache emu-cache-fuzz
