@@ -158,4 +158,67 @@ xfuzz-cache: gen-cache xfuzz
 		$(GEN_CSRC_DIR)/firrtl-cover.cpp
 	@echo "[xfuzz-cache] Binary: $(CACHE_XFUZZ_BIN)"
 
-.PHONY: verilog emu clean help gen-cache emu-cache xfuzz-cache
+
+# --- Standalone CacheTLB module generation for BMCFuzz ---
+CACHE_TLB_DIR     = $(BUILD_DIR)/modules/cache-tlb
+
+gen-cache-tlb:
+	mkdir -p $(CACHE_TLB_DIR)
+	NOOP_HOME=$(abspath .) mill -i NutShell.runMain top.CacheTLBGenMain \
+		-td $(CACHE_TLB_DIR) \
+		COVER=$(CACHE_COVER)
+
+# --- Verilator EMU for standalone CacheTLB (BMCFuzz) ---
+CACHE_TLB_EMU_DIR = $(BUILD_DIR)/emu-cache-tlb
+CACHE_TLB_EMU_BIN = $(CACHE_TLB_EMU_DIR)/emu-cache-tlb
+CACHE_TLB_TB_CPP  = $(abspath bmctest/emu/cache_tlb_tb.cpp)
+
+VLTR_TLB_FLAGS  = --cc --exe --build -j
+VLTR_TLB_FLAGS += -DSYNTHESIS
+VLTR_TLB_FLAGS += --top-module StandaloneCacheWithTLB
+VLTR_TLB_FLAGS += --Mdir $(CACHE_TLB_EMU_DIR)/obj
+VLTR_TLB_FLAGS += -o $(abspath $(CACHE_TLB_EMU_BIN))
+VLTR_TLB_FLAGS += --trace
+VLTR_TLB_FLAGS += -Wno-fatal -Wno-WIDTHTRUNC -Wno-WIDTHEXPAND
+
+ifdef CACHE_COV
+VLTR_TLB_FLAGS += --coverage
+VLTR_TLB_CFLAGS = -O0 -DVM_TRACE=1 -DVM_COVERAGE=1 -DVM_SAVABLE=0
+else
+VLTR_TLB_FLAGS += --savable
+VLTR_TLB_CFLAGS = -O2 -DVM_TRACE=1 -DVM_SAVABLE=1
+endif
+VLTR_TLB_FLAGS += -CFLAGS "$(VLTR_TLB_CFLAGS)"
+
+emu-cache-tlb: gen-cache-tlb
+	mkdir -p $(CACHE_TLB_EMU_DIR)
+	verilator $(VLTR_TLB_FLAGS) \
+		$(CACHE_TLB_DIR)/StandaloneCacheWithTLB.sv \
+		$(wildcard $(CACHE_TLB_DIR)/*.v) \
+		$(CACHE_TLB_TB_CPP)
+	@echo "[emu-cache-tlb] Binary: $(CACHE_TLB_EMU_BIN)"
+
+# --- XFuzz (ccover/LibAFL) harness for CacheTLB ---
+CACHE_TLB_XFUZZ_DIR = $(BUILD_DIR)/cache-tlb-xfuzz
+CACHE_TLB_XFUZZ_BIN = $(CACHE_TLB_XFUZZ_DIR)/cache-tlb-xfuzz
+
+VLTR_TLB_XFUZZ_FLAGS  = --cc --exe --build -j
+VLTR_TLB_XFUZZ_FLAGS += +define+DIFFTEST
+VLTR_TLB_XFUZZ_FLAGS += --top-module StandaloneCacheWithTLB
+VLTR_TLB_XFUZZ_FLAGS += --Mdir $(CACHE_TLB_XFUZZ_DIR)/obj
+VLTR_TLB_XFUZZ_FLAGS += -o $(abspath $(CACHE_TLB_XFUZZ_BIN))
+VLTR_TLB_XFUZZ_FLAGS += -Wno-fatal -Wno-WIDTHTRUNC -Wno-WIDTHEXPAND
+VLTR_TLB_XFUZZ_FLAGS += -CFLAGS "-DCACHE_TLB_XFUZZ=1 -DFIRRTL_COVER -I$(GEN_CSRC_DIR) -O2"
+VLTR_TLB_XFUZZ_FLAGS += -LDFLAGS "$(LIBFUZZER_A) -lrt -lpthread -ldl"
+
+xfuzz-cache-tlb: gen-cache-tlb xfuzz
+	mkdir -p $(CACHE_TLB_XFUZZ_DIR)
+	verilator $(VLTR_TLB_XFUZZ_FLAGS) \
+		$(CACHE_TLB_DIR)/StandaloneCacheWithTLB.sv \
+		$(wildcard $(CACHE_TLB_DIR)/*.v) \
+		$(CACHE_TLB_TB_CPP) \
+		$(GEN_CSRC_DIR)/firrtl-cover.cpp
+	@echo "[xfuzz-cache-tlb] Binary: $(CACHE_TLB_XFUZZ_BIN)"
+
+.PHONY: verilog emu clean help gen-cache emu-cache xfuzz-cache \
+        gen-cache-tlb emu-cache-tlb xfuzz-cache-tlb
